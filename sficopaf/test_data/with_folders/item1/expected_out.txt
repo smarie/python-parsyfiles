@@ -1,0 +1,4 @@
+[main]
+dummy_int = 0
+dummy_float = 1.1
+
