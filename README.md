@@ -4,6 +4,7 @@ A declarative framework to read complex objects made of several files, using a u
 This library provides a *framework*, not a specific parser ! Although it comes with a couple unitary file parsers as an example, it is intended for users that already know how to parse their various files independently, but who are looking for a higher-level tool to read complex objects made of several files/folders and potentially requiring to combine several parsers.
 
 Typical use cases of this library :
+
 * read collections of test cases on the file system - each test case being composed of several files (for example 2 'test inputs' .csv files, 1 'test configuration' .cfg file, and one 'reference test results' json file)
 * more generally, read complex objects, for example made of several csv files (timeseries + descriptive data), combinations of csv and xml/json files, configuration files, etc.
 
