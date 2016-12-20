@@ -7,7 +7,7 @@ from os.path import isfile, join, isdir, dirname, basename
 from threading import RLock
 from typing import Tuple, Any, Dict, Callable, Type, List, Set, Union
 
-from sficopaf import check_var
+from sficopaf.var_checker import check_var
 
 
 class FolderAndFilesStructureError(Exception):

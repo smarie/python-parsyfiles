@@ -11,12 +11,13 @@ Typical use cases of this library :
 ## Main features
 
 * **Declarative**: you *first* define the type of objects to parse - by creating a class -, then you use `parse_collection` or `parse_item` on the appropriate folder or file path.
-* **Supports concurrent unitary file parsers** for the same object type. Thanks to a combined *{Type+Extension}* registration, you register unitary file parsers for a given object type *and* for a given file extension (for example `str` + `.txt`). This allows users to register several parsers for the same object type, supporting various formats represented by the extensions.
+* **Supports several unitary file parsers for the same object type**. Thanks to a combined *{Type+Extension}* registration, you register unitary file parsers for a given object type *and* for a given file extension (for example `str` + `.txt`). This allows users to register several parsers for the same object type, supporting various formats represented by the extensions.
 * **Supports complex classes** : the main interest of this framework is its ability to define complex classes that spans across several files. For example, a `MyTestCase` class that would have two fields `input: DataFrame` and `expected_output: str`. The class constructor is introspected in order to find the *required* and *optional* fields and their names. Fields may be objects or collections (that should be declared with the `typing` module such as `Dict[str, Foo]`) in order for the framework to keep track of the underlying collection types) 
 * **Recursive**: fields may themselves be collections or complex types. In which case they are represented by several files.
 * Supports **two main file mapping flavours**: 
     * *flat*, where all items are represented as files in the same folder (even fields and collection elements)
     * *wrapped*, where all items that represent collections or complex types are represented by folders, and all ready-to-parse items are represented by files.
+* **Safe**: files are opened and finally closed by the framework, your parsing function may exit without closing
 * **Lazy-parsing** : TODO, a later version will allow to only trigger parsing when objects are read, in the case of collections 
 
 
