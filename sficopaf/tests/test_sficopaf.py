@@ -3,7 +3,60 @@ from pprint import pprint
 from typing import List, Set, Dict
 from unittest import TestCase
 
-from sficopaf import RootParser, UnsupportedObjectTypeError
+from sficopaf import RootParser, FolderAndFilesStructureError, FileMappingConfiguration
+from sficopaf import get_simple_object_parser
+
+
+class SimpleObjectsTest(TestCase):
+
+    def test_simple_object(self):
+
+        # First define the function that we want to test (not useful, but just to show a complete story in the readme...)
+        def exec_op(x: float, y: float, op: str) -> float:
+            if op is '+':
+                return x + y
+            elif op is '-':
+                return x - y
+            else:
+                raise ValueError('Unsupported operation : \'' + op + '\'')
+
+
+        # Then define the simple class representing your test case
+        class ExecOpTest(object):
+
+            def __init__(self, x: float, y: float, op: str, expected_result: float):
+                self.x = x
+                self.y = y
+                self.op = op
+                self.expected_result = expected_result
+
+        # create the parser and parse a single file
+        simple_parser = get_simple_object_parser(ExecOpTest)
+        e = simple_parser.parse_item('./test_data/demo_simple/test_diff_1', ExecOpTest)
+        print(e.x)
+        print(e.y)
+        print(e.op)
+        print(e.expected_result)
+
+
+
+    def test_simple_object_with_contract(self):
+
+        from classtools_autocode import autoprops, autoargs
+        from contracts import contract, new_contract
+
+        # custom contract needed in the class
+        new_contract('allowed_op', lambda x: x in {'+', '-'})
+
+        @autoprops
+        class ExecOpTest(object):
+            @autoargs
+            @contract(x='int|float', y='int|float', op='str,allowed_op', expected_result='int|float')
+            def __init__(self, x: float, y: float, op: str, expected_result: float):
+                pass
+
+        # Test
+        ExecOpTest(0,0,'+',2)
 
 
 class MainTest(TestCase):
@@ -16,46 +69,48 @@ class MainTest(TestCase):
         return
 
     def test_single_item_folders(self):
-        f = self.root_parser.parse_item('./test_data/with_folders/item1', self.main_type, flat_mode=False)
+        f = self.root_parser.parse_item('./test_data/with_folders/item1', self.main_type)
         pprint(f)
         return
 
     def test_single_item_no_folders(self):
-        try:
-            f = self.root_parser.parse_item('./test_data/without_folders/item1', List[self.main_type], flat_mode=True)
-            self.assertFalse(True, 'This should have raised an error')
-        except UnsupportedObjectTypeError as e:
-            f = self.root_parser.parse_item('./test_data/without_folders/item1', self.main_type, flat_mode=True)
 
+        config = FileMappingConfiguration(flat_mode=True)
+        with self.assertRaises(FolderAndFilesStructureError):
+            f = self.root_parser.parse_item('./test_data/without_folders/item1', List[self.main_type], file_mapping_conf=config)
+
+        f = self.root_parser.parse_item('./test_data/without_folders/item1', self.main_type, file_mapping_conf=config)
         pprint(f)
         return
 
     def test_single_item_that_is_a_list(self):
-        f = self.root_parser.parse_item('./test_data/with_folders', List[self.main_type], flat_mode=False)
+        f = self.root_parser.parse_item('./test_data/with_folders', List[self.main_type])
         pprint(f)
         self.assertEqual(len(f), 3)
         return
 
     def test_with_folders_list(self):
-        l = self.root_parser.parse_collection('./test_data/with_folders', List[self.main_type], flat_mode=False)
+        l = self.root_parser.parse_collection('./test_data/with_folders', List[self.main_type])
         pprint(l)
         self.assertEqual(len(l), 3)
         return
 
     def test_with_folders_set(self):
-        s = self.root_parser.parse_collection('./test_data/with_folders', Set[self.main_type], flat_mode=False)
+        s = self.root_parser.parse_collection('./test_data/with_folders', Set[self.main_type])
         pprint(s)
         self.assertEqual(len(s), 3)
         return
 
     def test_with_folders_dict(self):
-        d = self.root_parser.parse_collection('./test_data/with_folders', self.main_type, flat_mode=False)
+        d = self.root_parser.parse_collection('./test_data/with_folders', self.main_type)
         pprint(d)
         self.assertEqual(len(d), 3)
         return
 
     def test_no_folders(self):
-        d = self.root_parser.parse_collection('./test_data/without_folders', self.main_type, flat_mode=True)
+
+        config = FileMappingConfiguration(flat_mode=True)
+        d = self.root_parser.parse_collection('./test_data/without_folders', self.main_type, file_mapping_conf=config)
         pprint(d)
         self.assertEqual(len(d), 3)
         return
@@ -191,6 +246,8 @@ class MainTest(TestCase):
 
         return root_parser, MainFooBarItem
 
+
+
 class TestDemo(TestCase):
 
     def test_demo(self):
@@ -240,7 +297,7 @@ class TestDemo(TestCase):
             integer_str = file_object.readline()
             return int(integer_str)
 
-        root_parser.register_extension_parser(int, '.txt', parse_int_file)
+        root_parser.register_unitary_parser(int, '.txt', parse_int_file)
 
         # Note that the parsing framework automatically opens and closes the file for you, even in case of exception.
 
@@ -275,8 +332,8 @@ class TestDemo(TestCase):
             config.read_file(file_object)
             return dict(config['main'].items())
 
-        root_parser.register_extension_parser(OpConfig, '.txt', parse_configuration_txt_file)
-        root_parser.register_extension_parser(OpConfig, '.cfg', parse_configuration_cfg_file)
+        root_parser.register_unitary_parser(OpConfig, '.txt', parse_configuration_txt_file)
+        root_parser.register_unitary_parser(OpConfig, '.cfg', parse_configuration_cfg_file)
 
 
         # Finally we define the 'test case' objects
@@ -298,7 +355,8 @@ class TestDemo(TestCase):
         results = root_parser.parse_collection('./test_data/demo', OpTestCase)
         pprint(results)
 
-        results = root_parser.parse_collection('./test_data/demo_flat', OpTestCase, flat_mode=True, sep_for_flat='--')
+        conf = FileMappingConfiguration(flat_mode=True, sep_for_flat='--')
+        results = root_parser.parse_collection('./test_data/demo_flat', OpTestCase, file_mapping_conf=conf)
         pprint(results)
 
         class OpTestCaseColl(object):
@@ -318,8 +376,9 @@ class TestDemo(TestCase):
                     return str(self.input_a) + ' ' + self.op + ' ' + str(self.input_b) + ' =? ' + str(
                         self.output) + ' ' + str(self.input_c)
 
-        results = root_parser.parse_collection('./test_data/demo_flat_coll', OpTestCaseColl, flat_mode=True, sep_for_flat='--')
+
+        results = root_parser.parse_collection('./test_data/demo_flat_coll', OpTestCaseColl, file_mapping_conf=conf)
         pprint(results['case3'].input_c)
 
-        results = root_parser.parse_collection('./test_data/demo_coll', OpTestCaseColl, flat_mode=False)
+        results = root_parser.parse_collection('./test_data/demo_coll', OpTestCaseColl)
         pprint(results['case3'].input_c)
