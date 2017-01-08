@@ -32,6 +32,9 @@ class SimpleObjectsTest(TestCase):
 
         # create the parser and parse a single file
         simple_parser = get_simple_object_parser(ExecOpTest)
+
+        t = simple_parser.get_all_known_parsing_chains()
+        pprint(t)
         e = simple_parser.parse_item('./test_data/demo_simple/test_diff_1', ExecOpTest)
         print(e.x)
         print(e.y)

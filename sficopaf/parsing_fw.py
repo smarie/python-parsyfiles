@@ -4,11 +4,12 @@ from inspect import getmembers, signature, Parameter
 from io import TextIOBase
 from os.path import isfile, isdir
 from threading import RLock
-from typing import Tuple, Any, Dict, Callable, Type, List, Set, Union, TypeVar
+from typing import Tuple, Any, Dict, Callable, Type, List, Set, Union, TypeVar, Generic
 
 from sficopaf.parsing_filemapping import FileMappingConfiguration, _find_collectionobject_file_prefixes, \
     MandatoryFileNotFoundError, check_complex_object_on_filesystem, \
     _get_attribute_item_file_prefix, FolderAndFilesStructureError, MultipleFilesError
+
 from .dict_parsers import get_default_dict_parsers, convert_dict_to_simple_object
 from .var_checker import check_var
 
@@ -58,6 +59,75 @@ class UnsupportedObjectTypeError(Exception):
                                             ' folder for each of its fields.')
 
 
+class ParsingChain(Generic[T]):
+    """
+    Represents a parsing chain, with a mandatory initial parser function and a list of converters.
+    """
+    def __init__(self, item_type: Type[T], parser_function:Callable[[TextIOBase], T]):
+        self._item_type = item_type
+        self._parser_func = parser_function
+        self._converters_list = []
+
+    def __str__(self):
+        return 'ParsingChain[' + self._parser_func.__name__ + ' ' + \
+                   ' '.join(['> ' + converter_fun.__name__ for converter_fun in self._converters_list])\
+               + ']'
+
+    def __repr__(self):
+        # should we rather use the full canonical names ? yes, but pprint uses __repr__ so we'd like users to see
+        # the small and readable version, really
+        return self.__str__()
+
+    def add_conversion_step(self, source_item_type: Type[S], dest_item_type: Type[T], converter_fun:Callable[[S], T]):
+        if source_item_type is self._item_type:
+            self._item_type = dest_item_type
+            self._converters_list.append(converter_fun)
+            return self
+        else:
+            raise TypeError('Cannnot register a converter on this conversion chain : source type \'' + source_item_type
+                            + '\' is not compliant with current destination type of the chain : \'' + self._item_type)
+
+    def parse_with_chain(self, file_object: TextIOBase) -> T:
+        """
+        Utility method to parse using the parser and all converters in order
+        :return:
+        """
+        res = self._parser_func(file_object)
+        for converter_func in self._converters_list:
+            res = converter_func(res)
+        return res
+
+
+class ParsingException(Exception):
+    """
+    Raised whenever parsing fails
+    """
+
+    def __init__(self, contents):
+        """
+        We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+        That's why we have a helper static method create()
+
+        :param contents:
+        """
+        super(ParsingException, self).__init__(contents)
+
+    @staticmethod
+    def create(file_path: str, parsing_chain: ParsingChain[T], encoding: str, fun_args: list, fun_kwargs: dict, cause):
+        """
+        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+
+        :param item_type:
+        :return:
+        """
+        return ParsingException('Error while parsing file at path \'' + file_path + '\' with encoding \'' + encoding
+                                + '\' and parser function \'' + str(parsing_chain)+ '\' '
+                                + 'with args : ' + str(fun_args) + 'and kwargs : ' + str(fun_kwargs) + '.\n'
+                                + str(cause))
+
+
 class RootParser(object):
     """
     The root parser
@@ -74,8 +144,8 @@ class RootParser(object):
         :param initial_parsers:
         """
         self.__types_lock = RLock() # lock for self.__parsers
-        self.__parsers = {} # Dict[Type > Dict[ext > parser]]
-        self.__converters = {} # Dict[Type > Dict[Type > converter]]
+        self.__parsers = {} # Dict[DestinationType > Dict[ext > parser]]
+        self.__converters = {} # Dict[DestinationType > Dict[SourceType > converter]]
 
         if initial_parsers is not None:
             self.register_parsers(initial_parsers)
@@ -132,32 +202,6 @@ class RootParser(object):
         :return:
         """
         return deepcopy(self.__converters)
-
-
-    def get_converters_for_type(self, item_type: Type[T]) -> Dict[str, Callable[[S], T]]:
-        """
-        Utility method to return the converters associated to a given type.
-        Throws an UnsupportedObjectTypeError if no valid converter found
-
-        :param item_type:
-        :return: the dictionary of (source_type, converter) for the given type
-        """
-        try:
-            # get associated converters - throws KeyError if not found
-            attribute_converters = self.__converters[item_type]
-        except KeyError as e:
-            # find a compliant parent type
-            compliant_types = [supported_type for supported_type in self.__converters.keys() if issubclass(item_type, supported_type)]
-            if len(compliant_types) == 1:
-                attribute_converters = self.__converters[compliant_types[0]]
-            elif len(compliant_types) > 1:
-                raise TypeError('No exact match found, but several registered converters exist that would fit requested'
-                                ' type ' + str(item_type) + ' because they work for one of its parent class. Unknown '
-                                'behaviour, exiting.')
-            else:
-                raise UnsupportedObjectTypeError.create(item_type)
-
-        return attribute_converters
 
 
     def register_unitary_parser(self, object_type: Type[T], extension: str,
@@ -229,7 +273,7 @@ class RootParser(object):
 
     def get_parsers_for_type(self, item_type: Type[T]) -> Dict[str, Callable[[TextIOBase], T]]:
         """
-        Utility method to return the parsers associated to a given type.
+        Utility method to return the parsers associated to a given type (a dictionary extension > parser)
         Throws an UnsupportedObjectTypeError if not found
 
         :param item_type:
@@ -240,13 +284,90 @@ class RootParser(object):
             # get exact match - throws KeyError if not found
             return self.__parsers[item_type]
         except KeyError as e:
-            # find a parser able to parse a parent type, but only if the desired type is not a reserved collection
-            # (this is to prevent dict parsers (used for simple objects) to be used for Dict[str, Any]
-            # (used for complex objects).
-            if _is_multifile_collection(item_type):
-                raise UnsupportedObjectTypeError.create(item_type)
-            else:
-                return _find_approximative_match_using_parent_classes(item_type, self.__parsers)
+            raise UnsupportedObjectTypeError.create(item_type) from e
+
+            # DISABLED -  This automatic behavior may lead to confusion.
+            # # find a parser able to parse a parent type, but only if the desired type is not a reserved collection
+            # # (this is to prevent dict parsers (used for simple objects) to be used for Dict[str, Any]
+            # # (used for complex objects).
+            # if _is_multifile_collection(item_type):
+            #     raise UnsupportedObjectTypeError.create(item_type)
+            # else:
+            #     .
+            #     return RootParser._find_dict_entry_for_which_key_is_a_parent_class(item_type, self.__parsers)
+
+
+    def get_parsing_chains_for_type(self, item_type: Type[T], error_if_not_found: bool=True) \
+            -> Dict[str, ParsingChain[T]]:
+        """
+        Utility method to return the parsing_chain associated to a given type. A dictionary extension > parsing_chain
+        Throws an UnsupportedObjectTypeError if no valid converter found
+
+        :param item_type:
+        :return: the dictionary of (source_type, converter) for the given type
+        """
+
+        # First collect all basic parsers
+        try:
+            parsing_chains = {ext: ParsingChain(item_type, parser_fun) for ext, parser_fun in self.__parsers[item_type].items()}
+        except KeyError as e:
+            parsing_chains = {}
+
+        # Then add all converters
+        try:
+            converters_to_type = self.__converters[item_type]
+            for source_type, converter in converters_to_type.items():
+                subchains = self.get_parsing_chains_for_type(source_type, error_if_not_found=False)
+                for ext, subchain in subchains.items():
+                    if ext not in parsing_chains:
+                        # add the chain to the result set (dont forget to add the converter)
+                        parsing_chains[ext] = subchain.add_conversion_step(source_type, item_type, converter)
+                    else:
+                        # we already know how to parse item_type from this extension. Is the new solution better ?
+                        if parsing_chains[ext].chain_length() > (subchain.chain_length() + 1):
+                            # we found a shorter conversion chain to get the same result ! Use it
+                            parsing_chains[ext] = subchain.add_conversion_step(source_type, item_type, converter)
+        except KeyError as e:
+            pass
+
+        # throw error if empty, if requested
+        if error_if_not_found and len(parsing_chains) == 0:
+            raise UnsupportedObjectTypeError.create(item_type)
+        else:
+            return parsing_chains
+
+
+    def get_all_known_parsing_chains(self):
+        """
+        Utility method to return all known parsing chains (obtained by assembling converters and parsers)
+
+        :return:
+        """
+        return {type: self.get_parsing_chains_for_type(type)
+                for type in list(self.__parsers.keys()) + list(self.__converters.keys())}
+
+
+    # @staticmethod
+    # def _find_dict_entry_for_which_key_is_a_parent_class(item_type: Type[Any], candidates_dict: Dict[Type[Any], Any]) \
+    #         -> Any:
+    #     """
+    #     Utility method to find a unique approximative match for a given item_type in a dictionary that contains types as
+    #     keys. A match will be a parent class of item_type. If several matches are found, an error will be raised
+    #
+    #     :param item_type:
+    #     :param candidates_dict:
+    #     :return:
+    #     """
+    #     compliant_types = [supported_type for supported_type in candidates_dict.keys() if
+    #                        issubclass(item_type, supported_type)]
+    #     if len(compliant_types) == 1:
+    #         return candidates_dict[compliant_types[0]]
+    #     elif len(compliant_types) > 1:
+    #         raise TypeError('No exact match found, but several registered parsers/converters exist that would '
+    #                         'fit requested type ' + str(item_type) + ' because they work for one of its parent '
+    #                                                                  'class. Unknown behaviour, exiting.')
+    #     else:
+    #         raise UnsupportedObjectTypeError.create(item_type)
 
 
     @staticmethod
@@ -263,20 +384,17 @@ class RootParser(object):
         :param lazy_parsing:
         :return:
         """
-        check_var(item_file_prefix, var_types=str, var_name='item_path')
-        check_var(item_type, var_types=type, var_name='item_type')
+        indent_str_for_log, item_name_for_log = _check_common_vars_core(item_file_prefix, item_type,
+                                                                                   item_name_for_log,
+                                                                                   indent_str_for_log)
 
         file_mapping_conf = file_mapping_conf or FileMappingConfiguration()
         check_var(file_mapping_conf, var_types=FileMappingConfiguration, var_name='file_mapping_conf')
 
-        item_name_for_log = item_name_for_log or '<item>'
-        check_var(item_name_for_log, var_types=str, var_name='item_name')
-        indent_str_for_log = indent_str_for_log or ''
-        check_var(indent_str_for_log, var_types=str, var_name='indent_str_for_log')
-
         check_var(lazy_parsing, var_types=bool, var_name='lazy_parsing')
 
         return file_mapping_conf, indent_str_for_log, item_name_for_log
+
 
 
     def parse_collection(self, item_file_prefix: str, collection_or_item_type: Type[T], item_name_for_log: str = None,
@@ -390,10 +508,9 @@ class RootParser(object):
                                                                                           lazy_parsing)
 
         try:
-            # 1. Try to parse with a registered parser, if any
-            matching_parsers = self.get_parsers_for_type(item_type) # throws an error if no parser found
-            return parse_simple_item_with_parsers(item_file_prefix, item_type, matching_parsers, item_name_for_log,
-                                                  indent_str_for_log, file_mapping_conf.encoding) # throws an error if supported file extension not found
+            # 1. Try to parse with a registered parser and an optional parsing chain, if any
+            return self._parse_simple_item_with_registered_parsers(item_file_prefix, item_type, file_mapping_conf,
+                                                                   item_name_for_log, indent_str_for_log)
 
         except (UnsupportedObjectTypeError, MandatoryFileNotFoundError) as e:
             # this means that
@@ -401,12 +518,13 @@ class RootParser(object):
             # * or that the file extensions required by the parsers were not found > we can fallback to default behaviour
             try:
                 # 2. Try to find a conversion path, then
-                matching_converters = self.get_converters_for_type(item_type)
+                # TODO this function should return one parsing_chain per extension, only
+                conversion_chain = self.get_parsing_chains_for_type(item_type)
                 # if we are here that means that there is at least a converter registered.
-                return _parse_simple_item_with_converters(
+                return parse_simple_item_with_parsing_chains(
                     item_file_prefix,
                     item_type,
-                    matching_converters,
+                    conversion_chain,
                     item_name_for_log=item_name_for_log,
                     indent_str_for_log=indent_str_for_log,
                     encoding=file_mapping_conf.encoding)
@@ -422,6 +540,27 @@ class RootParser(object):
                     return self._parse_complex_item(item_file_prefix, item_type, item_name_for_log=item_name_for_log,
                                                     file_mapping_conf=file_mapping_conf, lazy_parsing=lazy_parsing,
                                                     indent_str_for_log=indent_str_for_log)
+
+
+    def _parse_simple_item_with_registered_parsers(self, item_file_prefix: str, item_type: Type[T],
+                                                   file_mapping_conf: FileMappingConfiguration = None,
+                                                   item_name_for_log: str = None, indent_str_for_log: str = None):
+        """
+        Utility method to parse a simple item of type "item_type" using the registered parsers of this RootParser.
+        Exact match will be used first, otherwise a parser that is able to parse a parent class will be used, but only
+        if only one is available.
+
+        :param item_file_prefix:
+        :param item_type:
+        :param file_mapping_conf:
+        :param item_name_for_log:
+        :param indent_str_for_log:
+        :return:
+        """
+        matching_parsers = self.get_parsers_for_type(item_type)  # throws an error if no parser found
+        return parse_simple_item_with_parsers(item_file_prefix, item_type, matching_parsers, item_name_for_log,
+                                              indent_str_for_log,
+                                              file_mapping_conf.encoding)  # throws an error if supported file extension not found
 
 
     def _parse_complex_item(self, item_file_prefix:str, item_type:Type[T], item_name_for_log=None,
@@ -506,45 +645,6 @@ class RootParser(object):
         # -- (d) finally create the object and return it
         return item_type(**parsed_object)
 
-
-#@staticmethod
-def _find_approximative_match_using_parent_classes(item_type: Type[Any], candidates_dict: Dict[Type[Any], Any]) \
-        -> Any:
-    """
-    Utility method to find a unique approximative match for a given item_type in a dictionary that contains types as
-    keys. A match will be a parent class of item_type. If several matches are found, an error will be raised
-
-    :param item_type:
-    :param candidates_dict:
-    :return:
-    """
-    compliant_types = [supported_type for supported_type in candidates_dict.keys() if
-                       issubclass(item_type, supported_type)]
-    if len(compliant_types) == 1:
-        return candidates_dict[compliant_types[0]]
-    elif len(compliant_types) > 1:
-        raise TypeError('No exact match found, but several registered parsers/converters exist that would '
-                        'fit requested type ' + str(item_type) + ' because they work for one of its parent '
-                                                                 'class. Unknown behaviour, exiting.')
-    else:
-        raise UnsupportedObjectTypeError.create(item_type)
-
-
-def _parse_simple_item_with_converters(item_file_prefix: str, item_type: Type[T], attribute_converters,
-                                       item_name_for_log:str = None, indent_str_for_log: str = None,
-                                       encoding:str='utf-8'):
-    """
-    Utility to parse an object that has a non-collection type, using registered converters
-
-    :param item_file_prefix:
-    :param item_type:
-    :param item_name_for_log:
-    :param indent_str_for_log:
-    :return:
-    """
-
-    # TODO
-    return None
 
 
 def _extract_collection_base_type(object_type, base_collection_type, item_name_for_errors):
@@ -631,7 +731,7 @@ def _find_typing_collection_class_or_none(object_type):
         # a typing subclass that is not a collection.
         return None
 
-def parse_simple_item_with_parsers(item_file_prefix, item_type, attribute_parsers: Dict[str, Callable[[TextIOBase], T]],
+def parse_simple_item_with_parsers(item_file_prefix, item_type, parsers: Dict[str, Callable[[TextIOBase], T]],
                                    item_name_for_log, indent_str_for_log, encoding):
     """
     Utility function to parse a simple item with a bunch of available parsers (a [extension > function] dictionary).
@@ -640,7 +740,31 @@ def parse_simple_item_with_parsers(item_file_prefix, item_type, attribute_parser
 
     :param item_file_prefix:
     :param item_type:
-    :param attribute_parsers:
+    :param parsers:
+    :param item_name_for_log:
+    :param indent_str_for_log:
+    :param encoding:
+    :return:
+    """
+
+    # First transform all parser functions into parsing chains
+    parsing_chains = {ext: ParsingChain(item_type, parser_function) for ext, parser_function in parsers.items()}
+
+    # Then use the generic method with parsing chains
+    return parse_simple_item_with_parsing_chains(item_file_prefix, item_type, parsing_chains, item_name_for_log,
+                                                 indent_str_for_log, encoding)
+
+
+def parse_simple_item_with_parsing_chains(item_file_prefix, item_type, parsers: Dict[str, ParsingChain[T]],
+                                   item_name_for_log, indent_str_for_log, encoding):
+    """
+    Utility function to parse a simple item with a bunch of available parsing chains (a [extension > parsing_chain]
+    dictionary). It will look if the file is present with a SINGLE supported extension, and parse with the associated
+    parsing chain if it is the case.
+
+    :param item_file_prefix:
+    :param item_type:
+    :param parsers:
     :param item_name_for_log:
     :param indent_str_for_log:
     :param encoding:
@@ -648,22 +772,19 @@ def parse_simple_item_with_parsers(item_file_prefix, item_type, attribute_parser
     """
 
     # 0. check all vars
-    check_var(item_file_prefix, var_types=str, var_name='item_file_prefix')
-    check_var(item_type, var_types=type, var_name='item_type')
-    if item_name_for_log is None:
-        item_name_for_log = ''
-    else:
-        check_var(item_name_for_log, var_types=str, var_name='item_name')
-    check_var(indent_str_for_log, var_types=str, var_name='indent_str_for_log')
+    indent_str_for_log, item_name_for_log = _check_common_vars_core(item_file_prefix, item_type,
+                                                                    item_name_for_log,
+                                                                    indent_str_for_log)
 
+    # 1. Check that there is no folder with that name
     if isdir(item_file_prefix):
         raise FolderAndFilesStructureError('Error parsing item ' + item_name_for_log + ' with registered parsers. '
                                            'Item file prefix ' + item_file_prefix + ' is a folder !')
 
-    # 1. Find files that can be parsed with one of the provided parsers
+    # 2. Find files that can be parsed with one of the provided parsing chains
     #
-    # -- list all possible file names that *could* exist, according to supported extensions
-    possible_files = {item_file_prefix + ext: ext for ext in attribute_parsers.keys()}
+    # -- list all possible file names that *could* be parsed, according to supported extensions
+    possible_files = {item_file_prefix + ext: ext for ext in parsers.keys()}
     #
     # -- find all the ones that *actually* exist on the file system
     found_files = {file_path: ext for file_path, ext in possible_files.items() if
@@ -673,23 +794,52 @@ def parse_simple_item_with_parsers(item_file_prefix, item_type, attribute_parser
     if len(found_files) is 1:
         # parse this file and add to the result
         file_path, file_ext = list(found_files.items())[0]
-        parsing_function = attribute_parsers[file_ext]
+        parsing_chain = parsers[file_ext]
         RootParser.logger.info(indent_str_for_log + 'Parsing ' + item_name_for_log + ' of type ' + str(item_type) +
-                               ' at ' + file_path + ' with parsing function ' + str(parsing_function))
-        return parse_simple_item_with_parser_function(file_path, parsing_function, encoding=encoding)
+                               ' at ' + file_path + ' with parsing chain ' + str(parsing_chain))
+        return parse_file_as_simple_item_with_parsing_chain(file_path, parsing_chain, encoding=encoding)
 
     elif len(found_files) is 0:
         # item is mandatory and no compliant file was found : error
-        raise MandatoryFileNotFoundError.create(item_name_for_log, item_file_prefix, list(attribute_parsers.keys()))
+        raise MandatoryFileNotFoundError.create(item_name_for_log, item_file_prefix, list(parsers.keys()))
 
     else:
         # the file is present several times with various extensions
         raise MultipleFilesError.create(item_name_for_log, item_file_prefix, list(found_files.values()))
 
 
+def parse_file_as_simple_item_with_parsing_chain(file_path: str, parsing_chain: ParsingChain[T],
+                                                 encoding: str = 'utf-8', *args, **kwargs) -> T:
+    """
+    Utility function to parse a single file
 
-def parse_simple_item_with_parser_function(file_path:str, parser_function:Callable[[TextIOBase], T],
-                                           encoding:str= 'utf-8', *args, **kwargs) -> T:
+    :param file_path:
+    :param parsing_chain:
+    :param encoding:
+    :param args:
+    :param kwargs:
+    :return:
+    """
+    global f
+    check_var(file_path, var_types=str, var_name='file_path')
+    check_var(parsing_chain, var_types=ParsingChain, var_name='parsing_chain')
+
+    try:
+        # Open the file with the appropriate encoding
+        f = open(file_path, 'r', encoding=encoding)
+
+        # Apply the parsing function
+        return parsing_chain.parse_with_chain(f, *args, **kwargs)
+    except Exception as e:
+        raise ParsingException.create(file_path, parsing_chain, encoding, args,
+                                      kwargs, e) from e
+    finally:
+        f.close()
+
+
+def parse_file_as_simple_item_with_parser_function(file_path:str, item_type: Type[T],
+                                                   parser_function:Callable[[TextIOBase], T],
+                                                   encoding:str= 'utf-8', *args, **kwargs) -> T:
     """
     A function to execute a given parsing function on a file path while handling the close() properly.
     Made public so that users may directly try with their parser functions on a single file.
@@ -701,17 +851,9 @@ def parse_simple_item_with_parser_function(file_path:str, parser_function:Callab
     :param kwargs:
     :return:
     """
-    global f
-    check_var(file_path, var_types=str, var_name='file_path')
     check_var(parser_function, var_types=Callable, var_name='parser_function')
-
-    try:
-        f = open(file_path, 'r', encoding=encoding)
-        res = parser_function(f, *args, **kwargs)
-
-        return res
-    finally:
-        f.close()
+    return parse_file_as_simple_item_with_parsing_chain(file_path, ParsingChain(item_type, parser_function),
+                                                          encoding=encoding, *args, **kwargs)
 
 
 def get_simple_object_parser(object_type: Type[T]) -> RootParser:
@@ -722,5 +864,28 @@ def get_simple_object_parser(object_type: Type[T]) -> RootParser:
     :return:
     """
     rp = RootParser()
-    rp.register_converter(dict, object_type, convert_dict_to_simple_object)
+
+    def convert_dict_to_simple_typed_object(dict) -> T:
+        return convert_dict_to_simple_object(dict, object_type=object_type)
+
+    rp.register_converter(dict, object_type, convert_dict_to_simple_typed_object)
     return rp
+
+
+def _check_common_vars_core(item_file_prefix, item_type, item_name_for_log, indent_str_for_log):
+    """
+    Utility method to check all these variables and apply defaults
+    :param item_file_prefix:
+    :param item_type:
+    :param item_name_for_log:
+    :param indent_str_for_log:
+    :return:
+    """
+    check_var(item_file_prefix, var_types=str, var_name='item_path')
+    check_var(item_type, var_types=type, var_name='item_type')
+    item_name_for_log = item_name_for_log or '<item>'
+    check_var(item_name_for_log, var_types=str, var_name='item_name')
+    indent_str_for_log = indent_str_for_log or ''
+    check_var(indent_str_for_log, var_types=str, var_name='indent_str_for_log')
+
+    return indent_str_for_log, item_name_for_log

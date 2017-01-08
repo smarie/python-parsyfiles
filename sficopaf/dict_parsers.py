@@ -1,8 +1,9 @@
 from io import StringIO
 from io import TextIOBase
 from typing import Dict, Union, Type, Any
+from warnings import warn
 
-from sficopaf import check_var
+from sficopaf.var_checker import check_var
 
 
 def get_default_dict_parsers():
@@ -110,12 +111,23 @@ def read_dict_from_json(file_object: TextIOBase) -> Dict[str, Any]:
     import json
     return json.loads(jsonStr)
 
-def convert_dict_to_simple_object(dict, object_type: Type[Any]) -> Any:
+
+def convert_dict_to_simple_object(input_dict: Dict[str, Any], object_type: Type[Any]) -> Any:
     """
     Utility method to create an object from a dictionary
 
-    :param dict:
+    :param input_dict:
     :param object_type:
     :return:
     """
-    return object_type(**dict)
+    try:
+        return object_type(**input_dict)
+    except TypeError as e:
+        warn('Error while trying to instantiate object of type ' + str(object_type) + ' using dictionary input_dict :')
+        print('input_dict = ')
+        try:
+            from pprint import pprint
+            pprint(input_dict)
+        except:
+            print(input_dict)
+        raise e
