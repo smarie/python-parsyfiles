@@ -3,8 +3,8 @@ from pprint import pprint
 from typing import List, Set, Dict
 from unittest import TestCase
 
-from sficopaf import RootParser, FolderAndFilesStructureError, FileMappingConfiguration
-from sficopaf import get_simple_object_parser
+from sficopaf import RootParser, FlatFileMappingConfiguration, \
+    parse_item, ParsingException
 
 
 class SimpleObjectsTest(TestCase):
@@ -31,11 +31,7 @@ class SimpleObjectsTest(TestCase):
                 self.expected_result = expected_result
 
         # create the parser and parse a single file
-        simple_parser = get_simple_object_parser(ExecOpTest)
-
-        t = simple_parser.get_all_known_parsing_chains()
-        pprint(t)
-        e = simple_parser.parse_item('./test_data/demo_simple/test_diff_1', ExecOpTest)
+        e = parse_item('./test_data/demo_simple/test_diff_1', ExecOpTest)
         print(e.x)
         print(e.y)
         print(e.op)
@@ -71,28 +67,30 @@ class MainTest(TestCase):
         pprint(self.root_parser.get_parsers_copy())
         return
 
-    def test_single_item_folders(self):
+    def test_single_multifile_object_folders(self):
         f = self.root_parser.parse_item('./test_data/with_folders/item1', self.main_type)
         pprint(f)
         return
 
-    def test_single_item_no_folders(self):
+    def test_single_multifile_object_flatmode(self):
 
-        config = FileMappingConfiguration(flat_mode=True)
-        with self.assertRaises(FolderAndFilesStructureError):
+        config = FlatFileMappingConfiguration()
+
+        # Try to parse it as a list
+        with self.assertRaises(ParsingException):
             f = self.root_parser.parse_item('./test_data/without_folders/item1', List[self.main_type], file_mapping_conf=config)
 
         f = self.root_parser.parse_item('./test_data/without_folders/item1', self.main_type, file_mapping_conf=config)
         pprint(f)
         return
 
-    def test_single_item_that_is_a_list(self):
+    def test_single_list_object_with_folders(self):
         f = self.root_parser.parse_item('./test_data/with_folders', List[self.main_type])
         pprint(f)
         self.assertEqual(len(f), 3)
         return
 
-    def test_with_folders_list(self):
+    def test_list_object_with_folders(self):
         l = self.root_parser.parse_collection('./test_data/with_folders', List[self.main_type])
         pprint(l)
         self.assertEqual(len(l), 3)
@@ -112,7 +110,7 @@ class MainTest(TestCase):
 
     def test_no_folders(self):
 
-        config = FileMappingConfiguration(flat_mode=True)
+        config = FlatFileMappingConfiguration()
         d = self.root_parser.parse_collection('./test_data/without_folders', self.main_type, file_mapping_conf=config)
         pprint(d)
         self.assertEqual(len(d), 3)
@@ -358,7 +356,7 @@ class TestDemo(TestCase):
         results = root_parser.parse_collection('./test_data/demo', OpTestCase)
         pprint(results)
 
-        conf = FileMappingConfiguration(flat_mode=True, sep_for_flat='--')
+        conf = FlatFileMappingConfiguration(separator='--')
         results = root_parser.parse_collection('./test_data/demo_flat', OpTestCase, file_mapping_conf=conf)
         pprint(results)
 

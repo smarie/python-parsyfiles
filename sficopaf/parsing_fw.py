@@ -2,24 +2,57 @@ import logging
 from copy import deepcopy
 from inspect import getmembers, signature, Parameter
 from io import TextIOBase
-from os.path import isfile, isdir
 from threading import RLock
 from typing import Tuple, Any, Dict, Callable, Type, List, Set, Union, TypeVar, Generic
+from warnings import warn
 
-from sficopaf.parsing_filemapping import FileMappingConfiguration, _find_collectionobject_file_prefixes, \
-    MandatoryFileNotFoundError, check_complex_object_on_filesystem, \
-    _get_attribute_item_file_prefix, FolderAndFilesStructureError, MultipleFilesError
-
-from .dict_parsers import get_default_dict_parsers, convert_dict_to_simple_object
-from .var_checker import check_var
+from sficopaf.dict_parsers import get_default_dict_parsers, get_default_dict_of_dicts_parsers
+from sficopaf.parsing_filemapping import FileMappingConfiguration, ObjectNotFoundOnFileSystemError, \
+    ObjectPresentMultipleTimesOnFileSystemError, EXT_SEPARATOR, WrappedFileMappingConfiguration
+from sficopaf.var_checker import check_var
 
 S = TypeVar('S')  # Can be anything - used for "source object"
 T = TypeVar('T')  # Can be anything - used for all other objects
 
+MULTIFILE_EXT = '<multifile>'
 
-class UnsupportedObjectTypeError(Exception):
+def parse_item(item_file_prefix: str, item_type: Type[T], item_name_for_log: str = None,
+                   file_mapping_conf: FileMappingConfiguration = None,
+                   lazy_parsing: bool = False, indent_str_for_log: str = None) -> T:
     """
-    Raised whenever the provided object type is unknown and therefore cannot be parsed from a file
+    Creates a RootParser() and calls its parse_item() method
+    :param item_file_prefix:
+    :param item_type:
+    :param item_name_for_log:
+    :param file_mapping_conf:
+    :param lazy_parsing:
+    :param indent_str_for_log:
+    :return:
+    """
+    rp = RootParser()
+    return rp.parse_item(item_file_prefix, item_type, item_name_for_log, file_mapping_conf, lazy_parsing,
+                         indent_str_for_log)
+
+def parse_collection(item_file_prefix: str, collection_or_item_type: Type[T], item_name_for_log: str = None,
+                         file_mapping_conf: FileMappingConfiguration = None, lazy_parsing: bool = False,
+                         indent_str_for_log: str = None) -> Union[T, Dict[str, T], List[T], Set[T], Tuple[T]]:
+    """
+    Creates a RootParser() and calls its parse_collection() method
+    :param item_file_prefix:
+    :param collection_or_item_type:
+    :param item_name_for_log:
+    :param file_mapping_conf:
+    :param lazy_parsing:
+    :param indent_str_for_log:
+    :return:
+    """
+    rp = RootParser()
+    return rp.parse_collection(item_file_prefix, collection_or_item_type, item_name_for_log, file_mapping_conf,
+                               lazy_parsing, indent_str_for_log)
+
+class ObjectCannotBeParsedError(Exception):
+    """
+    Raised whenever an object can not be parsed - but there is a file present
     """
     def __init__(self, contents):
         """
@@ -29,10 +62,10 @@ class UnsupportedObjectTypeError(Exception):
 
         :param contents:
         """
-        super(UnsupportedObjectTypeError, self).__init__(contents)
+        super(ObjectCannotBeParsedError, self).__init__(contents)
 
     @staticmethod
-    def create(item_type: Type[Any]): # -> UnsupportedObjectTypeError:
+    def create(item_name: str, item_type: Type[Any], is_singlefile: bool, item_file_path: str):
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
         https://github.com/nose-devs/nose/issues/725
@@ -40,30 +73,30 @@ class UnsupportedObjectTypeError(Exception):
         :param item_type:
         :return:
         """
-        return UnsupportedObjectTypeError('No unitary file parser available for item type : ' + str(item_type) + '.')
-
-    @staticmethod
-    def create_with_details(item_name_for_log: str, item_file_prefix: str, item_type: Type[Any]):
-        """
-        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
-        https://github.com/nose-devs/nose/issues/725
-
-        :param item_name_for_log:
-        :param item_file_prefix:
-        :param item_type:
-        :return:
-        """
-        return UnsupportedObjectTypeError('Error while reading item ' + item_name_for_log + ' at ' + item_file_prefix
-                                          + '. No unitary file parser available for item type requested : ' + str(item_type)
-                                          + '. If this is a complex type, then you probably need to create one file or '
-                                            ' folder for each of its fields.')
-
+        if is_singlefile:
+            return ObjectCannotBeParsedError('The object \'' + item_name + '\' is present on file system as a '
+                                             'singlefile object at path \'' + item_file_path + '\' but cannot be '
+                                             'parsed because no parser is registered for this extension for object type'
+                                             ' \'' + item_type.__name__ + '\', and the extension present is not one of the '
+                                             'extensions that may be used for auto-parsing using a dictionary :'
+                                             + get_default_dict_parsers().keys() )
+        else:
+            return ObjectCannotBeParsedError('The object \'' + item_name + '\' is present on file system as a '
+                                             'multifile object at path \'' + item_file_path + '\' but cannot be parsed '
+                                             'because no multifile parser is registered for object type \''
+                                             + item_type.__name__)
 
 class ParsingChain(Generic[T]):
     """
     Represents a parsing chain, with a mandatory initial parser function and a list of converters.
+    The parser function may be
+    * a singlefile parser - in which case the file will be opened by the framework and the signature of the function
+    should be f(opened_file: TextIoBase) -> T
+    * a multifile parser - in which case the framework will not open the files and the signature of the function should
+    be f(multifile_path: str, file_ammping_conf: FileMappingConfiguration) -> T
     """
-    def __init__(self, item_type: Type[T], parser_function:Callable[[TextIOBase], T]):
+    def __init__(self, item_type: Type[T], parser_function:Union[Callable[[TextIOBase], T],
+                                                                 Callable[[str, FileMappingConfiguration], T]]):
         self._item_type = item_type
         self._parser_func = parser_function
         self._converters_list = []
@@ -89,10 +122,22 @@ class ParsingChain(Generic[T]):
 
     def parse_with_chain(self, file_object: TextIOBase) -> T:
         """
-        Utility method to parse using the parser and all converters in order
+        Utility method to parse using the parser and all converters in order.
         :return:
         """
         res = self._parser_func(file_object)
+        for converter_func in self._converters_list:
+            res = converter_func(res)
+        return res
+
+    def parse_multifile_with_chain(self, file_prefix: str, file_mapping_conf: FileMappingConfiguration):
+        """
+        Utility method to parse a multifile item using the parser and all converters in order
+        :param file_prefix:
+        :param file_mapping_conf:
+        :return:
+        """
+        res = self._parser_func(file_prefix, file_mapping_conf)
         for converter_func in self._converters_list:
             res = converter_func(res)
         return res
@@ -114,7 +159,7 @@ class ParsingException(Exception):
         super(ParsingException, self).__init__(contents)
 
     @staticmethod
-    def create(file_path: str, parsing_chain: ParsingChain[T], encoding: str, fun_args: list, fun_kwargs: dict, cause):
+    def create(file_path: str, parsing_chain: ParsingChain[T], encoding: str, cause):
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
         https://github.com/nose-devs/nose/issues/725
@@ -123,8 +168,7 @@ class ParsingException(Exception):
         :return:
         """
         return ParsingException('Error while parsing file at path \'' + file_path + '\' with encoding \'' + encoding
-                                + '\' and parser function \'' + str(parsing_chain)+ '\' '
-                                + 'with args : ' + str(fun_args) + 'and kwargs : ' + str(fun_kwargs) + '.\n'
+                                + '\' and parser function \'' + str(parsing_chain)+ '\'.\n'
                                 + str(cause))
 
 
@@ -205,10 +249,9 @@ class RootParser(object):
 
 
     def register_unitary_parser(self, object_type: Type[T], extension: str,
-                                extension_parser: Callable[[TextIOBase], T]):
+                                extension_parser: Union[Callable[[TextIOBase], T], Callable[[str, FileMappingConfiguration], T]]):
         """
         To register a single parsing function, for a single file extension, for a given object type
-
         :param object_type:
         :param extension:
         :param extension_parser:
@@ -216,6 +259,14 @@ class RootParser(object):
         """
         check_var(object_type, var_types=type)
         check_var(extension, var_types=str, min_len=1)
+
+        # Extension should either be 'multifile' or start with EXT_SEPARATOR and contain only one EXT_SEPARATOR
+        if not ((extension.startswith(EXT_SEPARATOR) and extension.count(EXT_SEPARATOR) == 1)
+                or extension is MULTIFILE_EXT):
+            raise ValueError('\'extension\' should either start with \'' + EXT_SEPARATOR + '\' and contain not other '
+                             'occurence of \'' + EXT_SEPARATOR + '\', or be equal to '
+                             '\'' + MULTIFILE_EXT + '\' (for multifile object parsing)')
+
         check_var(extension_parser, var_types=Callable)
 
         self.__types_lock.acquire()
@@ -231,8 +282,7 @@ class RootParser(object):
             self.__types_lock.release()
         return
 
-
-    def register_parsers_for_type(self, object_type:Type[T], extension_parsers:Dict[str, Callable[[TextIOBase], T]]):
+    def register_parsers_for_type(self, object_type:Type[T], extension_parsers:Dict[str, Union[Callable[[TextIOBase], T], Callable[[str, FileMappingConfiguration], T]]]):
         """
         Registers a new type, with associated extension parsers
 
@@ -248,8 +298,7 @@ class RootParser(object):
             self.register_unitary_parser(object_type, extension, extension_parser)
         return
 
-
-    def register_parsers(self, parsers:Dict[Type[T], Dict[str, Callable[[TextIOBase], T]]]):
+    def register_parsers(self, parsers:Dict[Type[T], Dict[str, Union[Callable[[TextIOBase], T], Callable[[str, FileMappingConfiguration], T]]]]):
         """
         Registers the provided parsers
         :param parsers:
@@ -262,46 +311,17 @@ class RootParser(object):
             self.register_parsers_for_type(object_type, extension_parsers)
         return
 
-
-    def get_parsers_copy(self) -> Dict[Type[T], Dict[str, Dict[str, Callable[[TextIOBase], T]]]]:
+    def get_parsers_copy(self) -> Dict[Type[T], Dict[str, Dict[str, Union[Callable[[TextIOBase], T], Callable[[str, FileMappingConfiguration], T]]]]]:
         """
         Returns a deep copy of the parsers dictionary
         :return:
         """
         return deepcopy(self.__parsers)
 
-
-    def get_parsers_for_type(self, item_type: Type[T]) -> Dict[str, Callable[[TextIOBase], T]]:
-        """
-        Utility method to return the parsers associated to a given type (a dictionary extension > parser)
-        Throws an UnsupportedObjectTypeError if not found
-
-        :param item_type:
-        :return: the dictionary of (extension, parsers) for the given type
-        """
-        check_var(item_type, var_types=type, var_name='item_type')
-        try:
-            # get exact match - throws KeyError if not found
-            return self.__parsers[item_type]
-        except KeyError as e:
-            raise UnsupportedObjectTypeError.create(item_type) from e
-
-            # DISABLED -  This automatic behavior may lead to confusion.
-            # # find a parser able to parse a parent type, but only if the desired type is not a reserved collection
-            # # (this is to prevent dict parsers (used for simple objects) to be used for Dict[str, Any]
-            # # (used for complex objects).
-            # if _is_multifile_collection(item_type):
-            #     raise UnsupportedObjectTypeError.create(item_type)
-            # else:
-            #     .
-            #     return RootParser._find_dict_entry_for_which_key_is_a_parent_class(item_type, self.__parsers)
-
-
-    def get_parsing_chains_for_type(self, item_type: Type[T], error_if_not_found: bool=True) \
+    def get_all_known_parsing_chains_for_type(self, item_type: Type[T]) \
             -> Dict[str, ParsingChain[T]]:
         """
         Utility method to return the parsing_chain associated to a given type. A dictionary extension > parsing_chain
-        Throws an UnsupportedObjectTypeError if no valid converter found
 
         :param item_type:
         :return: the dictionary of (source_type, converter) for the given type
@@ -317,7 +337,7 @@ class RootParser(object):
         try:
             converters_to_type = self.__converters[item_type]
             for source_type, converter in converters_to_type.items():
-                subchains = self.get_parsing_chains_for_type(source_type, error_if_not_found=False)
+                subchains = self.get_all_known_parsing_chains_for_type(source_type, error_if_not_found=False)
                 for ext, subchain in subchains.items():
                     if ext not in parsing_chains:
                         # add the chain to the result set (dont forget to add the converter)
@@ -330,11 +350,7 @@ class RootParser(object):
         except KeyError as e:
             pass
 
-        # throw error if empty, if requested
-        if error_if_not_found and len(parsing_chains) == 0:
-            raise UnsupportedObjectTypeError.create(item_type)
-        else:
-            return parsing_chains
+        return parsing_chains
 
 
     def get_all_known_parsing_chains(self):
@@ -343,31 +359,8 @@ class RootParser(object):
 
         :return:
         """
-        return {type: self.get_parsing_chains_for_type(type)
+        return {type: self.get_all_known_parsing_chains_for_type(type)
                 for type in list(self.__parsers.keys()) + list(self.__converters.keys())}
-
-
-    # @staticmethod
-    # def _find_dict_entry_for_which_key_is_a_parent_class(item_type: Type[Any], candidates_dict: Dict[Type[Any], Any]) \
-    #         -> Any:
-    #     """
-    #     Utility method to find a unique approximative match for a given item_type in a dictionary that contains types as
-    #     keys. A match will be a parent class of item_type. If several matches are found, an error will be raised
-    #
-    #     :param item_type:
-    #     :param candidates_dict:
-    #     :return:
-    #     """
-    #     compliant_types = [supported_type for supported_type in candidates_dict.keys() if
-    #                        issubclass(item_type, supported_type)]
-    #     if len(compliant_types) == 1:
-    #         return candidates_dict[compliant_types[0]]
-    #     elif len(compliant_types) > 1:
-    #         raise TypeError('No exact match found, but several registered parsers/converters exist that would '
-    #                         'fit requested type ' + str(item_type) + ' because they work for one of its parent '
-    #                                                                  'class. Unknown behaviour, exiting.')
-    #     else:
-    #         raise UnsupportedObjectTypeError.create(item_type)
 
 
     @staticmethod
@@ -388,7 +381,8 @@ class RootParser(object):
                                                                                    item_name_for_log,
                                                                                    indent_str_for_log)
 
-        file_mapping_conf = file_mapping_conf or FileMappingConfiguration()
+        # default to wrapped mode
+        file_mapping_conf = file_mapping_conf or WrappedFileMappingConfiguration()
         check_var(file_mapping_conf, var_types=FileMappingConfiguration, var_name='file_mapping_conf')
 
         check_var(lazy_parsing, var_types=bool, var_name='lazy_parsing')
@@ -427,7 +421,7 @@ class RootParser(object):
         item_name_for_main_log = ('<collection>' if item_name_for_log is '<item>' else item_name_for_log)
 
         # 1. Check the collection type and extract the base item type
-        base_collection_type = _find_typing_collection_class_or_none(collection_or_item_type)
+        base_collection_type = find_associated_typing_collection_class_or_none(collection_or_item_type)
         if base_collection_type is None:
             # default behaviour when a non-collection type is provided : return a dictionary
             item_type = collection_or_item_type
@@ -443,10 +437,7 @@ class RootParser(object):
                                str(collection_or_item_type) + ' collection at path ' + item_file_prefix)
 
         # list all items in the collection and get their paths
-        item_paths = _find_collectionobject_file_prefixes(item_file_prefix,
-                                                          flat_mode=file_mapping_conf.flat_mode,
-                                                          sep_for_flat=file_mapping_conf.sep_for_flat,
-                                                          item_name_for_log=item_name_for_main_log)
+        item_paths = file_mapping_conf.find_collectionobject_contents_file_occurrences(item_file_prefix)
 
         # create a dictionary item > content to store the results
         if lazy_parsing:
@@ -483,13 +474,10 @@ class RootParser(object):
         the character sequence <sep_for_flat>
 
         The parser uses the following algorithm to perform the parsing:
-        * First check if there is at least a registered parser for `item_type`. If so, try to parse the file at path
-        `item_file_prefix` with the parser corresponding to its file extension
-        * If the above did not succeed, check if there is at least a registered converter for `item_type`. If so, for
-        each converter available, get its source type, and try to parse the file at path `item_file_prefix` as this
-        source type using a registered parser if any.
-        * If the above did not succeed, use either the multi-file collection parser (if `item_type` is a collection)
-        or the multi-file complex object parser (if `item_type` is not a collection)
+        * First check if there is at least a registered parsing chain for `item_type`. If so, try to parse the file or
+        folder at path `item_file_prefix` with the parsing chain corresponding to its file extension
+        * If the above did not succeed, use either the collection parser (if `item_type` is a collection)
+        or the single-file or multi-file object parser (if `item_type` is not a collection)
 
         :param item_file_prefix:
         :param item_type:
@@ -507,65 +495,118 @@ class RootParser(object):
                                                                                           indent_str_for_log,
                                                                                           lazy_parsing)
 
-        try:
-            # 1. Try to parse with a registered parser and an optional parsing chain, if any
-            return self._parse_simple_item_with_registered_parsers(item_file_prefix, item_type, file_mapping_conf,
-                                                                   item_name_for_log, indent_str_for_log)
 
-        except (UnsupportedObjectTypeError, MandatoryFileNotFoundError) as e:
-            # this means that
-            # * no parser may be found for this type,
-            # * or that the file extensions required by the parsers were not found > we can fallback to default behaviour
+        # 1. Try to find and use registered parsing chains
+        parsing_chains = self.get_all_known_parsing_chains_for_type(item_type)
+        if len(parsing_chains) > 0:
             try:
-                # 2. Try to find a conversion path, then
-                # TODO this function should return one parsing_chain per extension, only
-                conversion_chain = self.get_parsing_chains_for_type(item_type)
-                # if we are here that means that there is at least a converter registered.
-                return parse_simple_item_with_parsing_chains(
+                return parse_singlefile_object_with_parsing_chains(
                     item_file_prefix,
                     item_type,
-                    conversion_chain,
+                    file_mapping_conf,
+                    parsing_chains,
                     item_name_for_log=item_name_for_log,
-                    indent_str_for_log=indent_str_for_log,
-                    encoding=file_mapping_conf.encoding)
-            except (UnsupportedObjectTypeError, MandatoryFileNotFoundError) as e:
-                # 3. Check if the item has a collection type. If so, redirects on the collection method.
-                if _is_multifile_collection(item_type):
-                    # parse collection
-                    return self.parse_collection(item_file_prefix, item_type, item_name_for_log=item_name_for_log,
-                                                 file_mapping_conf=file_mapping_conf, lazy_parsing=lazy_parsing,
-                                                 indent_str_for_log=indent_str_for_log)
-                else:
-                    # parse single item using constructor inference
-                    return self._parse_complex_item(item_file_prefix, item_type, item_name_for_log=item_name_for_log,
+                    indent_str_for_log=indent_str_for_log)
+            except ObjectNotFoundOnFileSystemError as e:
+                # A file with a compliant extension was not found. Continue because maybe the other parsers will work
+                RootParser.logger.info(
+                    indent_str_for_log + str(len(parsing_chains)) + ' Explicitly registered parsing chain(s) were found'
+                    ' for this type \'' + str(item_type.__name__) + '\' but no compliant file was found on the file system. '
+                    'Trying to use the appropriate default auto-parser (singlefile, multifile, collection) depending on '
+                    'what is found on the file system. For information, the registered parsing chain(s) are ' + str(parsing_chains))
+        else:
+            RootParser.logger.info(
+                indent_str_for_log + 'There was no explicitly registered parsing chain for this type \'' + str(item_type.__name__)
+                + '\'. Trying to use the appropriate default auto-parsers (singlefile, multifile, collection) depending '
+                  'on what is found on the file system')
+
+        # 2. Check if the item has a collection type. If so, redirects on the collection method.
+        if is_multifile_collection(item_type):
+            # parse collection
+            return self.parse_collection(item_file_prefix, item_type, item_name_for_log=item_name_for_log,
+                                         file_mapping_conf=file_mapping_conf, lazy_parsing=lazy_parsing,
+                                         indent_str_for_log=indent_str_for_log)
+        else:
+            # Check what kind of object is present on the filesystem with this prefix.
+            # This method throws exceptions if no file is found or the object is found multiple times (for example with
+            # several file extensions, or as a file AND a folder)
+            default_extensions = list(get_default_dict_parsers().keys()) + [MULTIFILE_EXT]
+            is_single_file, singlefile_ext, singlefile_path = find_unique_singlefile_or_multifile_object(
+                                                                                         item_file_prefix,
+                                                                                         item_type,
+                                                                                         file_mapping_conf,
+                                                                                         item_name_for_log,
+                                                                                         default_extensions)
+            if is_single_file:
+                # parse singlefile object using default dict parsers + constructor call
+                RootParser.logger.info(
+                    indent_str_for_log + 'No registered parser could be used, but a single file was found')
+                return self._parse_singlefile_object(item_file_prefix, item_type, item_name_for_log=item_name_for_log,
                                                     file_mapping_conf=file_mapping_conf, lazy_parsing=lazy_parsing,
                                                     indent_str_for_log=indent_str_for_log)
+            else:
+                # parse multifile object using constructor inference
+                return self._parse_multifile_object(item_file_prefix, item_type, item_name_for_log=item_name_for_log,
+                                                   file_mapping_conf=file_mapping_conf, lazy_parsing=lazy_parsing,
+                                                   indent_str_for_log=indent_str_for_log)
 
 
-    def _parse_simple_item_with_registered_parsers(self, item_file_prefix: str, item_type: Type[T],
-                                                   file_mapping_conf: FileMappingConfiguration = None,
-                                                   item_name_for_log: str = None, indent_str_for_log: str = None):
+    def _parse_singlefile_object(self, item_file_prefix: str, item_type: Type[T], item_name_for_log=None,
+                                file_mapping_conf: FileMappingConfiguration = None, lazy_parsing: bool = False,
+                                indent_str_for_log: str = None) -> T:
         """
-        Utility method to parse a simple item of type "item_type" using the registered parsers of this RootParser.
-        Exact match will be used first, otherwise a parser that is able to parse a parent class will be used, but only
-        if only one is available.
+        Helper method to read an object of type "item_type" from a file path, as a simple (single-file) object.
 
         :param item_file_prefix:
         :param item_type:
-        :param file_mapping_conf:
         :param item_name_for_log:
+        :param file_mapping_conf:
+        :param lazy_parsing:
         :param indent_str_for_log:
         :return:
         """
-        matching_parsers = self.get_parsers_for_type(item_type)  # throws an error if no parser found
-        return parse_simple_item_with_parsers(item_file_prefix, item_type, matching_parsers, item_name_for_log,
-                                              indent_str_for_log,
-                                              file_mapping_conf.encoding)  # throws an error if supported file extension not found
+
+        RootParser.logger.info(indent_str_for_log + 'Parsing singlefile object ' + str(item_name_for_log) + ' of type '
+                               + item_type.__name__ + ' at ' + item_file_prefix + '. This means *first* trying to parse it '
+                                                                              'as a dictionary, and *then* calling its '
+                                                                              'class constructor with the parsed '
+                                                                              'dictionary.')
+
+        try:
+            # 1. Try to find a configuration file that can be read as a "dictionary of dictionaries"
+            parsers = get_default_dict_of_dicts_parsers()
+            parsed_dict = parse_singlefile_object_with_parsers(item_file_prefix, dict,
+                                                               file_mapping_conf,
+                                                               parsers=parsers,
+                                                               item_name_for_log=item_name_for_log,
+                                                               indent_str_for_log=indent_str_for_log)
+
+            # 2. Then create an object by creating a simple object for each of its constructor attributes
+            return convert_dict_of_dicts_to_singlefile_object(parsed_dict, object_type=item_type)
+
+        except (ObjectNotFoundOnFileSystemError, InvalidAttributeNameError,
+                TypeInformationRequiredToBuildObjectError, TypeError) as e:
+            # All these errors may happen:
+            # * ObjectNotFoundOnFileSystemError if the object is present but in other extension
+            # * TypeError, InvalidAttributeNameError and TypeInformationRequiredToBuildObjectError if the file is a
+            # configuration file but it should be used in 'dict' mode, not 'dict of dicts'
+
+            # in all these cases, the other simple 'dict' parsers may be the desired behaviour, so let it go
+            pass
+
+        # 2. switch to the 'normal' dictionary parsers
+        parsers = get_default_dict_parsers()
+        parsed_dict = parse_singlefile_object_with_parsers(item_file_prefix, dict,
+                                                           file_mapping_conf,
+                                                           parsers=parsers,
+                                                           item_name_for_log=item_name_for_log,
+                                                           indent_str_for_log=indent_str_for_log)
+        return convert_dict_to_singlefile_object(parsed_dict, object_type=item_type)
 
 
-    def _parse_complex_item(self, item_file_prefix:str, item_type:Type[T], item_name_for_log=None,
-                            file_mapping_conf: FileMappingConfiguration = None, lazy_parsing: bool = False,
-                            indent_str_for_log: str = None) -> T:
+    def _parse_multifile_object(self, item_file_prefix:str, item_type:Type[T], item_name_for_log=None,
+                                file_mapping_conf: FileMappingConfiguration = None, lazy_parsing: bool = False,
+                                indent_str_for_log: str = None) -> T:
         """
         Helper method to read an object of type "item_type" from a file path, as a complex (multi-file) object.
         The constructor of the provided item_type is used to check the names and types of the attributes of the object,
@@ -597,28 +638,20 @@ class RootParser(object):
                                                                                           lazy_parsing)
 
         # 1. Check if the item has a collection type. If so, raise an error.
-        if _is_multifile_collection(item_type):
+        if is_multifile_collection(item_type):
             raise TypeError('Item ' + item_name_for_log + ' is a Collection-like object cannot be parsed with '
-                            'parse_single_item(). Found type ' + str(item_type))
-
+                            'parse_single_item(). Found type ' + item_type.__name__)
 
 
         # 2. Parse according to the mode.
-        # -- (a) first check that the file structure is correct
-        RootParser.logger.info(indent_str_for_log + 'Parsing multifile object ' + str(item_name_for_log) + ' of type '
-                               + str(item_type) + ' at ' + item_file_prefix)
-        check_complex_object_on_filesystem(item_file_prefix, file_mapping_conf, item_name_for_log)
+        RootParser.logger.info(indent_str_for_log + 'Parsing multifile object ' + item_name_for_log + ' of type '
+                               + item_type.__name__ + ' at \'' + item_file_prefix + '\'. This means trying to parse each '
+                               'attribute of its class constructor as a separate file.')
 
-        # -- (b) extract the schema from the class constructor
-        constructors = [f[1] for f in getmembers(item_type) if f[0] is '__init__']
-        if len(constructors) is not 1:
-            raise ValueError('Several constructors were found for class ' + str(item_type))
-        # extract constructor
-        constructor = constructors[0]
-        s = signature(constructor)
+        # -- (a) extract the schema from the class constructor
+        s = _get_constructor_signature(item_type)
 
-
-        # -- (c) parse each attribute required by the constructor
+        # -- (b) parse each attribute required by the constructor
         parsed_object = {} # results will be put in this object
         for attribute_name, param in s.parameters.items():
 
@@ -628,16 +661,15 @@ class RootParser(object):
             if attribute_name is 'self':
                 pass # nothing to do, this is not an attribute
             else:
-                attribute_file_prefix = _get_attribute_item_file_prefix(item_file_prefix, attribute_name,
-                                                                             flat_mode=file_mapping_conf.flat_mode,
-                                                                             sep_for_flat=file_mapping_conf.sep_for_flat)
+                attribute_file_prefix = file_mapping_conf.get_file_prefix_for_multifile_object_attribute(item_file_prefix,
+                                                                                                         attribute_name)
                 att_item_name_for_log = item_name_for_log + '.' + attribute_name
                 try:
                     parsed_object[attribute_name] = self.parse_item(attribute_file_prefix, attribute_type,
                                                                     item_name_for_log=att_item_name_for_log,
                                                                     file_mapping_conf=file_mapping_conf,
                                                                     indent_str_for_log=indent_str_for_log + '--')
-                except MandatoryFileNotFoundError as e:
+                except ObjectNotFoundOnFileSystemError as e:
                     if attribute_is_mandatory:
                         # raise the error only if the attribute was mandatory
                         raise e
@@ -646,64 +678,255 @@ class RootParser(object):
         return item_type(**parsed_object)
 
 
-
-def _extract_collection_base_type(object_type, base_collection_type, item_name_for_errors):
+def find_unique_singlefile_or_multifile_object(item_file_prefix: str, item_type: Type[Any],
+                                               file_mapping_conf: FileMappingConfiguration,
+                                               item_name_for_log: str, extensions_to_match: List[str]) \
+        -> Tuple[bool, str, str]:
     """
-    Utility method to extract the base item type from a collection/iterable item type. R
-    eturns None if the item type is not a collection, and throws an error if it is a collection but it uses the
-    base types instead of relying on the typing module (typing.List, etc.).
+    Utility method to find a unique singlefile or multifile object, matching one of the extensions provided.
+    This method throws
+    * ObjectNotFoundOnFileSystemError if no file is found
+    * ObjectPresentMultipleTimesOnFileSystemError if the object is found multiple times (for example with
+    several file extensions, or as a file AND a folder)
+    * ObjectCannotBeParsedError if the object is present once but not with an extension matching extensions_to_match
 
-    :param object_type:
-    :param base_collection_type:
-    :param item_name_for_errors:
+    :param item_file_prefix:
+    :param file_mapping_conf:
+    :param item_name_for_log:
+    :param extensions_to_match: the extensions that should be matched. If a single object file is found but its
+    extension does not match any of the provided ones, a ObjectCannotBeParsedError will be thrown.
+    :return: a tuple (bool, str, str). If a unique singlefile object is present this is set to [True, singlefile_ext,
+    singlefile_path] ; if a unique multifile object is present this is set to [False, MULTIFILE_EXT, None]
+    """
+    simpleobjects_found = file_mapping_conf.find_simpleobject_file_occurrences(item_file_prefix)
+    complexobject_attributes_found = file_mapping_conf.find_multifileobject_attribute_file_occurrences(
+        item_file_prefix)
+    if len(simpleobjects_found) > 1 or len(simpleobjects_found) == 1 and len(complexobject_attributes_found) > 0:
+        # the object is present several times ! error
+        raise ObjectPresentMultipleTimesOnFileSystemError.create(item_name_for_log, item_file_prefix,
+                                                                 simpleobjects_found +
+                                                                 complexobject_attributes_found)
+    elif len(simpleobjects_found) == 1:
+        is_single_file = True
+        ext = list(simpleobjects_found.keys())[0]
+        singlefile_object_file_path = simpleobjects_found[ext]
+        if ext not in extensions_to_match:
+            # a single file is there but is does not have the required extensions to be parsed automatically
+            raise ObjectCannotBeParsedError.create(item_name_for_log, item_type, is_single_file, singlefile_object_file_path)
+
+    elif len(complexobject_attributes_found) > 0:
+        is_single_file = False
+        ext = MULTIFILE_EXT
+        singlefile_object_file_path = None
+        if MULTIFILE_EXT not in extensions_to_match:
+            # a multifile is there but this was not requested
+            raise ObjectCannotBeParsedError.create(item_name_for_log, item_type, is_single_file,
+                                                   complexobject_attributes_found[MULTIFILE_EXT])
+
+    else:
+        # the object was not found in a form that can be parsed
+        raise ObjectNotFoundOnFileSystemError.create(item_name_for_log, item_file_prefix,
+                                                     simpleobjects_found.keys())
+    return is_single_file, ext, singlefile_object_file_path
+
+
+def parse_singlefile_object_with_parsing_chains(item_file_prefix: str, item_type: Type[Any],
+                                                file_mapping_conf: FileMappingConfiguration,
+                                                parsing_chains: Dict[str, ParsingChain[T]],
+                                                item_name_for_log, indent_str_for_log):
+    """
+    Utility function to parse a singlefile or multifile object with a bunch of available parsing chains
+    (a [extension > parsing_chain] dictionary, where a special extension denotes a multifile).
+    This method throws
+    * ObjectNotFoundOnFileSystemError if no file is found
+    * ObjectPresentMultipleTimesOnFileSystemError if the object is found multiple times (for example with
+    several file extensions, or as a file AND a folder)
+    * ObjectCannotBeParsedError if the object is present once but not with an extension matching extensions_to_match
+
+    :param item_file_prefix:
+    :param item_type:
+    :param file_mapping_conf:
+    :param parsing_chains:
+    :param item_name_for_log:
+    :param indent_str_for_log:
     :return:
     """
-    # default value, if no wrapper collection type is found
-    item_type = None
 
-    if base_collection_type is None:
-        return None
+    # 0. check all vars
+    indent_str_for_log, item_name_for_log = _check_common_vars_core(item_file_prefix, item_type,
+                                                                    item_name_for_log,
+                                                                    indent_str_for_log)
 
-    elif issubclass(object_type, Dict):
-        # Dictionary
-        # noinspection PyUnresolvedReferences
-        key_type, item_type = object_type.__args__
-        if key_type is not str:
-            raise TypeError(
-                'Item ' + item_name_for_errors + ' has type Dict, but the keys are of type ' + key_type + ' which '
-                                                                                                       'is not supported. Only str keys are supported')
-    elif issubclass(object_type, List) or issubclass(object_type, Set):
-        # List or Set
-        # noinspection PyUnresolvedReferences
-        item_type = object_type.__args__[0]
+    # validate that there is at least one parser, otherwise this method should not have been called !
+    check_var(parsing_chains, var_types=dict, var_name='parsers', min_len=1)
+    check_var(file_mapping_conf, var_types=FileMappingConfiguration, var_name='file_mapping_conf')
 
-    elif issubclass(object_type, Tuple):
-        # Tuple
-        # noinspection PyUnresolvedReferences
-        item_type = object_type.__args__[0]
-        raise TypeError('Tuple attributes are not supported yet')
+    # 1. Check what kind of object is present on the filesystem with this prefix, that could be read with the extensions
+    # supported by the parsers.
+    #
+    # This method throws exceptions if no file is found or the object is found multiple times (for example with
+    # several file extensions, or as a file AND a folder)
+    is_single_file, file_ext, singlefile_path = find_unique_singlefile_or_multifile_object(item_file_prefix,
+                                                                                 item_type,
+                                                                                 file_mapping_conf,
+                                                                                 item_name_for_log,
+                                                                                 parsing_chains.keys())
+    if is_single_file:
+        # parse this file and add to the result
+        parsing_chain = parsing_chains[file_ext]
+        RootParser.logger.info(indent_str_for_log + 'Parsing ' + item_name_for_log + ' of type <' +
+                               item_type.__name__ + '> as singlefile at ' + singlefile_path + ' with parsing chain '
+                               + str(parsing_chain))
+        return parse_single_file_with_parsing_chain(singlefile_path, parsing_chain, encoding=file_mapping_conf.encoding)
+    else:
+        # parse this file and add to the result
+        parsing_chain = parsing_chains[file_ext]
+        RootParser.logger.info(indent_str_for_log + 'Parsing ' + item_name_for_log + ' of type ' + item_type.__name__ +
+                               ' as multifile at ' + item_file_prefix + ' with parsing chain ' + str(parsing_chain))
+        return parse_multifile_with_parsing_chain(item_file_prefix, file_mapping_conf, parsing_chain)
 
-    elif issubclass(object_type, dict) or issubclass(object_type, list) \
-            or issubclass(object_type, tuple) or issubclass(object_type, set):
-        # unsupported collection types
-        raise TypeError('Found attribute type \'' + str(object_type) + '\'. Please use one of '
-                        'typing.Dict, typing.Set, typing.List, or typing.Tuple instead, in order to enable '
-                        'type discovery for collection items')
-    return item_type
+
+def parse_single_file_with_parsing_chain(file_path: str, parsing_chain: ParsingChain[T],
+                                         encoding: str = None) -> T:
+    """
+    Utility function to parse a single-file object from the provided path, using the provided parsing chain. If an
+    error happens during parsing it will be wrapped into a ParsingException
+
+    :param file_path:
+    :param parsing_chain:
+    :param encoding:
+    :return:
+    """
+
+    check_var(file_path, var_types=str, var_name='file_path')
+    check_var(parsing_chain, var_types=ParsingChain, var_name='parsing_chain')
+    encoding = encoding or 'utf-8'
+    check_var(encoding, var_types=str, var_name='encoding')
+
+    f = None
+    try:
+        # Open the file with the appropriate encoding
+        f = open(file_path, 'r', encoding=encoding)
+
+        # Apply the parsing function
+        return parsing_chain.parse_with_chain(f)
+
+    except Exception as e:
+        # Wrap into a ParsingException
+        raise ParsingException.create(file_path, parsing_chain, encoding, e)\
+            .with_traceback(e.__traceback__) # 'from e' was hiding the inner traceback. This is much better for debug
+    finally:
+        if f is not None:
+            # Close the File in any case
+            f.close()
 
 
-def _is_multifile_collection(object_type):
+def parse_multifile_with_parsing_chain(file_prefix: str, file_mapping_conf: FileMappingConfiguration,
+                                       parsing_chain: ParsingChain[T]) -> T:
+    """
+    In this method the parsing chain is used to parse the multifile object file_prefix. Therefore the parsing chain
+    is responsible to open/close the files
+
+    :param file_prefix:
+    :param file_mapping_conf:
+    :param parsing_chain:
+    :return:
+    """
+    return parsing_chain.parse_multifile_with_chain(file_prefix, file_mapping_conf)
+
+
+def parse_singlefile_object_with_parsers(item_file_prefix: str, item_type: Type[Any],
+                                         file_mapping_conf: FileMappingConfiguration,
+                                         parsers: Dict[str, Union[Callable[[TextIOBase], T],
+                                                                  Callable[[str, FileMappingConfiguration], T]]],
+                                         item_name_for_log, indent_str_for_log):
+    """
+    Utility function to parse a singlefile object with a bunch of available parsers (a [extension > function] dictionary).
+    It will look if the file is present with a SINGLE supported extension, and parse with the associated parser if it
+    is the case.
+
+    :param item_file_prefix:
+    :param item_type:
+    :param file_mapping_conf:
+    :param parsers:
+    :param item_name_for_log:
+    :param indent_str_for_log:
+    :return:
+    """
+
+    # First transform all parser functions into parsing chains
+    parsing_chains = {ext: ParsingChain(item_type, parser_function) for ext, parser_function in parsers.items()}
+
+    # Then use the generic method with parsing chains
+    return parse_singlefile_object_with_parsing_chains(item_file_prefix, item_type, file_mapping_conf,
+                                                       parsing_chains, item_name_for_log, indent_str_for_log)
+
+
+def parse_single_file_object_with_parser_function(file_path:str, item_type: Type[T],
+                                                  parser_function:Callable[[TextIOBase], T],
+                                                  encoding:str= None, *args, **kwargs) -> T:
+    """
+    A function to execute a given parsing function on a file path while handling the close() properly.
+    Made public so that users may directly try with their parser functions on a single file.
+
+    :param file_path:
+    :param parser_function:
+    :param encoding:
+    :param args:
+    :param kwargs:
+    :return:
+    """
+    check_var(parser_function, var_types=Callable, var_name='parser_function')
+    return parse_single_file_with_parsing_chain(file_path, ParsingChain(item_type, parser_function),
+                                                encoding=encoding, *args, **kwargs)
+
+
+# def get_singlefile_object_parser(object_type: Type[T]) -> RootParser:
+#     """
+#     Convenience method to create a parser ready to parse the singlefile object type provided, from supported dict files
+#
+#     :param object_type:
+#     :return:
+#     """
+#     rp = RootParser()
+#
+#     def convert_dict_to_singlefile_typed_object(dict) -> T:
+#         return convert_dict_to_singlefile_object(dict, object_type=object_type)
+#
+#     rp.register_converter(dict, object_type, convert_dict_to_singlefile_typed_object)
+#     return rp
+
+
+def _check_common_vars_core(item_file_prefix, item_type, item_name_for_log, indent_str_for_log):
+    """
+    Utility method to check all these variables and apply defaults
+    :param item_file_prefix:
+    :param item_type:
+    :param item_name_for_log:
+    :param indent_str_for_log:
+    :return:
+    """
+    check_var(item_file_prefix, var_types=str, var_name='item_path')
+    check_var(item_type, var_types=type, var_name='item_type')
+    item_name_for_log = item_name_for_log or '<item>'
+    check_var(item_name_for_log, var_types=str, var_name='item_name')
+    indent_str_for_log = indent_str_for_log or ''
+    check_var(indent_str_for_log, var_types=str, var_name='indent_str_for_log')
+
+    return indent_str_for_log, item_name_for_log
+
+
+def is_multifile_collection(object_type):
     """
     Utility method to check if a type is a subclass of typing.{List,Dict,Set,Tuple}.
 
     :param object_type:
     :return:
     """
-    return _find_typing_collection_class_or_none(object_type) is not None
+    return find_associated_typing_collection_class_or_none(object_type) is not None
 
 
-
-def _find_typing_collection_class_or_none(object_type):
+def find_associated_typing_collection_class_or_none(object_type):
     """
     Utility method to check if a type is a subclass of typing.{List,Dict,Set,Tuple}. In that case returns the parent
      type, otherwise returns None. Note that '_find_typing_collection_or_none(dict)' will return None since dict is not
@@ -731,161 +954,223 @@ def _find_typing_collection_class_or_none(object_type):
         # a typing subclass that is not a collection.
         return None
 
-def parse_simple_item_with_parsers(item_file_prefix, item_type, parsers: Dict[str, Callable[[TextIOBase], T]],
-                                   item_name_for_log, indent_str_for_log, encoding):
-    """
-    Utility function to parse a simple item with a bunch of available parsers (a [extension > function] dictionary).
-    It will look if the file is present with a SINGLE supported extension, and parse with the associated parser if it
-    is the case.
 
-    :param item_file_prefix:
-    :param item_type:
-    :param parsers:
-    :param item_name_for_log:
-    :param indent_str_for_log:
-    :param encoding:
+def _extract_collection_base_type(object_type, base_collection_type, item_name_for_errors):
+    """
+    Utility method to extract the base item type from a collection/iterable item type. R
+    eturns None if the item type is not a collection, and throws an error if it is a collection but it uses the
+    base types instead of relying on the typing module (typing.List, etc.).
+
+    :param object_type:
+    :param base_collection_type:
+    :param item_name_for_errors:
     :return:
     """
+    # default value, if no wrapper collection type is found
+    item_type = None
 
-    # First transform all parser functions into parsing chains
-    parsing_chains = {ext: ParsingChain(item_type, parser_function) for ext, parser_function in parsers.items()}
+    if base_collection_type is None:
+        return None
 
-    # Then use the generic method with parsing chains
-    return parse_simple_item_with_parsing_chains(item_file_prefix, item_type, parsing_chains, item_name_for_log,
-                                                 indent_str_for_log, encoding)
+    elif issubclass(object_type, Dict):
+        # Dictionary
+        # noinspection PyUnresolvedReferences
+        key_type, item_type = object_type.__args__
+        if key_type is not str:
+            raise TypeError(
+                'Item ' + item_name_for_errors + ' has type Dict, but the keys are of type ' + key_type + ' which '
+                                                                                                          'is not supported. Only str keys are supported')
+    elif issubclass(object_type, List) or issubclass(object_type, Set):
+        # List or Set
+        # noinspection PyUnresolvedReferences
+        item_type = object_type.__args__[0]
+
+    elif issubclass(object_type, Tuple):
+        # Tuple
+        # noinspection PyUnresolvedReferences
+        item_type = object_type.__args__[0]
+        raise TypeError('Tuple attributes are not supported yet')
+
+    elif issubclass(object_type, dict) or issubclass(object_type, list) \
+            or issubclass(object_type, tuple) or issubclass(object_type, set):
+        # unsupported collection types
+        raise TypeError('Found attribute type \'' + str(object_type) + '\'. Please use one of '
+                                                                       'typing.Dict, typing.Set, typing.List, or typing.Tuple instead, in order to enable '
+                                                                       'type discovery for collection items')
+    return item_type
 
 
-def parse_simple_item_with_parsing_chains(item_file_prefix, item_type, parsers: Dict[str, ParsingChain[T]],
-                                   item_name_for_log, indent_str_for_log, encoding):
+def _get_constructor_signature(item_type):
+    constructors = [f[1] for f in getmembers(item_type) if f[0] is '__init__']
+    if len(constructors) is not 1:
+        raise ValueError('Several constructors were found for class ' + item_type.__name__)
+    # extract constructor
+    constructor = constructors[0]
+    s = signature(constructor)
+    return s
+
+
+class InvalidAttributeNameError(Exception):
     """
-    Utility function to parse a simple item with a bunch of available parsing chains (a [extension > parsing_chain]
-    dictionary). It will look if the file is present with a SINGLE supported extension, and parse with the associated
-    parsing chain if it is the case.
-
-    :param item_file_prefix:
-    :param item_type:
-    :param parsers:
-    :param item_name_for_log:
-    :param indent_str_for_log:
-    :param encoding:
-    :return:
+    Raised whenever an object can not be parsed - but there is a file present
     """
+    def __init__(self, contents):
+        """
+        We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+        That's why we have a helper static method create()
 
-    # 0. check all vars
-    indent_str_for_log, item_name_for_log = _check_common_vars_core(item_file_prefix, item_type,
-                                                                    item_name_for_log,
-                                                                    indent_str_for_log)
+        :param contents:
+        """
+        super(InvalidAttributeNameError, self).__init__(contents)
 
-    # 1. Check that there is no folder with that name
-    if isdir(item_file_prefix):
-        raise FolderAndFilesStructureError('Error parsing item ' + item_name_for_log + ' with registered parsers. '
-                                           'Item file prefix ' + item_file_prefix + ' is a folder !')
+    @staticmethod
+    def create(item_type: Type[Any], constructor_atts: List[str], invalid_property_name: str):
+        """
+        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
 
-    # 2. Find files that can be parsed with one of the provided parsing chains
-    #
-    # -- list all possible file names that *could* be parsed, according to supported extensions
-    possible_files = {item_file_prefix + ext: ext for ext in parsers.keys()}
-    #
-    # -- find all the ones that *actually* exist on the file system
-    found_files = {file_path: ext for file_path, ext in possible_files.items() if
-                   isfile(file_path)}
-
-    # 2. Parse only if a *unique* file has been found, otherwise throw errors
-    if len(found_files) is 1:
-        # parse this file and add to the result
-        file_path, file_ext = list(found_files.items())[0]
-        parsing_chain = parsers[file_ext]
-        RootParser.logger.info(indent_str_for_log + 'Parsing ' + item_name_for_log + ' of type ' + str(item_type) +
-                               ' at ' + file_path + ' with parsing chain ' + str(parsing_chain))
-        return parse_file_as_simple_item_with_parsing_chain(file_path, parsing_chain, encoding=encoding)
-
-    elif len(found_files) is 0:
-        # item is mandatory and no compliant file was found : error
-        raise MandatoryFileNotFoundError.create(item_name_for_log, item_file_prefix, list(parsers.keys()))
-
-    else:
-        # the file is present several times with various extensions
-        raise MultipleFilesError.create(item_name_for_log, item_file_prefix, list(found_files.values()))
+        :param item_type:
+        :return:
+        """
+        return InvalidAttributeNameError('Cannot parse object of type <' + item_type + '> using the provided '
+                                         'configuration file: configuration contains a property name (\''
+                                         + invalid_property_name + '\') that is not an attribute of the object '
+                                         'constructor. <' + item_type + '> constructor attributes are : '
+                                         + str(constructor_atts))
 
 
-def parse_file_as_simple_item_with_parsing_chain(file_path: str, parsing_chain: ParsingChain[T],
-                                                 encoding: str = 'utf-8', *args, **kwargs) -> T:
+class TypeInformationRequiredToBuildObjectError(Exception):
     """
-    Utility function to parse a single file
-
-    :param file_path:
-    :param parsing_chain:
-    :param encoding:
-    :param args:
-    :param kwargs:
-    :return:
+    Raised whenever an object can not be parsed - but there is a file present
     """
-    global f
-    check_var(file_path, var_types=str, var_name='file_path')
-    check_var(parsing_chain, var_types=ParsingChain, var_name='parsing_chain')
+    def __init__(self, contents):
+        """
+        We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+        That's why we have a helper static method create()
 
-    try:
-        # Open the file with the appropriate encoding
-        f = open(file_path, 'r', encoding=encoding)
+        :param contents:
+        """
+        super(TypeInformationRequiredToBuildObjectError, self).__init__(contents)
 
-        # Apply the parsing function
-        return parsing_chain.parse_with_chain(f, *args, **kwargs)
-    except Exception as e:
-        raise ParsingException.create(file_path, parsing_chain, encoding, args,
-                                      kwargs, e) from e
-    finally:
-        f.close()
+    @staticmethod
+    def create(item_type: Type[Any], faulty_attribute_name: str):
+        """
+        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+
+        :param item_type:
+        :return:
+        """
+        return TypeInformationRequiredToBuildObjectError('Cannot parse object of type <' + item_type + '> using a '
+                                                         'configuration file as a \'dictionary of dictionaries\': '
+                                                         'attribute \'' + faulty_attribute_name + '\' has no valid '
+                                                         'PEP484 type hint.')
 
 
-def parse_file_as_simple_item_with_parser_function(file_path:str, item_type: Type[T],
-                                                   parser_function:Callable[[TextIOBase], T],
-                                                   encoding:str= 'utf-8', *args, **kwargs) -> T:
+def convert_dict_to_singlefile_object(parsed_dict: Dict[str, Any], object_type: Type[Any]) -> Any:
     """
-    A function to execute a given parsing function on a file path while handling the close() properly.
-    Made public so that users may directly try with their parser functions on a single file.
+    Utility method to create an object from a dictionary
 
-    :param file_path:
-    :param parser_function:
-    :param encoding:
-    :param args:
-    :param kwargs:
-    :return:
-    """
-    check_var(parser_function, var_types=Callable, var_name='parser_function')
-    return parse_file_as_simple_item_with_parsing_chain(file_path, ParsingChain(item_type, parser_function),
-                                                          encoding=encoding, *args, **kwargs)
-
-
-def get_simple_object_parser(object_type: Type[T]) -> RootParser:
-    """
-    Convenience method to create a parser ready to parse the simple object type provided, from supported dict files
-
+    :param parsed_dict:
     :param object_type:
     :return:
     """
-    rp = RootParser()
+    check_var(object_type, var_types=type, var_name=object_type)
+    try:
+        # check constructor signature
+        s = _get_constructor_signature(object_type)
 
-    def convert_dict_to_simple_typed_object(dict) -> T:
-        return convert_dict_to_simple_object(dict, object_type=object_type)
+        # for each attribute, convert the types of its parsed values if required
+        dict_for_init = dict()
+        for attr_name, parsed_attr_value in parsed_dict.items():
+            if attr_name in s.parameters.keys():
+                attribute_type = s.parameters[attr_name].annotation
+                dict_for_init[attr_name] = try_convert_attribute_value_to_correct_type(object_type, attribute_type,
+                                                                                       parsed_attr_value)
+            else:
+                # the dictionary entry does not correspond to a valid attribute of the object
+                raise InvalidAttributeNameError.create(object_type, list(s.parameters.keys()), attr_name)
 
-    rp.register_converter(dict, object_type, convert_dict_to_simple_typed_object)
-    return rp
+        # create the object using its constructor
+        return object_type(**dict_for_init)
+
+    except TypeError as e:
+        warn('Error while trying to instantiate object of type ' + str(object_type) + ' using dictionary input_dict :')
+        print_dict('input_dict', parsed_dict)
+        raise e
 
 
-def _check_common_vars_core(item_file_prefix, item_type, item_name_for_log, indent_str_for_log):
+def convert_dict_of_dicts_to_singlefile_object(parsed_dict: Dict[str, Any], object_type: Type[Any]) -> Any:
     """
-    Utility method to check all these variables and apply defaults
-    :param item_file_prefix:
-    :param item_type:
-    :param item_name_for_log:
-    :param indent_str_for_log:
+    Utility method to create an object from a dictionary of dictionaries. The keys of the first dictionary should be
+    attribute names of the object constructor, and their types should be available through annotations.
+
+    :param parsed_dict:
+    :param object_type:
     :return:
     """
-    check_var(item_file_prefix, var_types=str, var_name='item_path')
-    check_var(item_type, var_types=type, var_name='item_type')
-    item_name_for_log = item_name_for_log or '<item>'
-    check_var(item_name_for_log, var_types=str, var_name='item_name')
-    indent_str_for_log = indent_str_for_log or ''
-    check_var(indent_str_for_log, var_types=str, var_name='indent_str_for_log')
+    try:
+        # check constructor signature
+        s = _get_constructor_signature(object_type)
 
-    return indent_str_for_log, item_name_for_log
+        # for each attribute, create the object corresponding to its type
+        dict_for_init = dict()
+        for attr_name, parsed_attr_dict in parsed_dict.items():
+            if attr_name in s.parameters.keys():
+                attribute_type = s.parameters[attr_name].annotation
+                if type(attribute_type) is not type:
+                    raise TypeInformationRequiredToBuildObjectError.create(object_type, attr_name)
+                dict_for_init[attr_name] = convert_dict_to_singlefile_object(parsed_attr_dict, attribute_type)
+            else:
+                # the dictionary entry does not correspond to a valid attribute of the object
+                raise InvalidAttributeNameError.create(object_type, list(s.parameters.keys()), attr_name)
+
+        # create the object using its constructor
+        return object_type(**dict_for_init)
+
+    except TypeError as e:
+        warn('Error while trying to instantiate object of type ' + str(object_type) + ' using dictionary input_dict :')
+        print_dict('input_dict', parsed_dict)
+        raise e
+
+def try_convert_attribute_value_to_correct_type(object_type: Type[Any], attribute_type: Type[Any],
+                                                parsed_attr_value: Any):
+    """
+    Utility method to try to convert the provided attribute value to the correct type
+
+    :param object_type:
+    :param attribute_type:
+    :param parsed_attr_value:
+    :return:
+    """
+    if type(attribute_type) == type:
+        if not isinstance(parsed_attr_value, attribute_type):
+            # try to convert the type by simply casting
+            # TODO rather use the parsing chains
+            res = attribute_type(parsed_attr_value)
+        else:
+            # we can safely use the value: it is already of the correct type
+            res = parsed_attr_value
+    else:
+        warn('Constructor for type \'' + str(object_type) + '\' has no PEP484 Type hint, trying to use the '
+                                                            'parsed value in the dict directly')
+        res = parsed_attr_value
+    return res
+
+
+def print_dict(dict_name, dict_value):
+    """
+    Utility method to print a named dictionary
+
+    :param dict_name:
+    :param dict_value:
+    :return:
+    """
+    print(dict_name + ' = ')
+    try:
+        from pprint import pprint
+        pprint(dict_value)
+    except:
+        print(dict_value)

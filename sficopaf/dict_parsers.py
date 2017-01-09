@@ -1,7 +1,6 @@
 from io import StringIO
 from io import TextIOBase
-from typing import Dict, Union, Type, Any
-from warnings import warn
+from typing import Dict, Any, List
 
 from sficopaf.var_checker import check_var
 
@@ -19,49 +18,94 @@ def get_default_dict_parsers():
         '.txt': read_dict_from_properties
     }
 
-class NoConfigSectionError(Exception):
-    """ This is raised whenever a configuration section does not exist in a config object.
-    Like configparser.NoConfigSection but with a free error message."""
 
-
-def read_dict_from_config(file_object: TextIOBase, config_section_name: str = None) \
-        -> Union[Dict[str, Any], Dict[str, Dict[str, Any]]]:
+def get_default_dict_of_dicts_parsers():
     """
-    Helper method to read a configuration file according to the 'configparser' format,
-    and return it as a dictionary. If a configuration section name is
-    provided in this method (you'll have to create a wrapper method with it set to a value),
-    only the contents of the required section will be returned, as a dictionary.
-    Otherwise a dictionary of dictionaries will be returned
+    Utility method to return the default parsers for 'dictionary of dictionary' type
+    :return:
+    """
+    return {
+        '.cfg': read_dict_of_dicts_from_config,
+        '.ini': read_dict_of_dicts_from_config,
+    }
+
+
+class MultipleKeyOccurenceInConfigurationError(Exception):
+    """
+    Raised whenever a configuration file is being read as a 'flat' dictionary (merging all sections into one dict) but
+    the same key appears in several sections
+    """
+    def __init__(self, contents):
+        """
+        We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+        That's why we have a helper static method create()
+
+        :param contents:
+        """
+        super(MultipleKeyOccurenceInConfigurationError, self).__init__(contents)
+
+    @staticmethod
+    def create(key_name: str, sections: List[str]): # -> ObjectCannotBeParsedError:
+        """
+        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+
+        :param item_type:
+        :return:
+        """
+        return MultipleKeyOccurenceInConfigurationError('Cannot read the provided config file as a flat dictionary : '
+                                                        'key \'' + key_name + '\' appears several times, in sections'
+                                                                              '\'' + sections + '\'.')
+
+
+def read_dict_of_dicts_from_config(file_object: TextIOBase) -> Dict[str, Dict[str, Any]]:
+    """
+    Helper method to read a configuration file according to the 'configparser' format, and return it as a dictionary
+    of dictionaries (section > [property > value])
 
     :param file_object:
-    :param config_section_name: optional configuration section name to return
     :return:
     """
     check_var(file_object, var_types=TextIOBase, var_name='file_object')
-    check_var(config_section_name, var_types=str, var_name='config_section_name', enforce_not_none=False)
 
     # lazy import configparser
     # see https://docs.python.org/3/library/configparser.html for details
     from configparser import ConfigParser
     config = ConfigParser()
     config.read_file(file_object)
-    sections = config.sections()
 
-    # convert the whole config to a dictionary of dictionaries
-    config_as_dict = {
-        section_name: {key: config[config_section_name][key] for key in config[config_section_name].keys()} for
-        section_name in
-        config.sections()}
+    return dict(config)
 
-    # return the required section or the whole configuration
-    if config_section_name is None:
-        return config_as_dict
-    else:
-        if config_section_name in config_as_dict.keys():
-            return config_as_dict[config_section_name]
-        else:
-            raise NoConfigSectionError('Unknown configuration section : ' + config_section_name
-                                       + '. Available section names are ' + str(config_as_dict.keys()))
+
+def read_dict_from_config(file_object: TextIOBase) \
+        -> Dict[str, Any]:
+    """
+    Helper method to read a configuration file according to the 'configparser' format, and return it as a dictionary
+    [property > value]. Properties from all sections are collected. If the same key appears in several sections, an
+    error will be thrown
+
+    :param file_object:
+    :return:
+    """
+    check_var(file_object, var_types=TextIOBase, var_name='file_object')
+
+    # lazy import configparser
+    # see https://docs.python.org/3/library/configparser.html for details
+    from configparser import ConfigParser
+    config = ConfigParser()
+    config.read_file(file_object)
+
+    # convert the whole config to a dictionary by flattening all sections
+    results = dict()
+    for section, props in config.items():
+        for key, value in props.items():
+            if key in results.keys():
+                raise MultipleKeyOccurenceInConfigurationError.create()
+            else:
+                results[key] = value
+    return results
+
 
 
 def read_dict_from_csv(file_object: TextIOBase) -> Dict[str, str]:
@@ -110,24 +154,3 @@ def read_dict_from_json(file_object: TextIOBase) -> Dict[str, Any]:
     jsonStr = StringIO(file_object).getvalue()
     import json
     return json.loads(jsonStr)
-
-
-def convert_dict_to_simple_object(input_dict: Dict[str, Any], object_type: Type[Any]) -> Any:
-    """
-    Utility method to create an object from a dictionary
-
-    :param input_dict:
-    :param object_type:
-    :return:
-    """
-    try:
-        return object_type(**input_dict)
-    except TypeError as e:
-        warn('Error while trying to instantiate object of type ' + str(object_type) + ' using dictionary input_dict :')
-        print('input_dict = ')
-        try:
-            from pprint import pprint
-            pprint(input_dict)
-        except:
-            print(input_dict)
-        raise e
