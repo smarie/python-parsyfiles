@@ -5,6 +5,21 @@ from typing import Dict, Any, List
 from sficopaf.var_checker import check_var
 
 
+def get_default_collection_parsers():
+    a = get_default_dict_parsers()
+    a.update(get_default_list_and_set_parsers())
+    return a
+
+def get_default_list_and_set_parsers():
+    """
+    Utility method to return the default parsers for list and set types
+    :return:
+    """
+    #TODO
+    return {
+
+    }
+
 def get_default_dict_parsers():
     """
     Utility method to return the default parsers for dictionary type

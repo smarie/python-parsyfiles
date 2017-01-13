@@ -53,7 +53,7 @@ class ObjectPresentMultipleTimesOnFileSystemError(Exception):
 
 class ObjectNotFoundOnFileSystemError(FileNotFoundError):
     """
-    Raised whenever a given attribute is missing in the filesystem (no supported extensions found)
+    Raised whenever a given object is missing on the filesystem (no singlefile or multifile found)
     """
 
     def __init__(self, contents: str):
@@ -101,26 +101,14 @@ class FileMappingConfiguration(metaclass=ABCMeta):
         self.encoding = encoding or 'utf-8'
 
 
-    def is_present_as_collection_object(self, item_file_prefix: str) -> bool:
-        """
-        Implementing classes should return True if an item with this item_file_prefix is present as a collection object,
-        or False otherwise
-
-        :param item_file_prefix:
-        :return:
-        """
-        return len(self.find_collectionobject_contents_file_occurrences(item_file_prefix)) > 0
-
-
     @abstractmethod
-    def find_collectionobject_contents_file_occurrences(self, item_file_prefix: str) -> Dict[str, str]:
+    def find_multifileobject_contents(self, item_file_prefix: str) -> Dict[str, str]:
         """
         Implementing classes should return a dictionary of <item_name>, <item_prefix> containing the named elements
         in this collection.
 
-        :param item_file_prefix: the absolute file prefix of the parent item. it may be a folder (non-flat mode)
-        or a folder + a file name prefix (flat mode)
-        :return: a dictionary of <item_name>, <item_prefix>
+        :param item_file_prefix: the absolute file prefix of the parent item.
+        :return: a dictionary of {item_name : item_prefix}
         """
         raise NotImplementedError('Function \'find_collectionobject_contents_file_occurrences\' is not implemented in this '
                                   'abstract base class')
@@ -134,19 +122,19 @@ class FileMappingConfiguration(metaclass=ABCMeta):
         :param item_file_prefix:
         :return:
         """
-        return len(self.find_multifileobject_attribute_file_occurrences(item_file_prefix)) > 0
+        return len(self.find_multifileobject_contents(item_file_prefix)) > 0
 
 
-    @abstractmethod
-    def find_multifileobject_attribute_file_occurrences(self, item_file_prefix) -> List[str]:
-        """
-        Implementing classes should return a list of attribute <item_file_prefix> for the attributes found
-
-        :param item_file_prefix:
-        :return:
-        """
-        raise NotImplementedError('Function \'find_multifileobject_attribute_file_occurrences\' is not implemented in this '
-                                  'abstract base class')
+    # @abstractmethod
+    # def find_multifileobject_attribute_file_occurrences(self, item_file_prefix) -> List[str]:
+    #     """
+    #     Implementing classes should return a list of attribute <item_file_prefix> for the attributes found
+    #
+    #     :param item_file_prefix:
+    #     :return:
+    #     """
+    #     raise NotImplementedError('Function \'find_multifileobject_attribute_file_occurrences\' is not implemented in this '
+    #                               'abstract base class')
 
 
     @abstractmethod
@@ -181,7 +169,7 @@ class FileMappingConfiguration(metaclass=ABCMeta):
         extension.
 
         :param item_file_prefix:
-        :return:
+        :return: a dictionary of {ext : file_path}
         """
         raise NotImplementedError('Function \'find_simpleobject_file_occurrences\' is not implemented in this '
                                   'abstract base class')
@@ -195,53 +183,40 @@ class WrappedFileMappingConfiguration(FileMappingConfiguration):
         super(WrappedFileMappingConfiguration, self).__init__(encoding=encoding)
 
 
-    def find_collectionobject_contents_file_occurrences(self, item_file_prefix) -> Dict[str, str]:
+    def find_multifileobject_contents(self, item_file_prefix) -> Dict[str, str]:
         """
         Utility method to list all sub-items of a given parent item.
-        In this mode, root_path should be a valid folder, and each item is a subfolder.
+        In this mode, root_path should be a valid folder, and each item is a subfolder or a file :
+
+            item_file_prefix/
+            |-singlefile_sub_item1.<ext>
+            |-singlefile_sub_item2.<ext>
+            |-multifile_sub_item3/
+              |- ...
 
         :param parent_item_prefix: the absolute file prefix of the parent item. it may be a folder (non-flat mode)
         or a folder + a file name prefix (flat mode)
-        :return: a dictionary of <item_name>, <item_path>
+        :return: a dictionary of {item_name : item_prefix}
         """
 
         # Assert that folder_path is a folder
         if not isdir(item_file_prefix):
-            # # try to check if this is a missing item or a structure problem
-            # files_with_that_prefix = [f for f in listdir(dirname(item_file_prefix)) if
-            #                           f.startswith(basename(item_file_prefix))]
-            # if len(files_with_that_prefix) > 0:
-            #     raise FolderAndFilesStructureError('Cannot parse collection object ' + (item_name_for_log or '')
-            #                                        + ' : we are in non-flat (=folders) mode, and item path is not a'
-            #                                          ' folder : ' + item_file_prefix + '. Either change the data '
-            #                                                                            'type to a non-iterable one, or create a folder to contain the '
-            #                                                                            'various items in the iteration. Alternatively you may wish to '
-            #                                                                            'use the flat mode to make all files stay in the same root '
-            #                                                                            'folder')
-            # else:
-            #     raise ObjectNotFoundOnFileSystemError.create('', item_file_prefix, list())
             return dict()
 
         else:
             # List folders (multifile objects or collections)
-            onlyfolders = [f for f in listdir(item_file_prefix) if isdir(join(item_file_prefix, f))]
-            item_paths = {item: join(item_file_prefix, item) for item in onlyfolders}
+            all_subfolders = [dir_ for dir_ in listdir(item_file_prefix) if isdir(join(item_file_prefix, dir_))]
+            items = {item_name: join(item_file_prefix, item_name) for item_name in all_subfolders}
 
-            # List files without their extension (singlefile objects)
-            item_paths.update({
-                                  f[0:f.rindex(EXT_SEPARATOR)]: join(item_file_prefix, f[0:f.rindex(EXT_SEPARATOR)])
-                                  for f in listdir(item_file_prefix) if isfile(join(item_file_prefix, f))
-                                                                     and EXT_SEPARATOR in f
-                              })
-
-        return item_paths
-
-
-    def find_multifileobject_attribute_file_occurrences(self, item_file_prefix) -> List[str]:
-        if isdir(item_file_prefix):
-            return [item_file_prefix]
-        else:
-            return []
+            # List files *without* their extension
+            items.update({
+                          item_name: join(item_file_prefix, item_name)
+                          for item_name in [file_name[0:file_name.rindex(EXT_SEPARATOR)]
+                                            for file_name in listdir(item_file_prefix)
+                                            if isfile(join(item_file_prefix, file_name))
+                                            and EXT_SEPARATOR in file_name]
+                         })
+        return items
 
 
     def get_file_prefix_for_multifile_object_attribute(self, parent_item_prefix: str, item_name: str) -> str:
@@ -306,72 +281,111 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
             raise ValueError('Separator cannot contain a folder separation character')
 
 
-    def find_collectionobject_contents_file_occurrences(self, item_file_prefix) -> Dict[str, str]:
+    def find_multifileobject_contents(self, item_file_prefix) -> Dict[str, str]:
         """
         Utility method to list all sub-items of a given parent item.
-        In this mode,  root_path may be a folder or an absolute file prefix, and each item is a set of files
-        with the same prefix separated from the attribute name by the character sequence <sep_for_flat>
+        In this mode, each item is a set of files with the same prefix than item_file_prefix, separated from the
+        attribute name by the character sequence <self.separator>. The item_file_prefix may also be directly a folder,
+        in which case the sub items dont have a prefix.
 
-        :param parent_item_prefix: the absolute file prefix of the parent item. it may be a folder (non-flat mode)
-        or a folder + a file name prefix (flat mode)
+        example if item_file_prefix = '<parent_folder>/<file_prefix>'
+
+        parent_folder/
+        |-file_prefix<sep>singlefile_sub_item1.<ext>
+        |-file_prefix<sep>singlefile_sub_item2.<ext>
+        |-file_prefix<sep>multifile_sub_item3<sep>singlesub1.<ext>
+        |-file_prefix<sep>multifile_sub_item3<sep>singlesub2.<ext>
+
+        example if item_file_prefix = '<parent_folder>/
+
+        item_file_prefix/
+        |-singlefile_sub_item1.<ext>
+        |-singlefile_sub_item2.<ext>
+        |-multifile_sub_item3<sep>singlesub1.<ext>
+        |-multifile_sub_item3<sep>singlesub2.<ext>
+
+        :param parent_item_prefix: the absolute file prefix of the parent item. It may be a folder (special case of the
+         root folder) but typically is just a file prefix
         :return: a dictionary of <item_name>, <item_path>
         """
 
         # Find the base directory and base name
         if isdir(item_file_prefix):  # special case of root folder. maybe TODO be more strict: root_folder = self.root_folder
             parent_dir = item_file_prefix
-            base_name = ''
+            base_prefix = ''
+            start_with = ''
         else:
             parent_dir = dirname(item_file_prefix)
-            base_name = basename(item_file_prefix) + self.separator
+            base_prefix = basename(item_file_prefix) #+ self.separator
+            start_with = self.separator
 
-        # list all files that are under the parent_item
-        all_file_suffixes_under_parent = [f[len(base_name):] for f in listdir(parent_dir)
-                                          if isfile(join(parent_dir, f)) and f.startswith(base_name)]
+        content_files = [content_file for content_file in listdir(parent_dir)
+                         # we are in flat mode : should be a file not a folder
+                         if isfile(join(parent_dir,content_file))
+                         # we are looking for children of a specific item
+                         and content_file.startswith(base_prefix)
+                         # we are looking for multifile child items only
+                         and content_file != base_prefix
+                         # they should start with the separator (or with nothing in case of the root folder)
+                         and (content_file[len(base_prefix):]).startswith(start_with)
+                         # they should have a valid extension
+                         and (content_file[len(base_prefix + start_with):]).count(EXT_SEPARATOR) >= 1
+                         ]
+        # build the resulting dictionary of item_name > item_prefix
+        item_prefixes = dict()
+        for item_file in content_files:
+            item_name = item_file[len(base_prefix + start_with):item_file.find(self.separator, len(base_prefix +
+                                                                                                   start_with))]
+            item_prefixes[item_name] = join(parent_dir, base_prefix + start_with + item_name)
+
+        return item_prefixes
+
+        # # list all files that are under the parent_item
+        # all_file_suffixes_under_parent = [f[len(base_prefix):] for f in listdir(parent_dir)
+        #                                   if isfile(join(parent_dir, f)) and f.startswith(base_prefix)]
 
         # find the set of file prefixes that exist under this parent item
-        prefixes = {file_name_suffix[0:file_name_suffix.index(self.separator)]: file_name_suffix
-                    for file_name_suffix in all_file_suffixes_under_parent if
-                    (self.separator in file_name_suffix)}
-        prefixes.update({file_name_suffix[0:file_name_suffix.rindex(EXT_SEPARATOR)]: file_name_suffix
-                         for file_name_suffix in all_file_suffixes_under_parent if
-                         (self.separator not in file_name_suffix)})
-        item_paths = dict()
-        for prefix, file_name_suffix in prefixes.items():
-            if len(prefix) == 0:
-                raise ValueError(
-                    'Error while trying to read item ' + item_file_prefix + ' as a collection: a '
-                                                                              'file already exist with this name and an extension : ' + base_name +
-                    self.separator + file_name_suffix)
-            if prefix not in item_paths.keys():
-                if isdir(item_file_prefix):
-                    item_paths[prefix] = join(item_file_prefix, prefix)
-                else:
-                    item_paths[prefix] = item_file_prefix + self.separator + prefix
+        # prefixes = {file_name_suffix[0:file_name_suffix.index(self.separator)]: file_name_suffix
+        #             for file_name_suffix in all_file_suffixes_under_parent if
+        #             (self.separator in file_name_suffix)}
+        # prefixes.update({file_name_suffix[0:file_name_suffix.rindex(EXT_SEPARATOR)]: file_name_suffix
+        #                  for file_name_suffix in all_file_suffixes_under_parent if
+        #                  (self.separator not in file_name_suffix)})
+        # item_paths = dict()
+        # for prefix, file_name_suffix in prefixes.items():
+        #     if len(prefix) == 0:
+        #         raise ValueError(
+        #             'Error while trying to read item ' + item_file_prefix + ' as a collection: a '
+        #                                                                       'file already exist with this name and an extension : ' + base_prefix +
+        #             self.separator + file_name_suffix)
+        #     if prefix not in item_paths.keys():
+        #         if isdir(item_file_prefix):
+        #             item_paths[prefix] = join(item_file_prefix, prefix)
+        #         else:
+        #             item_paths[prefix] = item_file_prefix + self.separator + prefix
+        # return item_paths
 
-        return item_paths
 
-
-    def find_multifileobject_attribute_file_occurrences(self, item_file_prefix) -> List[str]:
-        """
-        Utility method for flat mode only, to find all the attribute files for the given complex object, with any extension.
-        It also returns the files that are attributes of attributes (recursive) in the case of attributes that themselves
-        are complex objects
-
-        :param item_file_prefix:
-        :param sep_for_flat:
-        :return:
-        """
-        parent_dir = dirname(item_file_prefix)
-        base_prefix = basename(item_file_prefix)
-        # trick : is sep_for_flat is a dot, we have to take into account that there is also a dot for the extension
-        min_sep_count = (1 if self.separator == EXT_SEPARATOR else 0)
-        possible_attribute_field_files = [attribute_file for attribute_file in listdir(parent_dir) if
-                                          attribute_file.startswith(base_prefix)
-                                          and attribute_file != base_prefix
-                                          and (attribute_file[len(base_prefix):]).count(EXT_SEPARATOR) >= 1
-                                          and (attribute_file[len(base_prefix):]).count(self.separator) > min_sep_count]
-        return possible_attribute_field_files
+    # def find_multifileobject_attribute_file_occurrences(self, item_file_prefix) -> List[str]:
+    #     """
+    #     Utility method for flat mode only, to find all the attribute files for the given complex object, with any extension.
+    #     It also returns the files that are attributes of attributes (recursive) in the case of attributes that themselves
+    #     are complex objects
+    #
+    #     :param item_file_prefix:
+    #     :param sep_for_flat:
+    #     :return:
+    #     """
+    #     parent_dir = dirname(item_file_prefix)
+    #     base_prefix = basename(item_file_prefix)
+    #     # trick : is sep_for_flat is a dot, we have to take into account that there is also a dot for the extension
+    #     min_sep_count = (1 if self.separator == EXT_SEPARATOR else 0)
+    #     possible_attribute_field_files = [attribute_file for attribute_file in listdir(parent_dir) if
+    #                                       attribute_file.startswith(base_prefix)
+    #                                       and attribute_file != base_prefix
+    #                                       and (attribute_file[len(base_prefix):]).count(EXT_SEPARATOR) >= 1
+    #                                       and (attribute_file[len(base_prefix):]).count(self.separator) > min_sep_count]
+    #     return possible_attribute_field_files
 
 
     def get_file_prefix_for_multifile_object_attribute(self, parent_path: str, item_name: str):
@@ -387,22 +401,6 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
 
         return parent_path + self.separator + item_name
 
-    # def check_multifileobject(self, item_file_prefix, item_name_for_log):
-    #     if isdir(item_file_prefix):
-    #         raise FolderAndFilesStructureError('Cannot parse complex object : we are in flat mode, and item path is'
-    #                                            'a folder, it should be a file prefix followed by ' +
-    #                                            file_mapping_conf.sep_for_flat + ' : ' + item_file_prefix)
-    #     elif _is_present_as_singlefile_object(item_file_prefix, file_mapping_conf.sep_for_flat):
-    #         raise FolderAndFilesStructureError('Cannot parse complex object : we are in flat mode, and item path is'
-    #                                            ' already a file, it should be a file *prefix* followed by '
-    #                                            + file_mapping_conf.sep_for_flat + ' : ' + item_file_prefix)
-    #     else:
-    #         if not _is_present_as_complex_object_flat_mode(item_file_prefix, file_mapping_conf.sep_for_flat):
-    #             raise ObjectNotFoundOnFileSystemError.create(item_name_for_log, item_file_prefix, list())
-    #         else:
-    #             # -- there is at least one file that looks like a field : we can parse
-    #             # Note: weird case of an object that would not require any constructor arguments, is not supported.
-    #             pass
 
     def find_simpleobject_file_occurrences(self, item_file_prefix) -> Dict[str, str]:
         """
@@ -427,5 +425,4 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
                                  and (object_file[len(base_prefix):]).count(self.separator) == min_sep_count}
 
         return possible_object_files
-
 

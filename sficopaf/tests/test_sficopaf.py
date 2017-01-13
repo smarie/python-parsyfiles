@@ -4,7 +4,7 @@ from typing import List, Set, Dict
 from unittest import TestCase
 
 from sficopaf import RootParser, FlatFileMappingConfiguration, \
-    parse_item, ParsingException
+    parse_item, ParsingException, parse_collection
 
 
 class SimpleObjectsTest(TestCase):
@@ -55,7 +55,15 @@ class SimpleObjectsTest(TestCase):
                 pass
 
         # Test
-        ExecOpTest(0,0,'+',2)
+        # create the parser and parse a single file
+        e = parse_item('./test_data/demo_simple/test_diff_1', ExecOpTest)
+        print(e.x)
+        print(e.y)
+        print(e.op)
+        print(e.expected_result)
+
+        l = parse_collection('./test_data/demo_simple/test_diff_1', ExecOpTest)
+        pprint(l)
 
 
 class MainTest(TestCase):
@@ -91,13 +99,13 @@ class MainTest(TestCase):
         return
 
     def test_list_object_with_folders(self):
-        l = self.root_parser.parse_collection('./test_data/with_folders', List[self.main_type])
+        l = self.root_parser.parse_item('./test_data/with_folders', List[self.main_type])
         pprint(l)
         self.assertEqual(len(l), 3)
         return
 
     def test_with_folders_set(self):
-        s = self.root_parser.parse_collection('./test_data/with_folders', Set[self.main_type])
+        s = self.root_parser.parse_item('./test_data/with_folders', Set[self.main_type])
         pprint(s)
         self.assertEqual(len(s), 3)
         return
