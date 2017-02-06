@@ -1,15 +1,60 @@
+import logging
+import time
 from io import TextIOBase
 from pprint import pprint
-from typing import List, Set, Dict
+from typing import List, Set, Dict, Type, Any
 from unittest import TestCase
 
-from sficopaf import RootParser, FlatFileMappingConfiguration, \
-    parse_item, ParsingException, parse_collection
+from sficopaf.filesystem_mapping import FlatFileMappingConfiguration
+from sficopaf.parsing_core import ParsingException, SingleFileParserFunction
+from sficopaf.parsing_fw import RootParser, parse_item, parse_collection
+from sficopaf.var_checker import check_var
 
 
-class SimpleObjectsTest(TestCase):
+class Timer(object):
+    def __init__(self, name=None):
+        self.name = name
 
-    def test_simple_object(self):
+    def __enter__(self):
+        self.tstart = time.time()
+
+    def __exit__(self, type, value, traceback):
+        if self.name:
+            print('[%s]' % self.name)
+        print('Elapsed: %s' % (time.time() - self.tstart))
+
+
+class A_NewSimpleTests(TestCase):
+
+    def setUp(self):
+        self.root_parser = RootParser()
+
+    def test_a_root_parser(self):
+        print('\nRoot parser parsers:')
+        pprint(self.root_parser.get_all_parsers(strict_type_matching=False))
+        print('\nRoot parser converters:')
+        pprint(self.root_parser.get_all_conversion_chains())
+        print('\nRoot parser supported extensions:')
+        pprint(self.root_parser.get_all_supported_exts())
+        print('\nRoot parser supported types:')
+        pprint(self.root_parser.get_all_supported_types_pretty_str())
+        print('\nRoot parser parsers by extensions:')
+        self.root_parser.print_capabilities_by_ext(strict_type_matching=False)
+        print('\nRoot parser parsers by types:')
+        self.root_parser.print_capabilities_by_type(strict_type_matching=False)
+        return
+
+    def test_b_root_parser_any(self):
+        # print
+        self.root_parser.print_capabilities_for_type(typ=Any)
+
+        # details
+        res = self.root_parser.find_all_matching_parsers(strict=False, desired_type=Any, required_ext='.cfg')
+        match_generic, match_approx, match_exact = res[0]
+        self.assertEquals(len(match_generic), 0)
+        self.assertEquals(len(match_approx), 0)
+
+    def test_objects_support(self):
 
         # First define the function that we want to test (not useful, but just to show a complete story in the readme...)
         def exec_op(x: float, y: float, op: str) -> float:
@@ -30,14 +75,19 @@ class SimpleObjectsTest(TestCase):
                 self.op = op
                 self.expected_result = expected_result
 
+            def __str__(self):
+                return self.__repr__()
+
+            def __repr__(self):
+                return str(self.x) + ' ' + self.op + ' ' + str(self.y) + ' =? ' + str(self.expected_result)
+
         # create the parser and parse a single file
-        e = parse_item('./test_data/demo_simple/test_diff_1', ExecOpTest)
-        print(e.x)
-        print(e.y)
-        print(e.op)
-        print(e.expected_result)
+        e = parse_item('./test_data/objects/test_diff_1', ExecOpTest)
+        pprint(e)
 
-
+        # parse all of them
+        e = parse_collection('./test_data/objects', ExecOpTest)
+        pprint(e)
 
     def test_simple_object_with_contract(self):
 
@@ -56,27 +106,52 @@ class SimpleObjectsTest(TestCase):
 
         # Test
         # create the parser and parse a single file
-        e = parse_item('./test_data/demo_simple/test_diff_1', ExecOpTest)
+        e = parse_item('./test_data/objects/test_diff_1', ExecOpTest)
         print(e.x)
         print(e.y)
         print(e.op)
         print(e.expected_result)
 
-        l = parse_collection('./test_data/demo_simple/test_diff_1', ExecOpTest)
+        l = parse_collection('./test_data/objects/test_diff_1', ExecOpTest)
         pprint(l)
 
+    def test_collections(self):
+        l = parse_collection('./test_data/objects/test_diff_1', List[int])
+        print(l)
 
-class MainTest(TestCase):
+class MultifileAndCustomFunctionsTest(TestCase):
 
     def setUp(self):
-        self.root_parser, self.main_type = self._create_root_parser()
+        with Timer('setup'):
+            self.root_parser, self.main_type = self._create_root_parser()
 
-    def test_root_parser(self):
-        pprint(self.root_parser.get_parsers_copy())
+    def test_a_root_parser(self):
+        print('\nRoot parser parsers:')
+        pprint(self.root_parser.get_all_parsers(strict_type_matching=False))
+        print('\nRoot parser converters:')
+        pprint(self.root_parser.get_all_conversion_chains())
+        print('\nRoot parser supported extensions:')
+        pprint(self.root_parser.get_all_supported_exts())
+        print('\nRoot parser supported types:')
+        pprint(self.root_parser.get_all_supported_types_pretty_str())
+        print('\nRoot parser parsers by extensions:')
+        self.root_parser.print_capabilities_by_ext(strict_type_matching=False)
+        print('\nRoot parser parsers by types:')
+        self.root_parser.print_capabilities_by_type(strict_type_matching=False)
         return
 
+    def test_b_root_parser_any(self):
+        # print
+        self.root_parser.print_capabilities_for_type(typ=Any)
+
+        # details
+        res = self.root_parser.find_all_matching_parsers(strict=False, desired_type=Any, required_ext='.cfg')
+        match_generic, match_approx, match_exact = res[0]
+        self.assertEquals(len(match_generic), 0)
+        self.assertEquals(len(match_approx), 0)
+
     def test_single_multifile_object_folders(self):
-        f = self.root_parser.parse_item('./test_data/with_folders/item1', self.main_type)
+        f = self.root_parser.parse_item('./test_data/custom_with_folders/item1', self.main_type)
         pprint(f)
         return
 
@@ -86,32 +161,32 @@ class MainTest(TestCase):
 
         # Try to parse it as a list
         with self.assertRaises(ParsingException):
-            f = self.root_parser.parse_item('./test_data/without_folders/item1', List[self.main_type], file_mapping_conf=config)
+            f = self.root_parser.parse_item('./test_data/custom_without_folders/item1', List[self.main_type], file_mapping_conf=config)
 
-        f = self.root_parser.parse_item('./test_data/without_folders/item1', self.main_type, file_mapping_conf=config)
+        f = self.root_parser.parse_item('./test_data/custom_without_folders/item1', self.main_type, file_mapping_conf=config)
         pprint(f)
         return
 
     def test_single_list_object_with_folders(self):
-        f = self.root_parser.parse_item('./test_data/with_folders', List[self.main_type])
+        f = self.root_parser.parse_item('./test_data/custom_with_folders', List[self.main_type])
         pprint(f)
         self.assertEqual(len(f), 3)
         return
 
     def test_list_object_with_folders(self):
-        l = self.root_parser.parse_item('./test_data/with_folders', List[self.main_type])
+        l = self.root_parser.parse_item('./test_data/custom_with_folders', List[self.main_type])
         pprint(l)
         self.assertEqual(len(l), 3)
         return
 
     def test_with_folders_set(self):
-        s = self.root_parser.parse_item('./test_data/with_folders', Set[self.main_type])
+        s = self.root_parser.parse_item('./test_data/custom_with_folders', Set[self.main_type])
         pprint(s)
         self.assertEqual(len(s), 3)
         return
 
     def test_with_folders_dict(self):
-        d = self.root_parser.parse_collection('./test_data/with_folders', self.main_type)
+        d = self.root_parser.parse_collection('./test_data/custom_with_folders', self.main_type)
         pprint(d)
         self.assertEqual(len(d), 3)
         return
@@ -119,7 +194,7 @@ class MainTest(TestCase):
     def test_no_folders(self):
 
         config = FlatFileMappingConfiguration()
-        d = self.root_parser.parse_collection('./test_data/without_folders', self.main_type, file_mapping_conf=config)
+        d = self.root_parser.parse_collection('./test_data/custom_without_folders', self.main_type, file_mapping_conf=config)
         pprint(d)
         self.assertEqual(len(d), 3)
         return
@@ -208,7 +283,8 @@ class MainTest(TestCase):
         # (file_object: TextIOBase, stream opened from the file by the framework) and that returns an object of the
         # expected type. Note that the stream will be closed automatically by the framework
         #
-        def read_oneliner_from_txt_file_stream(file_object: TextIOBase) -> OneLiner:
+        def test_custom_read_oneliner_from_txt_file_stream(desired_type: Type[Config], file_object: TextIOBase,
+                                                logger: logging.Logger, *args, **kwargs) -> OneLiner:
             """
             Helper method to read a txt file and return its content as a OneLiner object.
             :param file_object: stream opened from the file by the framework, and closed automatically after parsing
@@ -221,7 +297,8 @@ class MainTest(TestCase):
 
             return OneLiner(first_row)
 
-        def read_config_from_config_file_stream(file_object: TextIOBase) -> Config:
+        def test_custom_read_config_from_config_file_stream(desired_type: Type[Config], file_object: TextIOBase,
+                                                logger: logging.Logger, *args, **kwargs) -> Config:
             """
             Helper method to read a txt file and return its content as a Config object.
             :param file_object: stream opened from the file by the framework, and closed automatically after parsing
@@ -239,27 +316,34 @@ class MainTest(TestCase):
         # then be registered. Note that you may register the same function twice if it is able to handle several file
         # extensions.
         #
-        parsers = {
-            OneLiner: {
-                '.txt': read_oneliner_from_txt_file_stream
-            },
-            Config: {
-                '.cfg': read_config_from_config_file_stream,
-                '.txt': read_config_from_config_file_stream
-            }
-        }
+        # parsers = {
+        #     OneLiner: {
+        #         '.txt': read_oneliner_from_txt_file_stream
+        #     },
+        #     Config: {
+        #         '.cfg': read_config_from_config_file_stream,
+        #         '.txt': read_config_from_config_file_stream
+        #     }
+        # }
+        parsers = [
+            SingleFileParserFunction(parser_function=test_custom_read_oneliner_from_txt_file_stream,
+                                     supported_exts={'.txt'},
+                                     supported_types={OneLiner}),
+            SingleFileParserFunction(parser_function=test_custom_read_config_from_config_file_stream,
+                                     supported_exts={'.cfg', '.txt'},
+                                     supported_types={Config}),
+        ]
 
         # create root parser
-        root_parser = RootParser()
+        root_parser = RootParser('parsyfiles defaults+test custom functions')
         root_parser.register_parsers(parsers)
 
         return root_parser, MainFooBarItem
 
 
-
 class TestDemo(TestCase):
 
-    def test_demo(self):
+    def test_old_demo(self):
         # In this demonstrative example, we will parse 'test cases' for an imaginary function that performs operations :
         # op_function(a:int, b:int, operation:str = '+') -> int
         #
@@ -295,18 +379,24 @@ class TestDemo(TestCase):
 
         # First import the package and create a root parser.
 
-        import sficopaf as sf
-        root_parser = sf.RootParser()
+        # for test : we dont register the default parsers, just to check
+        root_parser = RootParser('parsyfiles defaults+test custom functions',
+                                 register_default_parsers=False)
+
+        # install multifile support at least
+        root_parser.install_basic_multifile_support()
 
         # Then register a parser function for all items that will be represented as **single** files.
         # * In this example, all inputs and outputs are `int` so we create a first function to parse an int from a text file:
 
         #from io import TextIOBase
-        def parse_int_file(file_object: TextIOBase) -> int:
+        def test_parse_int_file(desired_type: Type[int], file_object: TextIOBase,
+                                                logger: logging.Logger, *args, **kwargs) -> int:
             integer_str = file_object.readline()
             return int(integer_str)
 
-        root_parser.register_unitary_parser(int, '.txt', parse_int_file)
+        root_parser.register_parser(SingleFileParserFunction(test_parse_int_file, streaming_mode=True,
+                                                             supported_types={int}, supported_exts={'.txt'}))
 
         # Note that the parsing framework automatically opens and closes the file for you, even in case of exception.
 
@@ -320,30 +410,40 @@ class TestDemo(TestCase):
             An OpConfig object is a Dict[str, str] object
             """
             def __init__(self, config: Dict[str, str]):
+                check_var(config, var_types=dict, var_name='config')
                 super(OpConfig, self).__init__()
                 self.__wrapped_impl = config
 
                 # here you may wish to perform additional checks on the wrapped object
-                unrecognized = set(config.keys()) - set('operation')
+                unrecognized = set(config.keys()) - {'operation'}
                 if len(unrecognized) > 0:
                     raise ValueError('Unrecognized options : ' + str(unrecognized))
+
+            def __getitem__(self, item):
+                return self.__wrapped_impl.__getitem__(item)
+
+            def __setitem__(self, key, value):
+                return self.__wrapped_impl.__setitem__(key, value)
 
             # Delegate all calls to the implementation:
             def __getattr__(self, name):
                 return getattr(self.__wrapped_impl, name)
 
-        def parse_configuration_txt_file(file_object: TextIOBase) -> Dict[str, str]:
-            return {'operation': file_object.readline()}
+        def test_parse_configuration_txt_file(desired_type: Type[Dict], file_object: TextIOBase,
+                                                logger: logging.Logger, *args, **kwargs) -> Dict[str, str]:
+            return OpConfig({'operation': file_object.readline()})
 
-        def parse_configuration_cfg_file(file_object: TextIOBase) -> Dict[str, str]:
+        def test_parse_configuration_cfg_file(desired_type: Type[Dict], file_object: TextIOBase,
+                                                logger: logging.Logger, *args, **kwargs) -> Dict[str, str]:
             import configparser
             config = configparser.ConfigParser()
             config.read_file(file_object)
-            return dict(config['main'].items())
+            return OpConfig(dict(config['main'].items()))
 
-        root_parser.register_unitary_parser(OpConfig, '.txt', parse_configuration_txt_file)
-        root_parser.register_unitary_parser(OpConfig, '.cfg', parse_configuration_cfg_file)
-
+        root_parser.register_parser(SingleFileParserFunction(test_parse_configuration_txt_file, streaming_mode=True,
+                                                             supported_types={OpConfig}, supported_exts={'.txt'}))
+        root_parser.register_parser(SingleFileParserFunction(test_parse_configuration_cfg_file, streaming_mode=True,
+                                                             supported_types={OpConfig}, supported_exts={'.cfg'}))
 
         # Finally we define the 'test case' objects
         class OpTestCase(object):
@@ -361,11 +461,11 @@ class TestDemo(TestCase):
                 return str(self.input_a) + ' ' + self.op + ' ' + str(self.input_b) + ' =? ' + str(self.output)
 
         # And we parse a collection of these
-        results = root_parser.parse_collection('./test_data/demo', OpTestCase)
+        results = root_parser.parse_collection('./test_data/custom_old_demo', OpTestCase)
         pprint(results)
 
         conf = FlatFileMappingConfiguration(separator='--')
-        results = root_parser.parse_collection('./test_data/demo_flat', OpTestCase, file_mapping_conf=conf)
+        results = root_parser.parse_collection('./test_data/custom_old_demo_flat', OpTestCase, file_mapping_conf=conf)
         pprint(results)
 
         class OpTestCaseColl(object):
@@ -386,8 +486,10 @@ class TestDemo(TestCase):
                         self.output) + ' ' + str(self.input_c)
 
 
-        results = root_parser.parse_collection('./test_data/demo_flat_coll', OpTestCaseColl, file_mapping_conf=conf)
+        results = root_parser.parse_collection('./test_data/custom_old_demo_flat_coll', OpTestCaseColl,
+                                               file_mapping_conf=conf)
         pprint(results['case3'].input_c)
 
-        results = root_parser.parse_collection('./test_data/demo_coll', OpTestCaseColl)
+        results = root_parser.parse_collection('./test_data/custom_old_demo_coll', OpTestCaseColl)
         pprint(results['case3'].input_c)
+
