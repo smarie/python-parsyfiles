@@ -12,8 +12,12 @@ from setuptools_scm import get_version
 here = path.abspath(path.dirname(__file__))
 
 # ************** ID card *****************
-DISTNAME = 'sficopaf'
-DESCRIPTION = 'Simple FIle COllection PArsing Framework'
+DISTNAME = 'parsyfiles'
+DESCRIPTION = 'Combines most popular python parsers (json, jprops, pickle...) with user-defined parsers and converters'\
+              ' to read objects from files. Supports multifile & multiparser objects, typically useful to organize '\
+              'test data. Leverages PEP484 type hints in order to intelligently use the best parser/converter chain, ' \
+              'and to try several combinations if relevant'
+
 MAINTAINER = 'Sylvain Marié'
 MAINTAINER_EMAIL = '"Sylvain Marié" <sylvain.marie@schneider-electric.com>'
 URL = 'https://github.com/smarie/python-simple-file-collection-parsing-framework'
@@ -23,15 +27,19 @@ LICENSE_LONG = 'License :: OSI Approved :: BSD License'
 version_for_download_url = get_version()
 DOWNLOAD_URL = URL + '/tarball/' + version_for_download_url
 
-KEYWORDS = 'file collection parsing framework'
+KEYWORDS = 'file collection complex simple test object parser converter parsing framework PEP484 typing data binding ' \
+           'SFiCoPaF'
 # --Get the long description from the README file
 #with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 #    LONG_DESCRIPTION = f.read()
-#try:
-import pypandoc
-LONG_DESCRIPTION = pypandoc.convert(path.join(here, 'README.md'), 'rst').replace('\r', '')
-#except(IOError, ImportError):
-#    LONG_DESCRIPTION = open('README.md').read()
+try:
+    import pypandoc
+    LONG_DESCRIPTION = pypandoc.convert(path.join(here, 'README.md'), 'rst').replace('\r', '')
+except(ImportError):
+    from warnings import warn
+    warn('WARNING pypandoc could not be imported - we recommend that you install it in order to package the '
+         'documentation correctly')
+    LONG_DESCRIPTION = open('README.md').read()
 
 # ************* VERSION AND DEPENDENCIES **************
 # --Get the Version number from VERSION file, see https://packaging.python.org/single_source_version/ option 4.
@@ -43,7 +51,8 @@ INSTALL_REQUIRES = []
 DEPENDENCY_LINKS = []
 SETUP_REQUIRES = ['setuptools_scm','pypandoc']
 TESTS_REQUIRE = ['nose', 'numpy', 'pandas']
-EXTRAS_REQUIRE = {'pandas_parser': ['numpy', 'pandas']}
+EXTRAS_REQUIRE = {'pandas_parser': ['numpy', 'pandas'],
+                  'jprops_parser': ['jprops']}
 
 setup(
     name=DISTNAME,
@@ -53,7 +62,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    #version=VERSION, NOW HANDLED BY GIT
+    # version=VERSION, NOW HANDLED BY GIT
 
     maintainer=MAINTAINER,
     maintainer_email=MAINTAINER_EMAIL,
@@ -93,7 +102,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=['sficopaf'], #find_packages(exclude=['contrib', 'docs', 'tests']),
+    packages=['parsyfiles'], #find_packages(exclude=['contrib', 'docs', 'tests']),
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:

@@ -2,12 +2,12 @@ from io import TextIOBase
 from logging import Logger
 from typing import Dict, Any, List, Union, Type, Set, Tuple
 
-from sficopaf.converting_core import Converter, ConverterFunction
-from sficopaf.filesystem_mapping import PersistedObject
-from sficopaf.parsing_core import SingleFileParserFunction, AnyParser, MultiFileParser, _ParsingPlanElement, T
-from sficopaf.parsing_registries import ParserFinder
-from sficopaf.type_inspection_tools import _extract_collection_base_type, get_pretty_type_str
-from sficopaf.var_checker import check_var
+from parsyfiles.converting_core import Converter, ConverterFunction
+from parsyfiles.filesystem_mapping import PersistedObject
+from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser, MultiFileParser, _ParsingPlanElement, T
+from parsyfiles.parsing_registries import ParserFinder
+from parsyfiles.type_inspection_tools import _extract_collection_base_type, get_pretty_type_str
+from parsyfiles.var_checker import check_var
 
 
 def read_list_from_properties(desired_type: Type[dict], file_object: TextIOBase,
@@ -86,6 +86,7 @@ class MultifileDictParser(MultiFileParser[Dict]):
         super(MultifileDictParser, self).__init__(supported_types={Dict, List})
         self.parser_finder = parser_finder
 
+    # Not useful : only Dict and List are supported already
     # def is_able_to_parse(self, desired_type: Type[Any], desired_ext: str, strict: bool):
     #     if not is_collection(desired_type, strict=True):
     #         return False, None
@@ -136,16 +137,12 @@ class MultifileDictParser(MultiFileParser[Dict]):
         the background. Note that users cannot set both lazy_parsing and background_parsing to True at the same time
         :return:
         """
-        # 0. check additional params
+
         check_var(lazy_parsing, var_types=bool, var_name='lazy_parsing')
         check_var(background_parsing, var_types=bool, var_name='background_parsing')
+
         if lazy_parsing and background_parsing:
             raise ValueError('lazy_parsing and background_parsing cannot be set to true at the same time')
-
-
-        #log_parsing_info(logger=logger, obj=obj, parser_name='(default collection parser for multi-files)',
-        #                              additional_details='Each item in the collection will be parsed independently and the '
-        #                                                 'result will be merged in a collection afterwards')
 
         if lazy_parsing:
             # -- TODO make a lazy dictionary

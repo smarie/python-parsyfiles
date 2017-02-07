@@ -5,13 +5,13 @@ from pprint import pprint
 from typing import Type, Dict, Any, List, Set, Tuple
 from warnings import warn
 
-from sficopaf.converting_core import S, Converter, ConversionChain
-from sficopaf.filesystem_mapping import PersistedObject
-from sficopaf.parsing_combining_parsers import ParsingChain, CascadingParser, DelegatingParser
-from sficopaf.parsing_core import AnyParser, T, InvalidParserException, _ParsingPlanElement, BaseParser
-from sficopaf.type_inspection_tools import get_pretty_type_str, get_base_generic_type, \
+from parsyfiles.converting_core import S, Converter, ConversionChain
+from parsyfiles.filesystem_mapping import PersistedObject
+from parsyfiles.parsing_combining_parsers import ParsingChain, CascadingParser, DelegatingParser
+from parsyfiles.parsing_core import AnyParser, T, InvalidParserException, _ParsingPlanElement, BaseParser
+from parsyfiles.type_inspection_tools import get_pretty_type_str, get_base_generic_type, \
     get_pretty_type_keys_dict
-from sficopaf.var_checker import check_var
+from parsyfiles.var_checker import check_var
 
 
 class ParserFinder(metaclass=ABCMeta):

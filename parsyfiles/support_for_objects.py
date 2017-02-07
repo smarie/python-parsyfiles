@@ -4,16 +4,16 @@ from io import TextIOBase
 from logging import Logger, warning
 from typing import Type, Any, List, Dict, Union
 
-from sficopaf.converting_core import Converter, S, T, ConverterFunctionWithStaticArgs
-from sficopaf.filesystem_mapping import PersistedObject
-from sficopaf.parsing_combining_parsers import print_error_to_io_stream
-from sficopaf.parsing_core import MultiFileParser, AnyParser, SingleFileParserFunction
-from sficopaf.parsing_registries import ParserFinder, ConversionFinder
-from sficopaf.support_for_collections import DictOfDict
-from sficopaf.support_for_primitive_types import AsciiStr
-from sficopaf.type_inspection_tools import get_pretty_type_str, get_constructor_attributes_types, \
+from parsyfiles.converting_core import Converter, S, T, ConverterFunctionWithStaticArgs
+from parsyfiles.filesystem_mapping import PersistedObject
+from parsyfiles.parsing_combining_parsers import print_error_to_io_stream
+from parsyfiles.parsing_core import MultiFileParser, AnyParser, SingleFileParserFunction
+from parsyfiles.parsing_registries import ParserFinder, ConversionFinder
+from parsyfiles.support_for_collections import DictOfDict
+from parsyfiles.support_for_primitive_types import AsciiStr
+from parsyfiles.type_inspection_tools import get_pretty_type_str, get_constructor_attributes_types, \
     TypeInformationRequiredError, _get_constructor_signature, is_collection
-from sficopaf.var_checker import check_var
+from parsyfiles.var_checker import check_var
 
 
 def read_object_from_pickle(desired_type: Type[Any], file_object: TextIOBase, logger: Logger,
@@ -453,10 +453,10 @@ def get_default_object_converters(conversion_finder: ConversionFinder) \
     and from other type to dict)
     :return:
     """
-    return [ConverterFunctionWithStaticArgs(dict, Any, dict_to_object, prettyname='<dict_to_object>',
+    return [ConverterFunctionWithStaticArgs(dict, Any, dict_to_object, custom_name='<dict_to_object>',
                                             is_able_to_convert_func=_is_able_to_convert,
                                             conversion_finder=conversion_finder, is_dict_of_dicts=False),
-            ConverterFunctionWithStaticArgs(DictOfDict, Any, dict_to_object, prettyname='<dict_of_dict_to_object>',
+            ConverterFunctionWithStaticArgs(DictOfDict, Any, dict_to_object, custom_name='<dict_of_dict_to_object>',
                                             is_able_to_convert_func=_is_able_to_convert,
                                             conversion_finder=conversion_finder, is_dict_of_dicts=True)]
 

@@ -4,10 +4,10 @@ from io import TextIOBase
 from logging import Logger
 from typing import TypeVar, Generic, Union, Type, Callable, Dict, Any, Set, Tuple
 
-from sficopaf.converting_core import get_validated_types
-from sficopaf.filesystem_mapping import EXT_SEPARATOR, MULTIFILE_EXT, PersistedObject
-from sficopaf.type_inspection_tools import get_pretty_type_str
-from sficopaf.var_checker import check_var
+from parsyfiles.converting_core import get_validated_types
+from parsyfiles.filesystem_mapping import EXT_SEPARATOR, MULTIFILE_EXT, PersistedObject
+from parsyfiles.type_inspection_tools import get_pretty_type_str
+from parsyfiles.var_checker import check_var
 
 T = TypeVar('T')  # Can be anything - used for all other objects
 
@@ -798,7 +798,7 @@ class MultiFileParser(AnyParser[T]):
 
     def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger,
                           *args, **kwargs) -> T:
-        raise NotImplementedError('Not implemented since this is a MultiFileParser')
+        raise Exception('Not implemented since this is a MultiFileParser')
 
     # def _parse(self, desired_type: Type[T], obj: PersistedObject, *args, **kwargs) -> T:
     #     """

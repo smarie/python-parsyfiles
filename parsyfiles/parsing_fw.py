@@ -3,23 +3,25 @@ import traceback
 from io import StringIO
 from logging import getLogger, StreamHandler
 
-from sficopaf.filesystem_mapping import *
-from sficopaf.parsing_core import *
-from sficopaf.parsing_registries import ParserRegistryWithConverters
-from sficopaf.support_for_collections import MultifileDictParser
-from sficopaf.support_for_objects import MultifileObjectParser
-from sficopaf.type_inspection_tools import *
-from sficopaf.var_checker import check_var
+from parsyfiles.filesystem_mapping import *
+from parsyfiles.parsing_core import *
+from parsyfiles.parsing_registries import ParserRegistryWithConverters
+from parsyfiles.support_for_collections import MultifileDictParser
+from parsyfiles.support_for_objects import MultifileObjectParser
+from parsyfiles.type_inspection_tools import *
+from parsyfiles.var_checker import check_var
 
 default_logger = getLogger()
 ch = StreamHandler(sys.stdout)
 default_logger.addHandler(ch)
+
 
 def parse_item(item_file_prefix: str, item_type: Type[T], item_name_for_log: str = None,
                    file_mapping_conf: FileMappingConfiguration = None,
                    lazy_parsing: bool = False) -> T:
     """
     Creates a RootParser() and calls its parse_item() method
+
     :param item_file_prefix:
     :param item_type:
     :param item_name_for_log:
@@ -80,7 +82,7 @@ class RootParser(ParserRegistryWithConverters):
         if register_default_parsers:
             try:
                 # primitive types
-                from sficopaf.support_for_primitive_types import get_default_primitive_parsers, get_default_primitive_converters
+                from parsyfiles.support_for_primitive_types import get_default_primitive_parsers, get_default_primitive_converters
                 self.register_parsers(get_default_primitive_parsers())
                 self.register_converters(get_default_primitive_converters())
             except ImportError as e:
@@ -88,7 +90,7 @@ class RootParser(ParserRegistryWithConverters):
 
             try:
                 # collections
-                from sficopaf.support_for_collections import get_default_collection_parsers, get_default_collection_converters
+                from parsyfiles.support_for_collections import get_default_collection_parsers, get_default_collection_converters
                 self.register_parsers(get_default_collection_parsers(self))
                 self.register_converters(get_default_collection_converters())
             except ImportError as e:
@@ -96,7 +98,7 @@ class RootParser(ParserRegistryWithConverters):
 
             try:
                 # objects
-                from sficopaf.support_for_objects import get_default_object_parsers, get_default_object_converters
+                from parsyfiles.support_for_objects import get_default_object_parsers, get_default_object_converters
                 self.register_parsers(get_default_object_parsers(self, self))
                 self.register_converters(get_default_object_converters(self))
             except ImportError as e:
@@ -104,7 +106,7 @@ class RootParser(ParserRegistryWithConverters):
 
             try:
                 # config
-                from sficopaf.support_for_configparser import get_default_config_parsers, get_default_config_converters
+                from parsyfiles.support_for_configparser import get_default_config_parsers, get_default_config_converters
                 self.register_parsers(get_default_config_parsers())
                 self.register_converters(get_default_config_converters())
             except ImportError as e:
@@ -112,7 +114,7 @@ class RootParser(ParserRegistryWithConverters):
 
             try:
                 # dataframe
-                from sficopaf.support_for_dataframe import get_default_dataframe_parsers, get_default_dataframe_converters
+                from parsyfiles.support_for_dataframe import get_default_dataframe_parsers, get_default_dataframe_converters
                 self.register_parsers(get_default_dataframe_parsers())
                 self.register_converters(get_default_dataframe_converters())
             except ImportError as e:

@@ -3,11 +3,11 @@ from io import StringIO, TextIOBase
 from logging import Logger
 from typing import Type, Dict, Any, List
 
-from sficopaf.converting_core import Converter, S, ConversionChain
-from sficopaf.filesystem_mapping import PersistedObject
-from sficopaf.parsing_core import AnyParser, T, _ParsingPlanElement, BaseParser, get_parsing_plan_log_str
-from sficopaf.type_inspection_tools import get_pretty_type_str
-from sficopaf.var_checker import check_var
+from parsyfiles.converting_core import Converter, S, ConversionChain
+from parsyfiles.filesystem_mapping import PersistedObject
+from parsyfiles.parsing_core import AnyParser, T, _ParsingPlanElement, BaseParser, get_parsing_plan_log_str
+from parsyfiles.type_inspection_tools import get_pretty_type_str
+from parsyfiles.var_checker import check_var
 
 
 class DelegatingParser(AnyParser[T]):

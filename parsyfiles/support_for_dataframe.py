@@ -3,8 +3,9 @@ from logging import Logger
 from typing import Dict, List, Any, Union, Type
 
 import pandas as pd
-from sficopaf.converting_core import Converter, ConverterFunction, T
-from sficopaf.parsing_core import SingleFileParserFunction, AnyParser
+
+from parsyfiles.converting_core import Converter, ConverterFunction, T
+from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser
 
 
 def read_simpledf_from_xls(desired_type: Type[pd.DataFrame], file_object: TextIOBase,

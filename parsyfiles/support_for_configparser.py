@@ -3,9 +3,9 @@ from io import TextIOBase
 from logging import Logger
 from typing import List, Union, Any, Dict, Type
 
-from sficopaf.converting_core import Converter, ConverterFunction, T
-from sficopaf.parsing_core import SingleFileParserFunction, AnyParser
-from sficopaf.support_for_collections import DictOfDict
+from parsyfiles.converting_core import Converter, ConverterFunction, T
+from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser
+from parsyfiles.support_for_collections import DictOfDict
 
 
 def read_config(desired_type: Type[ConfigParser], file_object: TextIOBase,
@@ -35,6 +35,7 @@ def get_default_config_parsers() -> List[AnyParser]:
                                      supported_exts={'.cfg', '.ini'},
                                      supported_types={ConfigParser}),
             ]
+
 
 class MultipleKeyOccurenceInConfigurationError(Exception):
     """

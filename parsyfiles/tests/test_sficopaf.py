@@ -5,10 +5,10 @@ from pprint import pprint
 from typing import List, Set, Dict, Type, Any
 from unittest import TestCase
 
-from sficopaf.filesystem_mapping import FlatFileMappingConfiguration
-from sficopaf.parsing_core import ParsingException, SingleFileParserFunction
-from sficopaf.parsing_fw import RootParser, parse_item, parse_collection
-from sficopaf.var_checker import check_var
+from parsyfiles.filesystem_mapping import FlatFileMappingConfiguration
+from parsyfiles.parsing_core import ParsingException, SingleFileParserFunction
+from parsyfiles.parsing_fw import RootParser, parse_item, parse_collection
+from parsyfiles.var_checker import check_var
 
 
 class Timer(object):

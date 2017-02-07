@@ -3,8 +3,8 @@ from io import StringIO, TextIOBase
 from logging import Logger
 from typing import Type, Union
 
-from sficopaf.converting_core import ConverterFunction
-from sficopaf.parsing_core import SingleFileParserFunction
+from parsyfiles.converting_core import ConverterFunction
+from parsyfiles.parsing_core import SingleFileParserFunction
 
 
 def read_str_from_txt(desired_type: Type[dict], file_object: TextIOBase,

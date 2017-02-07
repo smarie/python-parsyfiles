@@ -3,9 +3,9 @@ from random import shuffle
 from typing import Generic, TypeVar, Dict, Type, Any
 from unittest import TestCase
 
-from sficopaf import PersistedObject, get_pretty_type_str, MULTIFILE_EXT
-from sficopaf.parsing_core import SingleFileParserFunction, MultiFileParser, AnyParser, T, BaseParser
-from sficopaf.parsing_registries import ParserCache
+from parsyfiles import PersistedObject, get_pretty_type_str, MULTIFILE_EXT
+from parsyfiles.parsing_core import SingleFileParserFunction, MultiFileParser, AnyParser, T, BaseParser
+from parsyfiles.parsing_registries import ParserCache
 
 
 class TestParserRegistry(TestCase):

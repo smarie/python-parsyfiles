@@ -4,7 +4,7 @@ from os import listdir
 from os.path import isfile, join, isdir, dirname, basename
 from typing import Dict, List, Any, Tuple, Union
 
-from sficopaf.var_checker import check_var
+from parsyfiles.var_checker import check_var
 
 EXT_SEPARATOR = '.'
 MULTIFILE_EXT = '<multifile>'
