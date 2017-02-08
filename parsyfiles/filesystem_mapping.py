@@ -20,7 +20,7 @@ class FolderAndFilesStructureError(Exception):
 
 class ObjectPresentMultipleTimesOnFileSystemError(Exception):
     """
-    Raised whenever a given attribute is provided several times in the filesystem (with multiple extensions)
+    Raised whenever a given attribute is present several times in the filesystem (with multiple extensions)
     """
     def __init__(self, contents:str):
         """
@@ -33,20 +33,20 @@ class ObjectPresentMultipleTimesOnFileSystemError(Exception):
         super(ObjectPresentMultipleTimesOnFileSystemError, self).__init__(contents)
 
     @staticmethod
-    def create(item_file_prefix: str, extensions_found: List[str] = None):  # -> NoParserFoundForObject:
+    def create(location: str, extensions_found: List[str] = None):  # -> NoParserFoundForObject:
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
         https://github.com/nose-devs/nose/issues/725
 
-        :param item_file_prefix:
+        :param location:
         :param extensions_found:
         :return:
         """
         if not extensions_found:
-            return ObjectPresentMultipleTimesOnFileSystemError('Object : ' + item_file_prefix + ' is present multiple '
+            return ObjectPresentMultipleTimesOnFileSystemError('Object : ' + location + ' is present multiple '
                                                                'times on the file system.')
         else:
-            return ObjectPresentMultipleTimesOnFileSystemError('Object : ' + item_file_prefix + ' is present multiple '
+            return ObjectPresentMultipleTimesOnFileSystemError('Object : ' + location + ' is present multiple '
                                                                'times on the file system , with extensions : ' +
                                                                str(extensions_found) + '. Only one version of each '
                                                                'object should be provided. If you need multiple files'
@@ -57,7 +57,7 @@ class ObjectPresentMultipleTimesOnFileSystemError(Exception):
 
 class ObjectNotFoundOnFileSystemError(FileNotFoundError):
     """
-    Raised whenever a given object is missing on the filesystem (no singlefile or multifile found)
+    Raised whenever a given object is missing on the filesystem (no singlefile nor multifile found)
     """
 
     def __init__(self, contents: str):
@@ -112,56 +112,16 @@ class IllegalContentNameError(Exception):
                                        + '\'')
 
 
-class PersistedObject(metaclass=ABCMeta):
-    """
-    Represents an object persisted at a given location
-    """
-
-    def __init__(self, location: str, is_singlefile: bool, ext: str):
-        # -- location
-        check_var(location, var_types=str, var_name='location')
-        self.location = location
-        # -- single file
-        check_var(is_singlefile, var_types=bool, var_name='is_singlefile')
-        self.is_singlefile = is_singlefile
-        # -- ext
-        check_var(ext, var_types=str, var_name='ext')
-        self.ext = ext
-
-    def __str__(self) -> str:
-        return self.location + ' (' + self.get_pretty_file_ext() + ')'
-
-    def get_pretty_file_mode(self):
-        return 'singlefile' if self.is_singlefile else 'multifile'
-
-    def get_pretty_file_ext(self):
-        return ('singlefile, ' + self.ext) if self.is_singlefile else 'multifile'
-
-    def get_pretty_location(self):
-        return self.location + ' (' + self.get_pretty_file_ext() + ')'
-
-    @abstractmethod
-    def get_singlefile_path(self):
-        pass
-
-    @abstractmethod
-    def get_singlefile_encoding(self):
-        pass
-
-    @abstractmethod
-    def get_multifile_children(self) -> Dict[str, Any]: # actually, not Any but PersistedObject
-        pass
-
-
 class AbstractFileMappingConfiguration(metaclass=ABCMeta):
     """
     Represents a file mapping configuration. It should be able to find singlefile and multifile objects at specific
-    locations.
+    locations. Note that this class does not know the concept of PersistedObject, it just manipulates locations.
     """
 
-    def __init__(self, encoding:str = None):
+    def __init__(self, encoding: str = None):
         """
-        Constructor, with the encoding registered to open the files.
+        Constructor, with the encoding registered to open the singlefiles.
+
         :param encoding: the encoding used to open the files default is 'utf-8'
         """
         check_var(encoding, var_types=str, var_name='encoding', enforce_not_none=False)
@@ -174,6 +134,10 @@ class AbstractFileMappingConfiguration(metaclass=ABCMeta):
         * ObjectNotFoundOnFileSystemError if no file is found
         * ObjectPresentMultipleTimesOnFileSystemError if the object is found multiple times (for example with
         several file extensions, or as a file AND a folder)
+        * IllegalContentNameError if a multifile child name is None or empty string.
+
+        It relies on the abstract methods of this class (find_simpleobject_file_occurrences and
+        find_multifile_object_children) to find the various files present.
 
         :param location: a location identifier compliant with the provided file mapping configuration
         :return: [True, singlefile_ext, singlefile_path] if a unique singlefile object is present ;
@@ -192,6 +156,7 @@ class AbstractFileMappingConfiguration(metaclass=ABCMeta):
             u = simpleobjects_found
             u.update(complexobject_attributes_found)
             raise ObjectPresentMultipleTimesOnFileSystemError.create(location, list(u.keys()))
+
         elif len(simpleobjects_found) == 1:
             # create the output
             is_single_file = True
@@ -211,15 +176,36 @@ class AbstractFileMappingConfiguration(metaclass=ABCMeta):
             # the object was not found in a form that can be parsed
             raise ObjectNotFoundOnFileSystemError.create(location)
 
-    def is_present_as_multifile_object(self, item_file_prefix: str) -> bool:
+    def is_present_as_singlefile_object(self, location, sep_for_flat):
         """
-        Implementing classes should return True if an item with this item_file_prefix is present as a multifile object,
-        or False otherwise
+        Utility method to check if an item is present as a simple object - that means, if there is any file matching
+        this prefix with any extension
 
-        :param item_file_prefix:
+        :param location:
+        :param sep_for_flat:
         :return:
         """
-        return len(self.find_multifile_object_children(item_file_prefix)) > 0
+        return len(self.find_simpleobject_file_occurrences(location, sep_for_flat)) > 0
+
+    @abstractmethod
+    def find_simpleobject_file_occurrences(self, location) -> Dict[str, str]:
+        """
+        Implementing classes should return a dict of <ext, file_path> that match the given simple object, with any
+        extension. If the object is found several times all extensions should be returned
+
+        :param location:
+        :return: a dictionary of {ext : file_path}
+        """
+        pass
+
+    def is_present_as_multifile_object(self, location: str) -> bool:
+        """
+        Returns True if an item with this location is present as a multifile object, or False otherwise
+
+        :param location:
+        :return:
+        """
+        return len(self.find_multifile_object_children(location)) > 0
 
     @abstractmethod
     def find_multifile_object_children(self, parent_location: str, no_errors: bool = False) -> Dict[str, str]:
@@ -244,46 +230,106 @@ class AbstractFileMappingConfiguration(metaclass=ABCMeta):
         """
         pass
 
-    def is_present_as_singlefile_object(self, item_file_prefix, sep_for_flat):
-        """
-        Utility method to check if an item is present as a simple object - that means, if there is any file matching this
-        prefix with any extension
 
-        :param item_file_prefix:
-        :param sep_for_flat:
+class PersistedObject(metaclass=ABCMeta):
+    """
+    Contains all information about an object persisted at a given location. It may be a multifile (in which case it has
+    extension MULTIFILE) or a single file (in which cse it has an extension such as .txt, .cfg, etc.
+    """
+
+    def __init__(self, location: str, is_singlefile: bool, ext: str):
+        """
+        Constructor. A persisted object has a given filesystem location, is a singlefile or not (in which case it has
+        children), and has an extension such as .txt, .cfg, etc. Multifile objects have
+
+        :param location:
+        :param is_singlefile:
+        :param ext:
+        """
+        # -- location
+        check_var(location, var_types=str, var_name='location')
+        self.location = location
+        # -- single file
+        check_var(is_singlefile, var_types=bool, var_name='is_singlefile')
+        self.is_singlefile = is_singlefile
+        # -- ext
+        check_var(ext, var_types=str, var_name='ext')
+        self.ext = ext
+        # -- sanity check
+        if (is_singlefile and self.ext is MULTIFILE_EXT) or (not is_singlefile and self.ext is not MULTIFILE_EXT):
+            raise ValueError('Inconsistent object definition : is_singlefile and self.ext should be consistent')
+
+    def __str__(self) -> str:
+        return self.get_pretty_location()
+
+    def get_pretty_file_mode(self):
+        """
+        Utility method to return a string representing the mode of this file, 'singlefile' or 'multifile'
         :return:
         """
-        return len(self.find_simpleobject_file_occurrences(item_file_prefix, sep_for_flat)) > 0
+        return 'singlefile' if self.is_singlefile else 'multifile'
+
+    def get_pretty_file_ext(self):
+        """
+        Utility method to return a string representing the mode and extension of this file,
+        e.g 'singlefile, .txt' or 'multifile'
+        :return:
+        """
+        return ('singlefile, ' + self.ext) if self.is_singlefile else 'multifile'
+
+    def get_pretty_location(self):
+        """
+        Utility method to return a string representing the location, mode and extension of this file.
+        :return:
+        """
+        return self.location + ' (' + self.get_pretty_file_ext() + ')'
 
     @abstractmethod
-    def find_simpleobject_file_occurrences(self, item_file_prefix) -> Dict[str, str]:
+    def get_singlefile_path(self):
         """
-        Implementing classes should return a dict of <ext, file_path> that match the given simple object, with any
-        extension.
+        Implementing classes should return the path of this file, in case of a singlefile. If multifile, they should 
+        return an exception
+        :return:
+        """
+        pass
 
-        :param item_file_prefix:
-        :return: a dictionary of {ext : file_path}
+    @abstractmethod
+    def get_singlefile_encoding(self):
+        """
+        Implementing classes should return the file encoding, in case of a singlefile. If multifile, they should 
+        return an exception
+        :return: 
+        """
+        pass
+
+    @abstractmethod
+    def get_multifile_children(self) -> Dict[str, Any]: # actually, not Any but PersistedObject
+        """
+        Implementing classes should return a dictionary of PersistedObjects, for each named child of this object.
+        :return: 
         """
         pass
 
 
 class FileMappingConfiguration(AbstractFileMappingConfiguration):
     """
-    Abstract class for all file mapping configurations
+    Abstract class for all file mapping configurations. In addition to be an AbstractFileMappingConfiguration (meaning
+    that it can find objects at locations), it is able to create instances of PersistedObject, recursively.
     """
 
     class RecursivePersistedObject(PersistedObject):
         """
-        Represents an object on the filesystem. It may be multifile or singlefile.
-        When this object is created it performs the required file checks and logs them.
+        Represents an object on the filesystem. It may be multifile or singlefile. When this object is created it
+        recursively scans all of its children if any, and builds the corresponding PersistedObjects. All of this is
+        logged on the provided logger if any.
         """
 
-        # flagdata_init = threading.local()
-
-        def __init__(self, location: str, file_mapping_conf: AbstractFileMappingConfiguration = None, logger: Logger = None):
+        def __init__(self, location: str, file_mapping_conf: AbstractFileMappingConfiguration = None,
+                     logger: Logger = None):
             """
-            Creates a PersistedObject representing an object on the filesystem at location 'location'. It may be multifile
-            or singlefile. When this object is created it performs the required file checks and logs them.
+            Creates a PersistedObject representing an object on the filesystem at location 'location'. It may be
+            multifile or singlefile. When this object is created it recursively scans all of its children if any, and
+            builds the corresponding PersistedObjects. All of this is logged on the provided logger if any.
 
             :param location:
             :param file_mapping_conf:
@@ -299,48 +345,34 @@ class FileMappingConfiguration(AbstractFileMappingConfiguration):
             self.logger = logger
 
             try:
-                # # Initial log message
-                # in_root_call = False
-                # if logger is not None:
-                #     # log only for the root object, not for the children that will be created by the code below
-                #
-                #     if not hasattr(PersistedObject.flagdata_init, 'flag') or PersistedObject.flagdata_init.flag == 0:
-                #         print('Checking all files under ' + self.location)
-                #         PersistedObject.flagdata_init.flag = 1
-                #         in_root_call = True
-
-                # check single file or multifile
+                # -- check single file or multifile thanks to the filemapping
                 is_singlefile, ext, self._contents_or_path = self.file_mapping_conf.get_unique_object_contents(location)
 
+                # -- store all information in the container(parent class)
                 super(FileMappingConfiguration.RecursivePersistedObject, self).__init__(location, is_singlefile, ext)
 
-                # rather log after the get_unique_object, since the type of file will be shown. (a log is also in the
-                # 'except' in case of failure)
+                # -- log this for easy debug
                 if logger is not None:
                     logger.info(str(self))
 
-                # fill the self.children if multifile
+                # -- create and attach all the self.children if multifile
                 if not self.is_singlefile:
-                    self.children = {
-                    name: FileMappingConfiguration.RecursivePersistedObject(loc, file_mapping_conf=self.file_mapping_conf,
-                                                                            logger=self.logger)
-                    for name, loc in sorted(self._contents_or_path.items())}
+                    self.children = {name: FileMappingConfiguration.RecursivePersistedObject(loc,
+                                     file_mapping_conf=self.file_mapping_conf, logger=self.logger)
+                                     for name, loc in sorted(self._contents_or_path.items())}
 
-            except Exception as e:
+            except (ObjectNotFoundOnFileSystemError, ObjectPresentMultipleTimesOnFileSystemError,
+                    IllegalContentNameError) as e:
+                # -- log the object that was being built, just for consistency of log messages
                 if logger is not None:
-                    # log the object that was being built, just for consistency of log messages
                     logger.info(location)
                 raise e.with_traceback(e.__traceback__)
 
-                # finally:
-                #     # remove threadlocal flag if needed
-                #     if in_root_call:
-                #         PersistedObject.flagdata_init.flag = 0
-
-                # if in_root_call:
-                #     print('File checks done')
-
         def get_singlefile_path(self):
+            """
+            Implementation of the parent method
+            :return:
+            """
             if self.is_singlefile:
                 return self._contents_or_path
             else:
@@ -349,6 +381,10 @@ class FileMappingConfiguration(AbstractFileMappingConfiguration):
                     ' to get the file prefix')
 
         def get_singlefile_encoding(self):
+            """
+            Implementation of the parent method
+            :return:
+            """
             if self.is_singlefile:
                 return self.file_mapping_conf.encoding
             else:
@@ -356,6 +392,10 @@ class FileMappingConfiguration(AbstractFileMappingConfiguration):
                                           'object\'s children to know their encoding')
 
         def get_multifile_children(self) -> Dict[str, PersistedObject]:
+            """
+            Implementation of the parent method
+            :return:
+            """
             if self.is_singlefile:
                 raise NotImplementedError(
                     'get_multifile_children does not mean anything on a singlefile object : a single file'
@@ -370,11 +410,18 @@ class FileMappingConfiguration(AbstractFileMappingConfiguration):
         """
         super(FileMappingConfiguration, self).__init__(encoding)
 
-    def create_persisted_object(self, item_file_prefix: str, logger: Logger) -> PersistedObject:
+    def create_persisted_object(self, location: str, logger: Logger) -> PersistedObject:
+        """
+        Creates a PersistedObject representing the object at location 'location', and recursively creates all of its
+        children
 
-        #print('Checking all files under ' + item_file_prefix)
-        logger.info('Checking all files under ' + item_file_prefix)
-        obj = FileMappingConfiguration.RecursivePersistedObject(location=item_file_prefix, file_mapping_conf=self,
+        :param location:
+        :param logger:
+        :return:
+        """
+        #print('Checking all files under ' + location)
+        logger.info('Checking all files under ' + location)
+        obj = FileMappingConfiguration.RecursivePersistedObject(location=location, file_mapping_conf=self,
                                                                 logger=logger)
         #print('File checks done')
         logger.info('File checks done')
@@ -383,18 +430,23 @@ class FileMappingConfiguration(AbstractFileMappingConfiguration):
 
 class WrappedFileMappingConfiguration(FileMappingConfiguration):
     """
-    A file mapping where collection objects and multifile objects are in folders
+    A file mapping where multifile objects are represented by folders
     """
     def __init__(self, encoding:str = None):
+        """
+        Constructor, with the encoding registered to open the files.
+        :param encoding: the encoding used to open the files default is 'utf-8'
+        """
         super(WrappedFileMappingConfiguration, self).__init__(encoding=encoding)
-
 
     def find_multifile_object_children(self, parent_location, no_errors: bool = False) -> Dict[str, str]:
         """
-        Utility method to list all sub-items of a given parent item.
-        In this mode, root_path should be a valid folder, and each item is a subfolder or a file :
+        Implementation of the parent abstract method.
 
-            item_file_prefix/
+        In this mode, root_path should be a valid folder, and each item is a subfolder (multifile) or a file
+        (singlefile):
+
+            location/
             |-singlefile_sub_item1.<ext>
             |-singlefile_sub_item2.<ext>
             |-multifile_sub_item3/
@@ -402,11 +454,12 @@ class WrappedFileMappingConfiguration(FileMappingConfiguration):
 
         :param parent_location: the absolute file prefix of the parent item. it may be a folder (non-flat mode)
         or a folder + a file name prefix (flat mode)
-        :param no_errors:
+        :param no_errors: a boolean used in internal recursive calls in order to catch errors. Should not be changed by
+        users.
         :return: a dictionary of {item_name : item_prefix}
         """
 
-        # Assert that folder_path is a folder
+        # (1) Assert that folder_path is a folder
         if not isdir(parent_location):
             if no_errors:
                 return dict()
@@ -415,11 +468,11 @@ class WrappedFileMappingConfiguration(FileMappingConfiguration):
                                  'not a valid folder')
 
         else:
-            # List folders (multifile objects or collections)
+            # (2) List folders (multifile objects or collections)
             all_subfolders = [dir_ for dir_ in listdir(parent_location) if isdir(join(parent_location, dir_))]
             items = {item_name: join(parent_location, item_name) for item_name in all_subfolders}
 
-            # List files *without* their extension
+            # (3) List singlefiles *without* their extension
             items.update({
                           item_name: join(parent_location, item_name)
                           for item_name in [file_name[0:file_name.rindex(EXT_SEPARATOR)]
@@ -427,13 +480,13 @@ class WrappedFileMappingConfiguration(FileMappingConfiguration):
                                             if isfile(join(parent_location, file_name))
                                             and EXT_SEPARATOR in file_name]
                          })
+        # (4) return all
         return items
-
 
     def get_multifile_object_child_location(self, parent_item_prefix: str, child_name: str) -> str:
         """
-        Utility method to get the item_file_prefix corresponding to a parent path and an object.
-        In this mode the attribute is a file in the parent object folder
+        Implementation of the parent abstract method.
+        In this mode the attribute is a file inside the parent object folder
 
         :param parent_item_prefix: the absolute file prefix of the parent item.
         :return: the file prefix for this attribute
@@ -447,16 +500,15 @@ class WrappedFileMappingConfiguration(FileMappingConfiguration):
                 'Cannot get attribute item in non-flat mode, parent item path is not a folder : ' + parent_item_prefix)
         return join(parent_item_prefix, child_name)
 
-
-    def find_simpleobject_file_occurrences(self, item_file_prefix) -> Dict[str, str]:
+    def find_simpleobject_file_occurrences(self, location) -> Dict[str, str]:
         """
-        Utility method to find all the files for the given simple object, with any extension.
+        Implementation of the parent abstract method.
 
-        :param item_file_prefix:
+        :param location:
         :return: a dictionary of {ext : file_path}
         """
-        parent_dir = dirname(item_file_prefix)
-        base_prefix = basename(item_file_prefix)
+        parent_dir = dirname(location)
+        base_prefix = basename(location)
 
         possible_object_files = {object_file[len(base_prefix):]: join(parent_dir, object_file)
                                  for object_file in listdir(parent_dir) if
@@ -472,9 +524,10 @@ class WrappedFileMappingConfiguration(FileMappingConfiguration):
 
 class FlatFileMappingConfiguration(FileMappingConfiguration):
     """
-    A file mapping where collection objects and multifile objects are in files in the same folder than their parent,
-    with their parent name as the prefix, followed by a configurable separator
+    A file mapping where multifile objects are group of files located in the same folder than their parent,
+    with their parent name as the prefix, followed by a configurable separator.
     """
+
     def __init__(self, separator: str = None, encoding:str = None):
         """
         :param separator: the character sequence used to separate an item name from an item attribute name. Only
@@ -483,22 +536,21 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
         """
         super(FlatFileMappingConfiguration, self).__init__(encoding=encoding)
 
+        # -- check separator
         check_var(separator, var_types=str, var_name='sep_for_flat', enforce_not_none=False, min_len=1)
-
         self.separator = separator or '.'
-
         if '/' in self.separator or '\\' in self.separator:
             raise ValueError('Separator cannot contain a folder separation character')
 
-
     def find_multifile_object_children(self, parent_location, no_errors: bool = False) -> Dict[str, str]:
         """
-        Utility method to list all sub-items of a given parent item.
-        In this mode, each item is a set of files with the same prefix than item_file_prefix, separated from the
-        attribute name by the character sequence <self.separator>. The item_file_prefix may also be directly a folder,
+        Implementation of the parent abstract method.
+
+        In this mode, each item is a set of files with the same prefix than location, separated from the
+        attribute name by the character sequence <self.separator>. The location may also be directly a folder,
         in which case the sub items dont have a prefix.
 
-        example if item_file_prefix = '<parent_folder>/<file_prefix>'
+        example if location = '<parent_folder>/<file_prefix>'
 
         parent_folder/
         |-file_prefix<sep>singlefile_sub_item1.<ext>
@@ -506,9 +558,9 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
         |-file_prefix<sep>multifile_sub_item3<sep>singlesub1.<ext>
         |-file_prefix<sep>multifile_sub_item3<sep>singlesub2.<ext>
 
-        example if item_file_prefix = '<parent_folder>/
+        example if location = '<parent_folder>/
 
-        item_file_prefix/
+        location/
         |-singlefile_sub_item1.<ext>
         |-singlefile_sub_item2.<ext>
         |-multifile_sub_item3<sep>singlesub1.<ext>
@@ -520,7 +572,7 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
         :return: a dictionary of <item_name>, <item_path>
         """
 
-        # Find the base directory and base name
+        # (1) Find the base directory and base name
         if isdir(parent_location):  # special case of root folder. maybe TODO be more strict: root_folder = self.root_folder
             parent_dir = parent_location
             base_prefix = ''
@@ -530,19 +582,20 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
             base_prefix = basename(parent_location) #+ self.separator
             start_with = self.separator
 
+        # (2) list files that are not singlefiles
         content_files = [content_file for content_file in listdir(parent_dir)
-                         # we are in flat mode : should be a file not a folder
+                         # -> we are in flat mode : should be a file not a folder :
                          if isfile(join(parent_dir,content_file))
-                         # we are looking for children of a specific item
+                         # -> we are looking for children of a specific item :
                          and content_file.startswith(base_prefix)
-                         # we are looking for multifile child items only
+                         # -> we are looking for multifile child items only :
                          and content_file != base_prefix
-                         # they should start with the separator (or with nothing in case of the root folder)
+                         # -> they should start with the separator (or with nothing in case of the root folder) :
                          and (content_file[len(base_prefix):]).startswith(start_with)
-                         # they should have a valid extension
+                         # -> they should have a valid extension :
                          and (content_file[len(base_prefix + start_with):]).count(EXT_SEPARATOR) >= 1
                          ]
-        # build the resulting dictionary of item_name > item_prefix
+        # (3) build the resulting dictionary of item_name > item_prefix
         item_prefixes = dict()
         for item_file in content_files:
             end_name = item_file.find(self.separator, len(base_prefix + start_with))
@@ -553,56 +606,10 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
 
         return item_prefixes
 
-        # # list all files that are under the parent_item
-        # all_file_suffixes_under_parent = [f[len(base_prefix):] for f in listdir(parent_dir)
-        #                                   if isfile(join(parent_dir, f)) and f.startswith(base_prefix)]
-
-        # find the set of file prefixes that exist under this parent item
-        # prefixes = {file_name_suffix[0:file_name_suffix.index(self.separator)]: file_name_suffix
-        #             for file_name_suffix in all_file_suffixes_under_parent if
-        #             (self.separator in file_name_suffix)}
-        # prefixes.update({file_name_suffix[0:file_name_suffix.rindex(EXT_SEPARATOR)]: file_name_suffix
-        #                  for file_name_suffix in all_file_suffixes_under_parent if
-        #                  (self.separator not in file_name_suffix)})
-        # item_paths = dict()
-        # for prefix, file_name_suffix in prefixes.items():
-        #     if len(prefix) == 0:
-        #         raise ValueError(
-        #             'Error while trying to read item ' + item_file_prefix + ' as a collection: a '
-        #                                                                       'file already exist with this name and an extension : ' + base_prefix +
-        #             self.separator + file_name_suffix)
-        #     if prefix not in item_paths.keys():
-        #         if isdir(item_file_prefix):
-        #             item_paths[prefix] = join(item_file_prefix, prefix)
-        #         else:
-        #             item_paths[prefix] = item_file_prefix + self.separator + prefix
-        # return item_paths
-
-
-    # def find_multifileobject_attribute_file_occurrences(self, item_file_prefix) -> List[str]:
-    #     """
-    #     Utility method for flat mode only, to find all the attribute files for the given complex object, with any extension.
-    #     It also returns the files that are attributes of attributes (recursive) in the case of attributes that themselves
-    #     are complex objects
-    #
-    #     :param item_file_prefix:
-    #     :param sep_for_flat:
-    #     :return:
-    #     """
-    #     parent_dir = dirname(item_file_prefix)
-    #     base_prefix = basename(item_file_prefix)
-    #     # trick : is sep_for_flat is a dot, we have to take into account that there is also a dot for the extension
-    #     min_sep_count = (1 if self.separator == EXT_SEPARATOR else 0)
-    #     possible_attribute_field_files = [attribute_file for attribute_file in listdir(parent_dir) if
-    #                                       attribute_file.startswith(base_prefix)
-    #                                       and attribute_file != base_prefix
-    #                                       and (attribute_file[len(base_prefix):]).count(EXT_SEPARATOR) >= 1
-    #                                       and (attribute_file[len(base_prefix):]).count(self.separator) > min_sep_count]
-    #     return possible_attribute_field_files
-
-
     def get_multifile_object_child_location(self, parent_location: str, child_name: str):
         """
+        Implementation of the parent abstract method.
+
         In this mode the attribute is a file with the same prefix, separated from the parent object name by
         the character sequence <self.separator>
 
@@ -613,18 +620,18 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
         check_var(parent_location, var_types=str, var_name='parent_path')
         check_var(child_name, var_types=str, var_name='item_name')
 
+        # a child location is built by adding the separator between the child name and the parent location
         return parent_location + self.separator + child_name
 
-
-    def find_simpleobject_file_occurrences(self, item_file_prefix) -> Dict[str, str]:
+    def find_simpleobject_file_occurrences(self, location) -> Dict[str, str]:
         """
-        Utility method to find all the files for the given simple object, with any extension.
+        Implementation of the parent abstract method.
 
-        :param item_file_prefix:
+        :param location:
         :return: a dictionary{ext : file_path}
         """
-        parent_dir = dirname(item_file_prefix)
-        base_prefix = basename(item_file_prefix)
+        parent_dir = dirname(location)
+        base_prefix = basename(location)
 
         # trick : is sep_for_flat is a dot, we have to take into account that there is also a dot for the extension
         min_sep_count = (1 if self.separator == EXT_SEPARATOR else 0)
