@@ -2,18 +2,35 @@ from inspect import Parameter
 from io import StringIO
 from io import TextIOBase
 from logging import Logger, warning
-from typing import Type, Any, List, Dict, Union
+from typing import Type, Any, List, Dict, Union, Tuple, Set
 
-from parsyfiles.converting_core import Converter, S, T, ConverterFunctionWithStaticArgs
+from parsyfiles.converting_core import Converter, S, T, ConverterFunctionWithStaticArgs, ConverterFunction
 from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_combining_parsers import print_error_to_io_stream
 from parsyfiles.parsing_core import MultiFileParser, AnyParser, SingleFileParserFunction
 from parsyfiles.parsing_registries import ParserFinder, ConversionFinder
 from parsyfiles.support_for_collections import DictOfDict
-from parsyfiles.support_for_primitive_types import AsciiStr
 from parsyfiles.type_inspection_tools import get_pretty_type_str, get_constructor_attributes_types, \
     TypeInformationRequiredError, _get_constructor_signature, is_collection
 from parsyfiles.var_checker import check_var
+
+
+def read_object_from_yaml(desired_type: Type[Any], file_object: TextIOBase, logger: Logger,
+                          fix_imports: bool = True, errors: str = 'strict', *args, **kwargs) -> Any:
+    """
+    Parses a yaml file.
+
+    :param desired_type:
+    :param file_object:
+    :param logger:
+    :param fix_imports:
+    :param errors:
+    :param args:
+    :param kwargs:
+    :return:
+    """
+    import yaml
+    return yaml.load(file_object)
 
 
 def read_object_from_pickle(desired_type: Type[Any], file_object: TextIOBase, logger: Logger,
@@ -34,7 +51,7 @@ def read_object_from_pickle(desired_type: Type[Any], file_object: TextIOBase, lo
     return pickle.load(file_object, fix_imports=fix_imports, encoding=file_object.encoding, errors=errors)
 
 
-def base64_ascii_str_pickle_to_object(desired_type: Type[T], b64_ascii_str: AsciiStr, logger: Logger,
+def base64_ascii_str_pickle_to_object(desired_type: Type[T], b64_ascii_str: str, logger: Logger,
                                       *args, **kwargs) -> Any:
     import base64
     import pickle
@@ -426,11 +443,24 @@ def get_default_object_parsers(parser_finder: ParserFinder, conversion_finder: C
                                      streaming_mode=True,
                                      supported_exts={'.pyc'},
                                      supported_types={Any}),
+            # yaml for any object
+            SingleFileParserFunction(parser_function=read_object_from_yaml,
+                                     streaming_mode=True,
+                                     supported_exts={'.yaml'},
+                                     supported_types={Any},
+                                     ),
+            # yaml for collection objects
+            SingleFileParserFunction(parser_function=read_object_from_yaml,
+                                     custom_name='read_collection_from_yaml',
+                                     streaming_mode=True,
+                                     supported_exts={'.yaml'},
+                                     supported_types={Tuple, Dict, List, Set},
+                                     ),
             MultifileObjectParser(parser_finder, conversion_finder)
             ]
 
 
-def _is_able_to_convert(strict: bool, from_type: Type[Any] = None, to_type: Type[Any] = None):
+def _not_able_to_convert_collections(strict: bool, from_type: Type[Any] = None, to_type: Type[Any] = None):
     """
     Explicitly declare that we are not able to parse collections
 
@@ -453,12 +483,15 @@ def get_default_object_converters(conversion_finder: ConversionFinder) \
     and from other type to dict)
     :return:
     """
-    return [ConverterFunctionWithStaticArgs(dict, Any, dict_to_object, custom_name='<dict_to_object>',
-                                            is_able_to_convert_func=_is_able_to_convert,
-                                            conversion_finder=conversion_finder, is_dict_of_dicts=False),
-            ConverterFunctionWithStaticArgs(DictOfDict, Any, dict_to_object, custom_name='<dict_of_dict_to_object>',
-                                            is_able_to_convert_func=_is_able_to_convert,
-                                            conversion_finder=conversion_finder, is_dict_of_dicts=True)]
+    return [
+            ConverterFunction(str, Any, base64_ascii_str_pickle_to_object),
+            ConverterFunctionWithStaticArgs(DictOfDict, Any, dict_to_object, custom_name='dict_of_dict_to_object',
+                                            is_able_to_convert_func=_not_able_to_convert_collections,
+                                            conversion_finder=conversion_finder, is_dict_of_dicts=True),
+            ConverterFunctionWithStaticArgs(dict, Any, dict_to_object, custom_name='dict_to_object',
+                                            is_able_to_convert_func=_not_able_to_convert_collections,
+                                            conversion_finder=conversion_finder, is_dict_of_dicts=False)
+            ]
 
 
 class MultifileObjectParser(MultiFileParser):

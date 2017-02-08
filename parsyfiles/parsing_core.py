@@ -469,7 +469,8 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
     """
 
     def __init__(self, parser_function: Union[ParsingMethodForStream, ParsingMethodForFile],
-                 supported_types: Set[Type[T]], supported_exts: Set[str], streaming_mode: bool = True):
+                 supported_types: Set[Type[T]], supported_exts: Set[str], streaming_mode: bool = True,
+                 custom_name: str = None):
         """
         Constructor from a parser function , a mandatory set of supported types, and a mandatory set of supported
         extensions.
@@ -488,6 +489,10 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
         """
         super(SingleFileParserFunction, self).__init__(supported_types=supported_types, supported_exts=supported_exts)
 
+        # -- check the custom name
+        check_var(custom_name, var_types=str, var_name='custom_name', enforce_not_none=False)
+        self._custom_name = custom_name
+
         # -- check the function
         # TODO check the function signature to prevent TypeErrors to happen (and then remove the catch block below)
         check_var(parser_function, var_types=Callable, var_name='parser_function')
@@ -498,7 +503,10 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
         self._streaming_mode = streaming_mode
 
     def __str__(self):
-        return '<' + self._parser_func.__name__ + '(' + ('stream' if self._streaming_mode else 'file') + ' mode)>'
+        if self._custom_name:
+            return '<' + self._custom_name + '>'
+        else:
+            return '<' + self._parser_func.__name__ + '(' + ('stream' if self._streaming_mode else 'file') + ' mode)>'
 
     def __repr__(self):
         # __repr__ is supposed to offer an unambiguous representation,

@@ -1,0 +1,4 @@
+# a YAML object
+# we cant load an instance of parsyfiles.test.test_parsyfiles.ExecOpTest like that, it should be available in a module.
+# !!python/object:__main__.ExecOpTest
+!!python/dict {x: 1, y: 5, op: +, expected_result: 6}

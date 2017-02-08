@@ -5,7 +5,7 @@ from typing import Type, Dict, Any, List
 
 from parsyfiles.converting_core import Converter, S, ConversionChain
 from parsyfiles.filesystem_mapping import PersistedObject
-from parsyfiles.parsing_core import AnyParser, T, ParsingPlan, _BaseParsingPlan
+from parsyfiles.parsing_core import AnyParser, T, ParsingPlan
 from parsyfiles.parsing_core_api import get_parsing_plan_log_str, Parser
 from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
@@ -210,7 +210,7 @@ class CascadingParser(DelegatingParser):
 
     class ActiveParsingPlan(ParsingPlan[T]):
         """
-        A wrapper for the currently active parsing plan, to provide a different string representation.
+        A wrapper for the currently active parsing plan, simply to provide a different string representation.
         """
 
         def __init__(self, pp, cascadeparser):
@@ -221,6 +221,9 @@ class CascadingParser(DelegatingParser):
 
         def __str__(self):
             return str(self.pp) + ' (currently active parsing plan in ' + str(self.cascadeparser) + ')'
+
+        def execute(self, logger: Logger, *args, **kwargs) -> T:
+            return self.pp.execute(logger, *args, **kwargs)
 
         def _execute(self, logger: Logger, *args, **kwargs) -> T:
             return self.pp._execute(logger, *args, **kwargs)
@@ -462,7 +465,7 @@ class ParsingChain(AnyParser):
         return self._base_parser._get_parsing_plan_for_multifile_children(obj_on_fs, desired_type, logger)
 
     def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
-                         parsing_plan_for_children: Dict[str, _BaseParsingPlan],
+                         parsing_plan_for_children: Dict[str, ParsingPlan],
                          logger: Logger, *args, **kwargs) -> T:
         """
         Implementation of AnyParser API
