@@ -5,8 +5,8 @@ from typing import Type, Dict, Any, List
 
 from parsyfiles.converting_core import Converter, S, ConversionChain
 from parsyfiles.filesystem_mapping import PersistedObject
-from parsyfiles.parsing_core import AnyParser, T, ParsingPlan, _BaseParser, _BaseParsingPlan
-from parsyfiles.parsing_core_api import get_parsing_plan_log_str
+from parsyfiles.parsing_core import AnyParser, T, ParsingPlan, _BaseParsingPlan
+from parsyfiles.parsing_core_api import get_parsing_plan_log_str, Parser
 from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
 
@@ -208,13 +208,13 @@ class CascadingParser(DelegatingParser):
         # finally add it
         self._parsers_list.append(parser)
 
-    class ActiveParsingPlan(_BaseParsingPlan[T]):
+    class ActiveParsingPlan(ParsingPlan[T]):
         """
         A wrapper for the currently active parsing plan, to provide a different string representation.
         """
 
         def __init__(self, pp, cascadeparser):
-            # explicitly dont use base constructor
+            # -- explicitly dont use base constructor : we are just a proxy
             # super(CascadingParser.ActiveParsingPlan, self).__init__()
             self.pp = pp
             self.cascadeparser = cascadeparser
@@ -247,11 +247,11 @@ class CascadingParser(DelegatingParser):
         """
 
         def _execute(self, logger: Logger, *args, **kwargs) -> T:
-            raise NotImplementedError('This method is not implemented directly but though inner parsing plans. '
+            raise NotImplementedError('This method is not implemented directly but through inner parsing plans. '
                                       'This should not be called normally')
 
         def __init__(self, desired_type: Type[T], obj_on_filesystem: PersistedObject, parser: AnyParser,
-                     parser_list: List[_BaseParser], logger: Logger):
+                     parser_list: List[Parser], logger: Logger):
 
             super(CascadingParser.CascadingParsingPlan, self).__init__(desired_type, obj_on_filesystem, parser)
 

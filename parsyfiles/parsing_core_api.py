@@ -47,7 +47,7 @@ def check_extension(extension: str, allow_multifile: bool = False):
                          'multifile object parsing)' if allow_multifile else ''))
 
 
-class BaseParserDeclarationForRegistries(object):
+class _BaseParserDeclarationForRegistries(object):
     """
     Represents the base API to declare a parser in Parser registries, in order to determine which parsers are available
     and what are their capabilities : supported object types and supported file extensions.
@@ -189,7 +189,7 @@ class ParsingException(Exception):
         super(ParsingException, self).__init__(contents)
 
     @staticmethod
-    def create_for_caught_error(parser: BaseParserDeclarationForRegistries, desired_type: Type[T],
+    def create_for_caught_error(parser: _BaseParserDeclarationForRegistries, desired_type: Type[T],
                                 obj: PersistedObject, caught: Exception, *args, **kwargs):
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
@@ -214,7 +214,7 @@ class ParsingException(Exception):
             .with_traceback(caught.__traceback__) # 'from e' was hiding the inner traceback. This is much better for debug
 
     @staticmethod
-    def create_for_wrong_result_type(parser: BaseParserDeclarationForRegistries, desired_type: Type[T],
+    def create_for_wrong_result_type(parser: _BaseParserDeclarationForRegistries, desired_type: Type[T],
                                      obj: PersistedObject, result: T, *args, **kwargs):
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
@@ -234,7 +234,7 @@ class ParsingException(Exception):
                                 + ' which is not an instance of ' + str(desired_type))
 
     @staticmethod
-    def create_for_wrong_result_type_multifile(desired_type: Type[T], parser: BaseParserDeclarationForRegistries,
+    def create_for_wrong_result_type_multifile(desired_type: Type[T], parser: _BaseParserDeclarationForRegistries,
                                                result: T, multifile_location: str):
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
@@ -276,7 +276,7 @@ class ParsingPlan(Generic[T], PersistedObject):
     """
 
     def __init__(self, object_type: Type[T], obj_on_filesystem: PersistedObject,
-                 parser: BaseParserDeclarationForRegistries):
+                 parser: _BaseParserDeclarationForRegistries):
         """
         Creates a parsing plan, from an object's type, an object's files, and a parser.
 
@@ -294,7 +294,7 @@ class ParsingPlan(Generic[T], PersistedObject):
         check_var(obj_on_filesystem, var_types=PersistedObject, var_name='obj_on_filesystem')
         self.obj_on_fs_to_parse = obj_on_filesystem
         # -- parser
-        check_var(parser, var_types=BaseParserDeclarationForRegistries, var_name='parser')
+        check_var(parser, var_types=_BaseParserDeclarationForRegistries, var_name='parser')
         self.parser = parser
 
     def __getattr__(self, item):
@@ -310,12 +310,27 @@ class ParsingPlan(Generic[T], PersistedObject):
             raise AttributeError('\'' + self.__class__.__name__ + '\' object has no attribute \'' + item + '\'')
 
     def get_singlefile_path(self):
+        """
+        Delegates to the inner PersistedObject
+        We have to implement this explicitly because it is an abstract method in the parent class
+        :return:
+        """
         return self.obj_on_fs_to_parse.get_singlefile_path()
 
     def get_singlefile_encoding(self):
+        """
+        Delegates to the inner PersistedObject
+        We have to implement this explicitly because it is an abstract method in the parent class
+        :return:
+        """
         return self.obj_on_fs_to_parse.get_singlefile_encoding()
 
     def get_multifile_children(self) -> Dict[str, Any]:
+        """
+        Delegates to the inner PersistedObject
+        We have to implement this explicitly because it is an abstract method in the parent class
+        :return:
+        """
         return self.obj_on_fs_to_parse.get_multifile_children()
 
     def __str__(self):
@@ -362,15 +377,15 @@ class ParsingPlan(Generic[T], PersistedObject):
         pass
 
 
-class Parser(BaseParserDeclarationForRegistries):
+class Parser(_BaseParserDeclarationForRegistries):
     """
     Represents the API that any parser should implement to be usable.
 
     A parser is basically
-    * (1) a declaration (= a BaseParserDeclarationForRegistries) of supported object types and supported file
+    * (1) a declaration (= a _BaseParserDeclarationForRegistries) of supported object types and supported file
     extensions. It is possible to declare that a parser is able to parse any type (typically, a pickle parser). It is
     also possible to declare a custom function telling if a specific object type is supported, in order to accept most
-    types but not all. See constructor in BaseParserDeclarationForRegistries for details.
+    types but not all. See constructor in _BaseParserDeclarationForRegistries for details.
     * (2) a factory able to create ParsingPlan[T] objects on demand in order to parse files into objects of type T.
 
     Important note: as this class shows, it is not mandatory for a Parser to implement any actual parsing methods,

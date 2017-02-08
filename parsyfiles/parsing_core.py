@@ -180,7 +180,7 @@ class AnyParser(_BaseParser):
     MultiFileParser respectively, or one of their subclasses such as SingleFileParserFunction.
 
     Reminder from 'Parser' parent class: a parser is basically
-    * (1) a declaration (= a BaseParserDeclarationForRegistries) of supported object types and supported file
+    * (1) a declaration (= a _BaseParserDeclarationForRegistries) of supported object types and supported file
     extensions. It is possible to declare that a parser is able to parse Any type (typically, a pickle parser). It is
     also possible to declare a custom function telling if a specific object type is supported, in order to accept most
     types but not all. See constructor for details.
@@ -190,8 +190,8 @@ class AnyParser(_BaseParser):
     capabilities in the parent 'create_parsing_plan' method.
 
     So what remains to the implementation ?
-    * This class extends BaseParserDeclarationForRegistries. So you may call its super constructor to declare the
-    parser capabilities (see BaseParserDeclarationForRegistries.__init__ for details)
+    * This class extends _BaseParserDeclarationForRegistries. So you may call its super constructor to declare the
+    parser capabilities (see _BaseParserDeclarationForRegistries.__init__ for details)
     * This class extends _BaseParser. So 2 parsing methods should be implemented : '_parse_singlefile' and
     '_parse_multifile'.
     * This class implements _BaseParser._create_parsing_plan by creating recursive parsing plans. These recursive
@@ -326,14 +326,14 @@ class SingleFileParser(AnyParser):
     Represents parser able to parse singlefiles only (not multifiles).
 
     Reminder from 'Parser' parent class: a parser is basically
-    * (1) a declaration (= a BaseParserDeclarationForRegistries) of supported object types and supported file
+    * (1) a declaration (= a _BaseParserDeclarationForRegistries) of supported object types and supported file
     extensions. It is possible to declare that a parser is able to parse Any type (typically, a pickle parser). It is
     also possible to declare a custom function telling if a specific object type is supported, in order to accept most
     types but not all. See constructor for details.
     * (2) a factory able to create ParsingPlan[T] objects on demand in order to parse files into objects of type T.
     """
 
-    def __init__(self, supported_exts: Set[str], supported_types: Set[Type[T]]):
+    def __init__(self, supported_exts: Set[str], supported_types: Set[Type]):
         """
         Constructor, with
         * a mandatory set of supported extensions
@@ -383,7 +383,7 @@ class MultiFileParser(AnyParser):
     Represents parser able to parse multifiles only (not singlefiles).
 
     Reminder from 'Parser' parent class: a parser is basically
-    * (1) a declaration (= a BaseParserDeclarationForRegistries) of supported object types and supported file
+    * (1) a declaration (= a _BaseParserDeclarationForRegistries) of supported object types and supported file
     extensions. It is possible to declare that a parser is able to parse Any type (typically, a pickle parser). It is
     also possible to declare a custom function telling if a specific object type is supported, in order to accept most
     types but not all. See constructor for details.
@@ -455,7 +455,7 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
     Represents a parser for singlefiles relying on a parser_function.
 
     Reminder from 'Parser' parent class: a parser is basically
-    * (1) a declaration (= a BaseParserDeclarationForRegistries) of supported object types and supported file
+    * (1) a declaration (= a _BaseParserDeclarationForRegistries) of supported object types and supported file
     extensions. It is possible to declare that a parser is able to parse Any type (typically, a pickle parser). It is
     also possible to declare a custom function telling if a specific object type is supported, in order to accept most
     types but not all. See constructor for details.
