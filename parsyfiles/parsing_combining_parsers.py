@@ -5,12 +5,13 @@ from typing import Type, Dict, Any, List
 
 from parsyfiles.converting_core import Converter, S, ConversionChain
 from parsyfiles.filesystem_mapping import PersistedObject
-from parsyfiles.parsing_core import AnyParser, T, _ParsingPlanElement, BaseParser, get_parsing_plan_log_str
+from parsyfiles.parsing_core import AnyParser, T, ParsingPlan, _BaseParser, _BaseParsingPlan
+from parsyfiles.parsing_core_api import get_parsing_plan_log_str
 from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
 
 
-class DelegatingParser(AnyParser[T]):
+class DelegatingParser(AnyParser):
     """
     A parser that delegates all the parsing tasks to another implementation ; and therefore does not implement directly
     the corresponding parsing submethods, just the '_create_parsing_plan'
@@ -72,8 +73,8 @@ class CascadeError(Exception):
         super(CascadeError, self).__init__(contents)
 
     @staticmethod
-    def create_for_parsing_plan_creation(origin_parser: AnyParser[T], parent_plan: AnyParser._RecursiveParsingPlan[T],
-                                         caught: Dict[AnyParser[T], Exception]):
+    def create_for_parsing_plan_creation(origin_parser: AnyParser, parent_plan: AnyParser._RecursiveParsingPlan[T],
+                                         caught: Dict[AnyParser, Exception]):
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
         https://github.com/nose-devs/nose/issues/725
@@ -95,8 +96,8 @@ class CascadeError(Exception):
         return CascadeError(base_msg + msg.getvalue())
 
     @staticmethod
-    def create_for_execution(origin_parser: AnyParser[T], parent_plan: AnyParser._RecursiveParsingPlan[T],
-                             caught_exec: Dict[AnyParser[T], Exception]):
+    def create_for_execution(origin_parser: AnyParser, parent_plan: AnyParser._RecursiveParsingPlan[T],
+                             caught_exec: Dict[AnyParser, Exception]):
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
         https://github.com/nose-devs/nose/issues/725
@@ -118,13 +119,13 @@ class CascadeError(Exception):
         return CascadeError(base_msg + msg.getvalue())
 
 
-class CascadingParser(DelegatingParser[T]):
+class CascadingParser(DelegatingParser):
     """
     Represents a cascade of parsers that are tried in order: the first parser is used, then if it fails the second is
     used, etc. If all parsers failed, a CascadeError is thrown in order to provide an overview of all errors.
     Note that before switching to another parser, a new parsing plan is rebuilt with that new parser.
     """
-    def __init__(self, parsers: List[AnyParser[T]] = None):
+    def __init__(self, parsers: List[AnyParser] = None):
         """
         Constructor from an initial list of parsers
         :param parsers:
@@ -156,7 +157,7 @@ class CascadingParser(DelegatingParser[T]):
         # but pprint uses __repr__ so we'd like users to see the small and readable version
         return self.__str__()
 
-    def add_parser_to_cascade(self, parser: AnyParser[T]):
+    def add_parser_to_cascade(self, parser: AnyParser):
         """
         Adds the provided parser to this cascade. If this is the first parser, it will configure the cascade according
         to the parser capabilities (single and multifile support, extensions).
@@ -207,7 +208,7 @@ class CascadingParser(DelegatingParser[T]):
         # finally add it
         self._parsers_list.append(parser)
 
-    class ActiveParsingPlan(BaseParser.ParsingPlan[T]):
+    class ActiveParsingPlan(_BaseParsingPlan[T]):
         """
         A wrapper for the currently active parsing plan, to provide a different string representation.
         """
@@ -224,7 +225,7 @@ class CascadingParser(DelegatingParser[T]):
         def _execute(self, logger: Logger, *args, **kwargs) -> T:
             return self.pp._execute(logger, *args, **kwargs)
 
-        def _get_children_parsing_plan(self) -> Dict[str, _ParsingPlanElement]:
+        def _get_children_parsing_plan(self) -> Dict[str, ParsingPlan]:
             return self.pp._get_children_parsing_plan()
 
         def __getattr__(self, item):
@@ -239,7 +240,7 @@ class CascadingParser(DelegatingParser[T]):
             else:
                 raise AttributeError('\'' + self.__class__.__name__ + '\' object has no attribute \'' + item + '\'')
 
-    class CascadingParsingPlan(_ParsingPlanElement[T]):
+    class CascadingParsingPlan(ParsingPlan[T]):
         """
         Represents a parsing plan built by multiple parsers. It is at any time a proxy of the most appropriate parsing
         plan
@@ -249,8 +250,8 @@ class CascadingParser(DelegatingParser[T]):
             raise NotImplementedError('This method is not implemented directly but though inner parsing plans. '
                                       'This should not be called normally')
 
-        def __init__(self, desired_type: Type[T], obj_on_filesystem: PersistedObject, parser: AnyParser[T],
-                     parser_list: List[BaseParser], logger: Logger):
+        def __init__(self, desired_type: Type[T], obj_on_filesystem: PersistedObject, parser: AnyParser,
+                     parser_list: List[_BaseParser], logger: Logger):
 
             super(CascadingParser.CascadingParsingPlan, self).__init__(desired_type, obj_on_filesystem, parser)
 
@@ -288,7 +289,7 @@ class CascadingParser(DelegatingParser[T]):
                     try:
                         # -- try to rebuild a parsing plan with next parser, and remember it if is succeeds
                         self.active_parsing_plan = CascadingParser.ActiveParsingPlan(p.create_parsing_plan(
-                            self.obj_type, self.obj_on_fs_to_parse, self.logger, in_rootcall=False), self.parser)
+                            self.obj_type, self.obj_on_fs_to_parse, self.logger, _main_call=False), self.parser)
                         self.active_parser_idx = i
                         return
 
@@ -354,7 +355,7 @@ class CascadingParser(DelegatingParser[T]):
                 raise Exception('Cannot execute this parsing plan : empty parser list !')
 
     def _create_parsing_plan(self, desired_type: Type[T], filesystem_object: PersistedObject, logger: Logger) \
-            -> _ParsingPlanElement[T]:
+            -> ParsingPlan[T]:
         """
         Creates a parsing plan to parse the given filesystem object into the given desired_type.
         This overrides the method in AnyParser, in order to provide a 'cascading' parsing plan
@@ -370,12 +371,12 @@ class CascadingParser(DelegatingParser[T]):
                                                     logger=logger)
 
 
-class ParsingChain(AnyParser[T]):
+class ParsingChain(AnyParser):
     """
     Represents a parsing chain made of a base parser and a list of converters.
     """
 
-    def __init__(self, base_parser: AnyParser[S], converter: Converter[S, T], strict: bool,
+    def __init__(self, base_parser: AnyParser, converter: Converter[S, T], strict: bool,
                  base_parser_chosen_dest_type: Type[S] = None):
         """
         Constructor from a base parser and a conversion chain.
@@ -415,8 +416,8 @@ class ParsingChain(AnyParser[T]):
         check_var(strict, var_types=bool, var_name='strict')
         self.strict = strict
 
-    def size(self):
-        return self._base_parser.size() + self._converter.size()
+    def __len__(self):
+        return len(self._base_parser) + len(self._converter)
 
     def __getattr__(self, item):
         # Redirect anything that is not implemented here to the base parser.
@@ -461,7 +462,7 @@ class ParsingChain(AnyParser[T]):
         return self._base_parser._get_parsing_plan_for_multifile_children(obj_on_fs, desired_type, logger)
 
     def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
-                         parsing_plan_for_children: Dict[str, BaseParser.ParsingPlan],
+                         parsing_plan_for_children: Dict[str, _BaseParsingPlan],
                          logger: Logger, *args, **kwargs) -> T:
         """
         Implementation of AnyParser API

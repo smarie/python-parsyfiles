@@ -84,7 +84,7 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
                   enforce_not_none=False)
         self.is_able_to_convert_func = is_able_to_convert_func
 
-    def size(self):
+    def __len__(self):
         # as opposed to conversion chains.. for use in sorting methods
         return 1
 
@@ -378,7 +378,7 @@ class ConversionChain(Converter[S, T]):
         copy_list = deepcopy(self._converters_list, memo=memo)
         return ConversionChain(copy_list, strict_chaining=self.strict)
 
-    def size(self):
+    def __len__(self):
         """
         A method returning the chain size, that may be used for example to sort a list of candidate conversion chains
         :return: the chain size

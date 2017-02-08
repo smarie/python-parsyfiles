@@ -1,6 +1,5 @@
 from abc import ABCMeta, abstractmethod
 from logging import Logger
-from operator import methodcaller
 from pprint import pprint
 from typing import Type, Dict, Any, List, Set, Tuple
 from warnings import warn
@@ -8,9 +7,8 @@ from warnings import warn
 from parsyfiles.converting_core import S, Converter, ConversionChain
 from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_combining_parsers import ParsingChain, CascadingParser, DelegatingParser
-from parsyfiles.parsing_core import AnyParser, T, InvalidParserException, _ParsingPlanElement, BaseParser
-from parsyfiles.type_inspection_tools import get_pretty_type_str, get_base_generic_type, \
-    get_pretty_type_keys_dict
+from parsyfiles.parsing_core import AnyParser, T, _InvalidParserException, ParsingPlan, _BaseParser
+from parsyfiles.type_inspection_tools import get_pretty_type_str, get_base_generic_type, get_pretty_type_keys_dict
 from parsyfiles.var_checker import check_var
 
 
@@ -21,7 +19,7 @@ class ParserFinder(metaclass=ABCMeta):
 
     @abstractmethod
     def build_parser_for_fileobject_and_desiredtype(self, obj_on_filesystem: PersistedObject, object_type: Type[T],
-                                                    logger: Logger = None) -> BaseParser[T]:
+                                                    logger: Logger = None) -> _BaseParser:
         """
         Returns the most appropriate parser to use to parse object obj_on_filesystem as an object of type object_type
 
@@ -350,7 +348,7 @@ class AbstractParserCache(metaclass=ABCMeta):
             self.register_parser(parser)
 
     @abstractmethod
-    def register_parser(self, parser: AnyParser[T]):
+    def register_parser(self, parser: AnyParser):
         pass
 
     @abstractmethod
@@ -373,10 +371,10 @@ class AbstractParserCache(metaclass=ABCMeta):
         l = self.get_capabilities_by_type(strict_type_matching=strict_type_matching)
         pprint({get_pretty_type_str(typ): parsers for typ, parsers in l.items()})
 
-    def get_all_supported_types_pretty_str(self) -> List[str]:
-        return list({get_pretty_type_str(typ) for typ in self.get_all_supported_types()})
+    def get_all_supported_types_pretty_str(self) -> Set[str]:
+        return {get_pretty_type_str(typ) for typ in self.get_all_supported_types()}
 
-    def get_capabilities_by_type(self, strict_type_matching: bool) -> Dict[str, Dict[Type[T], AnyParser[T]]]:
+    def get_capabilities_by_type(self, strict_type_matching: bool) -> Dict[Type, Dict[str, Dict[str, AnyParser]]]:
         """
         For all types that are supported,
         lists all extensions that can be parsed into such a type.
@@ -403,7 +401,7 @@ class AbstractParserCache(metaclass=ABCMeta):
         pprint(self.get_capabilities_for_type(typ, strict_type_matching=strict_type_matching))
 
 
-    def get_capabilities_for_type(self, typ, strict_type_matching):
+    def get_capabilities_for_type(self, typ, strict_type_matching) -> Dict[str, Dict[str, AnyParser]]:
         """
         Utility method to return, for a given type, all known ways to parse an object of this type, organized by file
         extension.
@@ -425,7 +423,7 @@ class AbstractParserCache(metaclass=ABCMeta):
             # insert_element_to_dict_of_dicts(res, typ, ext, matching_dict)
         return r
 
-    def get_capabilities_by_ext(self, strict_type_matching: bool) -> Dict[str, Dict[Type[T], AnyParser[T]]]:
+    def get_capabilities_by_ext(self, strict_type_matching: bool) -> Dict[str, Dict[Type, Dict[str, AnyParser]]]:
         """
         For all extensions that are supported,
         lists all types that can be parsed from this extension.
@@ -449,7 +447,7 @@ class AbstractParserCache(metaclass=ABCMeta):
     def print_capabilities_for_ext(self, ext, strict_type_matching = False):
         pprint(get_pretty_type_keys_dict(self.get_capabilities_for_ext(ext, strict_type_matching)))
 
-    def get_capabilities_for_ext(self, ext, strict_type_matching):
+    def get_capabilities_for_ext(self, ext, strict_type_matching) -> Dict[Type, Dict[str, AnyParser]]:
         """
         Utility method to return, for a given file extension, all known ways to parse a file with this extension,
         organized by target object type.
@@ -471,14 +469,14 @@ class AbstractParserCache(metaclass=ABCMeta):
             # insert_element_to_dict_of_dicts(res, ext, typ, matching_dict)
         return r
 
-    def get_all_supported_types(self):
+    def get_all_supported_types(self) -> Set[Type]:
         return self.get_all_supported_types_for_ext(ext_to_match=None)
 
     @abstractmethod
-    def get_all_supported_types_for_ext(self, ext_to_match: str) -> Set[Type[Any]]:
+    def get_all_supported_types_for_ext(self, ext_to_match: str) -> Set[Type]:
         pass
 
-    def get_all_supported_exts(self):
+    def get_all_supported_exts(self) -> Set[str]:
         # no need to use strict = False here :)
         return self.get_all_supported_exts_for_type(type_to_match=None, strict=True)
 
@@ -487,7 +485,7 @@ class AbstractParserCache(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def register_parser(self, parser: AnyParser[T]):
+    def register_parser(self, parser: AnyParser):
         pass
 
     @abstractmethod
@@ -531,7 +529,7 @@ class ParserCache(AbstractParserCache):
 
 
 
-    def register_parser(self, parser: AnyParser[T]):
+    def register_parser(self, parser: AnyParser):
         """
         Utility method to register any parser. Parsers that support any type will be stored in the "generic"
         list, and the others will be stored in front of the types they support
@@ -540,7 +538,7 @@ class ParserCache(AbstractParserCache):
         check_var(parser, var_types=AnyParser, var_name='parser')
         if (not parser.supports_multifile()) and (not parser.supports_singlefile()):
             # invalid
-            raise InvalidParserException.create(parser)
+            raise _InvalidParserException.create(parser)
 
         # (1) store in the main lists
         if parser.is_generic():
@@ -870,12 +868,12 @@ class ParserCache(AbstractParserCache):
     #             if is_able and not strictly:
     #                 r.append(p)
 
-class ParserRegistry(ParserCache, ParserFinder, DelegatingParser[T]):
+class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
     """
     A manager of specific and generic parsers
     """
 
-    def __init__(self, pretty_name: str, strict_matching: bool, initial_parsers_to_register: List[AnyParser[T]] = None):
+    def __init__(self, pretty_name: str, strict_matching: bool, initial_parsers_to_register: List[AnyParser] = None):
         """
         Constructor. Initializes the dictionary of parsers with the optionally provided initial_parsers, and
         inits the lock that will be used for access in multithreading context.
@@ -897,7 +895,7 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser[T]):
         return self.pretty_name
 
     def _create_parsing_plan(self, desired_type: Type[T], filesystem_object: PersistedObject, logger: Logger) \
-            -> _ParsingPlanElement[T]:
+            -> ParsingPlan[T]:
         """
         Implementation of AnyParser API
         Relies on the underlying registry of parsers to provide the best parsing plan
@@ -913,7 +911,7 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser[T]):
         return combined_parser.create_parsing_plan(desired_type, filesystem_object, logger)
 
     def build_parser_for_fileobject_and_desiredtype(self, obj_on_filesystem: PersistedObject, object_type: Type[T],
-                                                    logger: Logger = None) -> AnyParser[T]:
+                                                    logger: Logger = None) -> AnyParser:
         """
         Builds from the registry, a parser to parse object obj_on_filesystem as an object of type object_type.
 
@@ -1345,13 +1343,12 @@ class ConverterCache(AbstractConverterCache):
         self._specific_conversion_chains += specific_chains
 
         # FINALLY sort all lists
-        self._generic_nonstrict_conversion_chains = sorted(self._generic_nonstrict_conversion_chains,
-                                                           key=methodcaller('size'), reverse=True)
-        self._generic_conversion_chains = sorted(self._generic_conversion_chains, key=methodcaller('size'), reverse=True)
+        self._generic_nonstrict_conversion_chains = sorted(self._generic_nonstrict_conversion_chains, key=len,
+                                                           reverse=True)
+        self._generic_conversion_chains = sorted(self._generic_conversion_chains, key=len, reverse=True)
         self._specific_non_strict_conversion_chains = sorted(self._specific_non_strict_conversion_chains,
-                                                             key=methodcaller('size'), reverse=True)
-        self._specific_conversion_chains = sorted(self._specific_conversion_chains, key=methodcaller('size'),
-                                                  reverse=True)
+                                                             key=len, reverse=True)
+        self._specific_conversion_chains = sorted(self._specific_conversion_chains, key=len, reverse=True)
 
 
         # for chain in generic_chains + specific_nonstrict_chains + specific_chains:
@@ -1734,9 +1731,9 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
                                                                            base_parser_chosen_dest_type=typ))
 
         # Finally sort by chain length
-        matching_p_generic = sorted(matching_p_generic, key=methodcaller('size'), reverse=True)
-        matching_p_approx = sorted(matching_p_approx, key=methodcaller('size'), reverse=True)
-        matching_p_exact = sorted(matching_p_exact, key=methodcaller('size'), reverse=True)
+        matching_p_generic = sorted(matching_p_generic, key=len, reverse=True)
+        matching_p_approx = sorted(matching_p_approx, key=len, reverse=True)
+        matching_p_exact = sorted(matching_p_exact, key=len, reverse=True)
 
         return (matching_p_generic, matching_p_approx, matching_p_exact), no_type_match_but_ext_match, \
                no_ext_match_but_type_match, no_match

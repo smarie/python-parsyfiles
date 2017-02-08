@@ -6,7 +6,8 @@ from typing import List, Set, Dict, Type, Any
 from unittest import TestCase
 
 from parsyfiles.filesystem_mapping import FlatFileMappingConfiguration
-from parsyfiles.parsing_core import ParsingException, SingleFileParserFunction
+from parsyfiles.parsing_core import SingleFileParserFunction
+from parsyfiles.parsing_core_api import ParsingException
 from parsyfiles.parsing_fw import RootParser, parse_item, parse_collection
 from parsyfiles.var_checker import check_var
 

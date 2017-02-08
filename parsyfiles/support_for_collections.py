@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Union, Type, Set, Tuple
 
 from parsyfiles.converting_core import Converter, ConverterFunction
 from parsyfiles.filesystem_mapping import PersistedObject
-from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser, MultiFileParser, _ParsingPlanElement, T
+from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser, MultiFileParser, ParsingPlan, T
 from parsyfiles.parsing_registries import ParserFinder
 from parsyfiles.type_inspection_tools import _extract_collection_base_type, get_pretty_type_str
 from parsyfiles.var_checker import check_var
@@ -71,7 +71,7 @@ class DictOfDict(Dict[str, Dict[str, Any]]):
     pass
 
 
-class MultifileDictParser(MultiFileParser[Dict]):
+class MultifileDictParser(MultiFileParser):
     """
     This class is able to read any collection type as long as they are PEP484 specified (Dict, List, Set, Tuple), from
      multifile objects. It simply inspects the required type to find the base type expected for items of the collection,
@@ -122,7 +122,7 @@ class MultifileDictParser(MultiFileParser[Dict]):
         return children_plan
 
     def _parse_multifile(self, desired_type: Type[Union[Dict, List]], obj: PersistedObject,
-                         parsing_plan_for_children: Dict[str, _ParsingPlanElement], logger: Logger,
+                         parsing_plan_for_children: Dict[str, ParsingPlan], logger: Logger,
                          lazy_parsing: bool = False, background_parsing: bool = False, *args, **kwargs) \
             -> Union[Dict, List]:
         """

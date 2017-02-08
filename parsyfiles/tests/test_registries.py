@@ -4,7 +4,7 @@ from typing import Generic, TypeVar, Dict, Type, Any
 from unittest import TestCase
 
 from parsyfiles import PersistedObject, get_pretty_type_str, MULTIFILE_EXT
-from parsyfiles.parsing_core import SingleFileParserFunction, MultiFileParser, AnyParser, T, BaseParser
+from parsyfiles.parsing_core import SingleFileParserFunction, MultiFileParser, AnyParser, T, _BaseParsingPlan
 from parsyfiles.parsing_registries import ParserCache
 
 
@@ -115,7 +115,7 @@ class TestParserRegistry(TestCase):
         self.all_parsers_for_d.add(ad_parser_single)
 
         # ******** Specific Multifile ************
-        class DummyMultifileParser(MultiFileParser[T]):
+        class DummyMultifileParser(MultiFileParser):
 
             def __init__(self, supported_types):
                 super(DummyMultifileParser, self).__init__(supported_types)
@@ -125,7 +125,7 @@ class TestParserRegistry(TestCase):
                        + 'for ' + str(self.supported_exts)
 
             def _get_parsing_plan_for_multifile_children(self, obj_on_fs: PersistedObject, desired_type: Type[T],
-                                                         logger: Logger) -> Dict[str, BaseParser.ParsingPlan[Any]]:
+                                                         logger: Logger) -> Dict[str, _BaseParsingPlan[Any]]:
                 pass
 
             def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
@@ -154,14 +154,14 @@ class TestParserRegistry(TestCase):
         self.all_parsers_for_d.add(bd_parser_multi)
 
         # ******** Specific BOTH **************
-        class DummyParser(AnyParser[T]):
+        class DummyParser(AnyParser):
 
             def __init__(self, supported_types, supported_exts):
                 super(DummyParser, self).__init__(supported_types=supported_types,
                                                   supported_exts=supported_exts)
 
             def _get_parsing_plan_for_multifile_children(self, obj_on_fs: PersistedObject, desired_type: Type[T],
-                                                         logger: Logger) -> Dict[str, BaseParser.ParsingPlan[Any]]:
+                                                         logger: Logger) -> Dict[str, _BaseParsingPlan[Any]]:
                 pass
 
             def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
