@@ -13,10 +13,10 @@ here = path.abspath(path.dirname(__file__))
 
 # ************** ID card *****************
 DISTNAME = 'parsyfiles'
-DESCRIPTION = 'Combines most popular python parsers (json, jprops, pickle...) with user-defined parsers and converters'\
-              ' to read objects from files. Supports multifile & multiparser objects, typically useful to organize '\
-              'test data. Leverages PEP484 type hints in order to intelligently use the best parser/converter chain, ' \
-              'and to try several combinations if relevant'
+DESCRIPTION = 'Combines most popular python parsers (json, jprops, pickle...) with user-defined parsers and type ' \
+              'converters to read objects from files. Supports multifile & multiparser objects, typically useful to ' \
+              'organize test data. Leverages PEP484 type hints in order to intelligently use the best parser/converter ' \
+              'chain, and to try several combinations if relevant'
 
 MAINTAINER = 'Sylvain Marié'
 MAINTAINER_EMAIL = '"Sylvain Marié" <sylvain.marie@schneider-electric.com>'

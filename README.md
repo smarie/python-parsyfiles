@@ -1,18 +1,32 @@
-# python simple file collection parsing framework (sficopaf)
-A declarative framework to read complex objects made of several files, using a user-provided library of unitary file parsers. 
+# python simple file collection parsing framework (parsyfiles)
+A declarative framework that combines most popular python parsers (json, jprops, pickle...) with user-defined parsers and type converters, in order to easily read objects from files. It is able to read an object even if the object's content comes from several files requiring several parsers: this is typically useful to read test data where you want to combine datasets, parameters, expected results and what not. 
 
-This library provides a *framework*, not a specific parser ! Although it comes with a couple unitary file parsers as an example, it is intended for users that already know how to parse their various files independently, but who are looking for a higher-level tool to read complex objects made of several files/folders and potentially requiring to combine several parsers.
+It leverages PEP484 type hints in order to intelligently use the best parser/converter chain, and to try several combinations if relevant
+
+
+This library provides a *framework*, not a specific parser for a specific file format. However it also comes bundled with a couple unitary file parsers to parse simple objects that can be represented as dictionaries. Therefore intended audience is composed of :
+
+* developers looking for a fast way to parse dictionaries and simple objects from various formats (json, properties, cfg, csv...) using standard python libraries. They can combine this library with [classtools_autocode](https://github.com/smarie/python-classtools-autocode) to preserve compact, readable and checked classes.
+
+* developers who already know how to parse their various files independently, but looking for a higher-level tool to read complex objects made of several files/folders and potentially requiring to combine several parsers.
+
 
 Typical use cases of this library :
 
-* read collections of test cases on the file system - each test case being composed of several files (for example 2 'test inputs' .csv files, 1 'test configuration' .cfg file, and one 'reference test results' json file)
-* more generally, read complex objects, for example made of several csv files (timeseries + descriptive data), combinations of csv and xml/json files, configuration files, etc.
+* **read collections of test cases** on the file system - each test case being composed of several files (for example 2 'test inputs' .csv files, 1 'test configuration' .cfg file, and one 'reference test results' json file)
+* more generally, **read complex objects that for some reason are not represented by a single XML or Json representation**, for example objects made of several csv files (timeseries + descriptive data), combinations of csv and xml/json files, configuration files, etc.
 
 
 ## Main features
 
-* **Declarative**: you *first* define the type of objects to parse - by creating a class -, then you use `parse_collection` or `parse_item` on the appropriate folder or file path.
-* **Supports several unitary file parsers for the same object type**. Thanks to a combined *{Type+Extension}* registration, you register unitary file parsers for a given object type *and* for a given file extension (for example `str` + `.txt`). This allows users to register several parsers for the same object type, supporting various formats represented by the extensions.
+* **Declarative (class-based)**: you *first* define the objects to parse - by creating or importing their class -, then you use `parse_item` on the appropriate folder or file path.
+* **No annotations required**: as opposed to data binding frameworks, this is meant for you to parse object types that may already exist, and potentially only for tests. Therefore the framework does not require that you tag your classes with parsing hints
+* **Multi-format (file extension-based)**. Thanks to a combined *{Type + file extension}* registration, you register unitary file parsers for a given object type *and* a given file extension (for example `parseFooTxt()` is the parser registered for object `Foo` + extension `.txt`). This allows you to register **other** parsers for the same object type (for example `parseFooBin()`for `Foo` + `.bin`), to support various alternative formats for the same object.
+* **Simple objects out of the box**: simple objects that may be represented as dictionaries are very easy to read, with `parse_simple_object()` 
+
+**TODO**
+ 
+ 
 * **Supports complex classes** : the main interest of this framework is its ability to define complex classes that spans across several files. For example, a `MyTestCase` class that would have two fields `input: DataFrame` and `expected_output: str`. The class constructor is introspected in order to find the *required* and *optional* fields and their names. Fields may be objects or collections (that should be declared with the `typing` module such as `Dict[str, Foo]`) in order for the framework to keep track of the underlying collection types) 
 * **Recursive**: fields may themselves be collections or complex types. In which case they are represented by several files.
 * Supports **two main file mapping flavours**: 
@@ -20,7 +34,7 @@ Typical use cases of this library :
     * *wrapped*, where all items that represent collections or complex types are represented by folders, and all ready-to-parse items are represented by files.
 * **Safe**: files are opened and finally closed by the framework, your parsing function may exit without closing
 * **Lazy-parsing** : TODO, a later version will allow to only trigger parsing when objects are read, in the case of collections 
-
+* Last but not least, you may change the *encoding* used to parse the files (but as of today all files are open with the same global encoding)
 
 ## Installation
 
@@ -41,7 +55,7 @@ The first executable that should show up should be the one from the virtual envi
 This package is available on `PyPI`. You may therefore use `pip` to install from a release
 
 ```bash
-> pip install sficopaf
+> pip install parsyfiles
 ```
 
 ### Uninstalling
@@ -49,10 +63,74 @@ This package is available on `PyPI`. You may therefore use `pip` to install from
 As usual : 
 
 ```bash
-> pip uninstall sficopaf
+> pip uninstall parsyfiles
 ```
 
-## Examples
+## Usage
+
+### 1- Simple objects
+
+Simple objects are objects that can be read from a single file. We will see complex objects spanning across several files in [section 2](#2--complex-objects).
+
+#### a - Getting started
+
+Suppose that we want to test the following function.
+
+```python
+def exec_op(x: float, y: float, op: str) -> float:
+    if op is '+':
+        return x+y
+    elif op is '-':
+        return x-y
+    else:
+        raise ValueError('Unsupported operation : \'' + op + '\'')
+```
+
+We would like each test configuration to be represented as an object, containing the inputs and expected outputs. So we define this class:
+
+```python
+class ExecOpTest(object):
+
+    def __init__(self, x: float, y: float, op: str, expected_result: float):
+        self.x = x
+        self.y = y
+        self.op = op
+        self.expected_result = expected_result
+```
+
+#### b - Parsing simple objects
+
+Simple objects such as instances of `ExecOpTest` may be represented by dictionaries. The following 3 "default" file formats are provided for convenience, relying on python standard libraries to parse a dictionary from a file:
+
+* `.cfg` or `.ini`
+* `.json`
+* `.properties` or `.txt`
+
+Our test data folder looks like this:
+
+```bash
+demo_simple
+├── test_diff_1.cfg
+├── test_diff_2.ini
+├── test_sum_1.json
+├── test_sum_2.properties
+└── test_sum_3.txt
+```
+
+Note that the variety of file formats is not very realistic here - you will probably use one or two - but it is used to demonstrate all formats supported out of the box. You may find this example data folder in the [project sources](https://github.com/smarie/python-simple-file-collection-parsing-framework/tree/master/parsyfiles/test_data) by the way.
+
+```python
+from parsyfiles import get_simple_object_parser
+simple_parser = get_simple_object_parser(ExecOpTest)
+```
+
+To read a single object from a single file, for example `test_sum_1.json`, simply use
+
+
+
+
+### 2- Complex objects
+
 
 ### Basic: the `op_function` test cases
 
@@ -96,7 +174,7 @@ You may also have noticed that the configuration file is present with two differ
 First import the package and create a root parser.
 
 ```python
-import sficopaf as sf
+import parsyfiles as sf
 root_parser = sf.RootParser()
 ```
 
@@ -336,6 +414,28 @@ Finally, note that it is not possible to mix collection and non-collection items
 ## See Also
 
 Check [here](https://github.com/webmaven/python-parsing-tools) for other parsers in Python, that you might wish to register as unitary parsers to perform specific file format parsing (binary, json, custom...) for some of your objects.
+
+*Do you like this library ? You might also like [these](https://github.com/smarie?utf8=%E2%9C%93&tab=repositories&q=&type=&language=python)* 
+
+
+
+## Combining parsyfiles and classtools_autocode (combo!)
+
+Users may wish to use [classtools_autocode](https://github.com/smarie/python-classtools-autocode) in order to create very compact classes representing their objects *and* ensuring that parsed data is valid.
+
+```python
+from classtools_autocode import autoprops, autoargs
+from contracts import contract, new_contract
+
+new_contract('allowed_op', lambda x: x in {'+', '-'})
+
+@autoprops
+class ExecOpTest(object):
+    @autoargs
+    @contract
+    def __init__(self, x: float, y: float, op: str, expected_result: float):
+        pass
+```
 
 
 ## Developers
