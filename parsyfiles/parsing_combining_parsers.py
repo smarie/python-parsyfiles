@@ -13,12 +13,13 @@ from parsyfiles.var_checker import check_var
 class DelegatingParser(AnyParser[T]):
     """
     A parser that delegates all the parsing tasks to another implementation ; and therefore does not implement directly
-    the corresponding methods.
+    the corresponding parsing submethods, just the '_create_parsing_plan'
     """
+
     def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger,
                           *args, **kwargs) -> T:
         """
-        Implementation of AnyParser API
+        Implementation of AnyParser API with an exception
         """
         raise Exception('This should never happen, since this parser relies on underlying parsers')
 
@@ -39,6 +40,14 @@ class DelegatingParser(AnyParser[T]):
 
 
 def print_error_to_io_stream(err: Exception, io: TextIOBase, print_big_traceback : bool = True):
+    """
+    Utility method to print an exception's content to a stream
+
+    :param err:
+    :param io:
+    :param print_big_traceback:
+    :return:
+    """
     if print_big_traceback:
         traceback.print_tb(err.__traceback__, file=io, limit=-3)
     else:
@@ -48,7 +57,8 @@ def print_error_to_io_stream(err: Exception, io: TextIOBase, print_big_traceback
 
 class CascadeError(Exception):
     """
-    Raised whenever parsing fails
+    Raised whenever parsing failed for all parsers in a CascadingParser. This object provides an overview of errors
+    caught in the multiple parsers
     """
 
     def __init__(self, contents):
@@ -111,7 +121,8 @@ class CascadeError(Exception):
 class CascadingParser(DelegatingParser[T]):
     """
     Represents a cascade of parsers that are tried in order: the first parser is used, then if it fails the second is
-    used, etc.
+    used, etc. If all parsers failed, a CascadeError is thrown in order to provide an overview of all errors.
+    Note that before switching to another parser, a new parsing plan is rebuilt with that new parser.
     """
     def __init__(self, parsers: List[AnyParser[T]] = None):
         """
@@ -119,7 +130,7 @@ class CascadingParser(DelegatingParser[T]):
         :param parsers:
         """
 
-        # init
+        # -- init
         # explicitly dont use base constructor
         # super(CascadingParser, self).__init__(supported_types=set(), supported_exts=set())
         self.configured = False
@@ -131,18 +142,12 @@ class CascadingParser(DelegatingParser[T]):
                 self.add_parser_to_cascade(parser)
 
     def __str__(self):
-        if len(self._parsers_list) > 0:
-            # if hasattr(CascadingParser.active_mf_parsers, 'parser') \
-            #         and CascadingParser.active_mf_parsers.parser is not None:
-            #     return str(CascadingParser.active_mf_parsers.parser) + '(selected from a try/catch cascade of parsers)'
-            # elif len(self._parsers_list) == 1:
-            #     return str(self._parsers_list[0])
-            # else:
-                # return 'ParserCascade[Try \'' + str(self._parsers_list[0]) + (
-                #     '\' then \'' if len(self._parsers_list) > 1 else '\'') \
-                #        + '\' then \''.join([str(parser) for parser in self._parsers_list[1:]]) + ']'
+        if len(self._parsers_list) > 1:
             return '[Try \'' + str(self._parsers_list[0]) + '\' then \'' \
                    + '\' then \''.join([str(parser) for parser in self._parsers_list[1:]]) + ']'
+        elif len(self._parsers_list) == 1:
+            # useless...
+            return 'ParserCascade[' + str(self._parsers_list[0]) + ']'
         else:
             return 'ParserCascade[Empty]'
 
@@ -162,10 +167,8 @@ class CascadingParser(DelegatingParser[T]):
         """
         # the first parser added will configure the cascade
         if not self.configured:
-            #self.supports_singlefile = parser.supports_singlefile
             self.supported_exts = parser.supported_exts
             self.supported_types = parser.supported_types
-            #self.supports_multifile = parser.supports_multifile
 
         # check if new parser is compliant with previous ones
         if self.supports_singlefile():
@@ -279,25 +282,32 @@ class CascadingParser(DelegatingParser[T]):
                 for i in range(self.active_parser_idx+1, len(self.parser_list)):
                     p = self.parser_list[i]
                     if i > 0:
-                        #print('----- Rebuilding local parsing plan with next candidate parser:')
+                        # print('----- Rebuilding local parsing plan with next candidate parser:')
                         if logger is not None:
                             logger.info('----- Rebuilding local parsing plan with next candidate parser:')
                     try:
+                        # -- try to rebuild a parsing plan with next parser, and remember it if is succeeds
                         self.active_parsing_plan = CascadingParser.ActiveParsingPlan(p.create_parsing_plan(
                             self.obj_type, self.obj_on_fs_to_parse, self.logger, in_rootcall=False), self.parser)
                         self.active_parser_idx = i
                         return
+
                     except Exception as e:
+                        # -- log the error
                         msg = StringIO()
                         print_error_to_io_stream(e, msg, print_big_traceback=False)
-                        # we dont use warning because it does not show up in the correct order in the console
-                        #print('----- WARNING: Caught error while creating parsing plan with parser ' + str(p) + '.')
                         logger.warning('----- WARNING: Caught error while creating parsing plan with parser ' + str(p))
-                        #print(msg.getvalue())
                         logger.warning(msg.getvalue())
+                        # print('----- WARNING: Caught error while creating parsing plan with parser ' + str(p) + '.')
+                        # print(msg.getvalue())
+                        # (Note: we dont use warning because it does not show up in the correct order in the console)
+
+                        # -- remember the error in order to create a CascadeError at the end in case of failure of all
                         self.parsing_plan_creation_errors[p] = e
+
             if already_caught_execution_errors is None:
-                raise CascadeError.create_for_parsing_plan_creation(self.parser, self, self.parsing_plan_creation_errors)
+                raise CascadeError.create_for_parsing_plan_creation(self.parser, self,
+                                                                    self.parsing_plan_creation_errors)
             else:
                 caught = self.parsing_plan_creation_errors
                 caught.update(already_caught_execution_errors)
@@ -305,7 +315,7 @@ class CascadingParser(DelegatingParser[T]):
 
         def execute(self, logger: Logger, *args, **kwargs):
             """
-            Delegate execution to currently active parser. In case of an exception, recompute the parsing plan and
+            Delegates execution to currently active parser. In case of an exception, recompute the parsing plan and
             do it again on the next one.
 
             :param logger:
@@ -317,24 +327,29 @@ class CascadingParser(DelegatingParser[T]):
                 execution_errors = dict()
                 while self.active_parsing_plan is not None:
                     try:
-                        # try to execute current plan
+                        # -- try to execute current plan
                         return self.active_parsing_plan.execute(logger, *args, **kwargs)
+
                     except Exception as e:
-                        # if error, print it, save it and activate the next parser
+                        # -- log the error
                         msg = StringIO()
                         print_error_to_io_stream(e, msg, print_big_traceback=False)
-                        # we dont use warning because it does not show up in the correct order in the console
-                        #print('----- WARNING: Caught error during execution : ')
                         logger.warning('!!!! Caught error during execution : ')
-                        #print(msg.getvalue())
                         logger.warning(msg.getvalue())
-                        #print('----- Rebuilding local parsing plan...')
+                        # print('----- WARNING: Caught error during execution : ')
+                        # print(msg.getvalue())
+                        # (Note: we dont use warning because it does not show up in the correct order in the console)
+
+                        # -- remember the error in order to create a CascadeError at the end in case of failure of all
                         execution_errors[self.active_parsing_plan.parser] = e
+
+                        # -- try to switch to the next parser of the cascade, if any
                         self.activate_next_working_parser(execution_errors, logger)
 
                 caught = self.parsing_plan_creation_errors
                 caught.update(execution_errors)
                 raise CascadeError.create_for_execution(self.parser, self, caught)
+
             else:
                 raise Exception('Cannot execute this parsing plan : empty parser list !')
 
