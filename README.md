@@ -1,28 +1,37 @@
 # python simple file collection parsing framework (parsyfiles)
-A declarative framework that combines most popular python parsers (json, jprops, pickle...) with user-defined parsers and type converters, in order to easily read objects from files. It is able to read an object even if the object's content comes from several files requiring several parsers: this is typically useful to read test data where you want to combine datasets, parameters, expected results and what not. 
+A declarative framework that combines many popular python parsers (json, jprops, yaml, pickle...) with your user-defined parsers and type converters, in order to easily read objects from files. It is able to read an object even if the object's content comes from several files requiring several parsers: this is typically useful to read test data where you want to combine datasets, parameters, expected results and what not. 
 
-It leverages PEP484 type hints in order to intelligently use the best parser/converter chain, and to try several combinations if relevant
+This library provides a *framework*, not a specific parser for a specific file format. By default several classic parsers from the python world are already registered, but it is also extremely easy to add more if your favourite parser is missing. Even better: if you just need to parse a derived type of a type that can already be parsed, you may simply need to register a *type converter*, the framework will link it to any compliant parser for you. 
 
 
-This library provides a *framework*, not a specific parser for a specific file format. However it also comes bundled with a couple unitary file parsers to parse simple objects that can be represented as dictionaries. Therefore intended audience is composed of :
+## Intended audience
 
-* developers looking for a fast way to parse dictionaries and simple objects from various formats (json, properties, cfg, csv...) using standard python libraries. They can combine this library with [classtools_autocode](https://github.com/smarie/python-classtools-autocode) to preserve compact, readable and checked classes.
+* developers looking for an easy way to parse dictionaries and simple objects from various formats (json, properties, cfg, csv...) using standard python libraries. They can combine this library with [classtools_autocode](https://github.com/smarie/python-classtools-autocode) to preserve compact, readable and content-validated classes.
 
 * developers who already know how to parse their various files independently, but looking for a higher-level tool to read complex objects made of several files/folders and potentially requiring to combine several parsers.
 
 
-Typical use cases of this library :
+## Typical use cases
 
-* **read collections of test cases** on the file system - each test case being composed of several files (for example 2 'test inputs' .csv files, 1 'test configuration' .cfg file, and one 'reference test results' json file)
-* more generally, **read complex objects that for some reason are not represented by a single XML or Json representation**, for example objects made of several csv files (timeseries + descriptive data), combinations of csv and xml/json files, configuration files, etc.
+* **read collections of test cases** on the file system - each test case being composed of several files (for example 2 'test inputs' .csv files, 1 'test configuration' .cfg file, and one 'reference test results' json or yaml file)
+* more generally, **read complex objects that for some reason are not represented by a single file representation**, for example objects made of several csv files (timeseries + descriptive data), combinations of csv and xml/json files, configuration files, pickle files, etc.
+
+
+### Note on the Intelligence/Speed tradeoff
+This framework contains a bit of nontrivial logic in order to transparently infer which parser and conversion chain to use, and even in some cases to try several alternatives in order to guess what was your intent. This makes it quite powerful but will certainly be slower and more memory-consuming than writing a dedicated parser tailored for your specific case. However if you are looking for a tool to speedup your development so that you may focus on what's important (your business logic, algorithm implementation, test logic, etc) then it might do the job.
 
 
 ## Main features
 
-* **Declarative (class-based)**: you *first* define the objects to parse - by creating or importing their class -, then you use `parse_item` on the appropriate folder or file path.
-* **No annotations required**: as opposed to data binding frameworks, this is meant for you to parse object types that may already exist, and potentially only for tests. Therefore the framework does not require that you tag your classes with parsing hints
-* **Multi-format (file extension-based)**. Thanks to a combined *{Type + file extension}* registration, you register unitary file parsers for a given object type *and* a given file extension (for example `parseFooTxt()` is the parser registered for object `Foo` + extension `.txt`). This allows you to register **other** parsers for the same object type (for example `parseFooBin()`for `Foo` + `.bin`), to support various alternative formats for the same object.
-* **Simple objects out of the box**: simple objects that may be represented as dictionaries are very easy to read, with `parse_simple_object()` 
+* **Declarative (class-based)**: you *first* define the objects to parse - by creating or importing their class -, *then* you use `parse_item` or `parse_collection` on the appropriate folder or file path. 
+* **Simple objects out of the box**: if you're interested in parsing singlefile objects only requiring simple types in their constructor, then the framework is probably already able to parse them, for many singlefile formats (json, properties, txt, csv, yaml and more.). 
+* **Serialization out of the box**: pickle files (.pyc) are supported too. Base64-encoded pickle objects can also be included in any simple file content.
+* **Multifile objects out of the box**: the library comes with two ways to organize multifile objects: *wrapped* (each object is a folder), or *flat* (all files are in the same folder, files belonging to the same object have the same prefix)
+
+* **Extensible**. You may register any number of additional file parsers, or type converters, or both. When registering a parser you just have to declare the object types that it can parse, *and* the file extensions it can read. The same goes for converters: you declare the object type it can read, and the object type it can convert to. 
+* **Intelligent** Since several parsers may be registered for the same file extension, and more generally several parsing chains (parser + converters) may be eligible to a given task, the library has a built-in set of rules to select the relevant parsing chains and test them in most plausible order. This provides you with several ways to parse the same object. This might be useful for example if some of your data comes from nominal tests, some other from field tests, some other from web service calls, etc. You don't need anymore to convert all of these to the same format before using it.
+* **No annotations required**: as opposed to some data binding frameworks, this library is meant to parse object types that may already exist, and potentially only for tests. Therefore the framework does not require annotations on the type if there is there is a registered way to parse it. However if you wish to build higher-level objects encapsulating the result of several parsers, then PEP484 type hints are required. But that's probably less a problem since these objects are yours (they are part of your tests for example) 
+
 
 **TODO**
  
@@ -35,6 +44,7 @@ Typical use cases of this library :
 * **Safe**: files are opened and finally closed by the framework, your parsing function may exit without closing
 * **Lazy-parsing** : TODO, a later version will allow to only trigger parsing when objects are read, in the case of collections 
 * Last but not least, you may change the *encoding* used to parse the files (but as of today all files are open with the same global encoding)
+
 
 ## Installation
 
@@ -68,7 +78,94 @@ As usual :
 
 ## Usage
 
-### 1- Simple objects
+### 1- Collections of known types
+
+The most simple case of all: you wish to parse a collection of files that all have the same type, and for which a parser is already registered. For example your data folder looks like this (you may find this example data folder in the [project sources](https://github.com/smarie/python-simple-file-collection-parsing-framework/tree/master/parsyfiles/test_data)):
+
+```bash
+demo/simple_collection
+├── a.csv
+├── b.txt
+├── c.xls
+├── d.xlsx
+└── e.xlsm
+```
+
+Parsing all of these dataframes is straightforward:
+
+```python
+from pprint import pprint
+from parsyfiles import parse_collection
+from pandas import DataFrame
+
+dfs = parse_collection('./test_data/simple_collection', DataFrame)
+print(dfs)
+```
+
+Here is the result
+```bash
+**** Starting to parse  collection of <DataFrame> at location ./test_data/demo/simple_collection ****
+Checking all files under ./test_data/demo/simple_collection
+./test_data/demo/simple_collection (multifile)
+./test_data/demo/simple_collection\a (singlefile, .csv)
+./test_data/demo/simple_collection\b (singlefile, .txt)
+./test_data/demo/simple_collection\c (singlefile, .xls)
+./test_data/demo/simple_collection\d (singlefile, .xlsx)
+./test_data/demo/simple_collection\e (singlefile, .xlsm)
+File checks done
+
+Building a parsing plan to parse ./test_data/demo/simple_collection (multifile) into a Dict[str, DataFrame]
+./test_data/demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
+./test_data/demo/simple_collection\a (singlefile, .csv) > DataFrame ------- using <read_simpledf_from_csv(stream mode)>
+./test_data/demo/simple_collection\b (singlefile, .txt) > DataFrame ------- using [Try '<read_simpledf_from_csv(stream mode)>' then '$<read_dict_from_properties(stream mode)> => <dict_to_object>$' then '$<read_str_from_txt(stream mode)> => <base64_ascii_str_pickle_to_object>$]
+./test_data/demo/simple_collection\b (singlefile, .txt) > DataFrame ------- using <read_simpledf_from_csv(stream mode)>
+./test_data/demo/simple_collection\c (singlefile, .xls) > DataFrame ------- using <read_simpledf_from_xls(file mode)>
+./test_data/demo/simple_collection\d (singlefile, .xlsx) > DataFrame ------- using <read_simpledf_from_xls(file mode)>
+./test_data/demo/simple_collection\e (singlefile, .xlsm) > DataFrame ------- using <read_simpledf_from_xls(file mode)>
+Parsing Plan created successfully
+
+Executing Parsing Plan for ./test_data/demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
+Parsing ./test_data/demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
+Parsing ./test_data/demo/simple_collection\a (singlefile, .csv) > DataFrame ------- using <read_simpledf_from_csv(stream mode)>
+Parsing ./test_data/demo/simple_collection\b (singlefile, .txt) > DataFrame ------- using <read_simpledf_from_csv(stream mode)>
+Parsing ./test_data/demo/simple_collection\c (singlefile, .xls) > DataFrame ------- using <read_simpledf_from_xls(file mode)>
+Parsing ./test_data/demo/simple_collection\d (singlefile, .xlsx) > DataFrame ------- using <read_simpledf_from_xls(file mode)>
+Parsing ./test_data/demo/simple_collection\e (singlefile, .xlsm) > DataFrame ------- using <read_simpledf_from_xls(file mode)>
+--> Assembling all parsed child items into a Dict[str, DataFrame] to build ./test_data/demo/simple_collection (multifile)
+Completed parsing successfully
+
+{'a':    a  b  c  d
+      0  1  2  3  4,
+ 'b':    a  b  c  d
+      0  1  2  3  4,
+ 'c':    c   5
+      0  d   8
+      1  e  12
+      2  f   3,
+ 'd':    c   5
+      0  d   8
+      1  e  12
+      2  f   3,
+ 'e':    c   5
+      0  d   8
+      1  e  12
+      2  f   3}
+```
+
+*Note: the above capture was slightly 'improved' for readability, because unfortunately pprint does not display dictionaries of dataframes as nicely as this.*
+
+In this output you see a couple hints on how the parsing framework works:
+
+* first it recursively checks your folder to check that it is entirely compliant with the file mapping format. That is the log section beginning with `Checking all files under ./test_data/demo/simple_collection`. If the same item appears twice (e.g. `a.csv` and `a.txt`)  it will throw an error at this stage (an `ObjectPresentMultipleTimesOnFileSystemError`).
+
+* then it recursively creates a parsing plan that is able to produce an object the required type. That's the section beginning with `Building a parsing plan to parse ./test_data/demo/simple_collection (multifile) into a Dict[str, DataFrame]`. Here you may note that by default, a collection of items is actually parsed as an object of type dictionary, where the key is the name of the file without extension, and the value is the object that is parsed from the file. If at this stage it does not find a way to parse a given file into the required object type, it will fail. For example if you add a file in the folder, named `unknown_ext_for_dataframe.ukn`, you will get an error (a `NoParserFoundForObjectExt`).
+
+* finally it executes the parsing plan. That's the section beginning with `Executing Parsing Plan for ./test_data/demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)`.
+
+It is important to understand these 3 log sections, since the main issue with complex framework is debugging when something unexpected.
+
+
+### 2- Simple objects
 
 Simple objects are objects that can be read from a single file. We will see complex objects spanning across several files in [section 2](#2--complex-objects).
 

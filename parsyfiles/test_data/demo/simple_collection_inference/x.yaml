@@ -1,0 +1,5 @@
+# a YAML dictionary
+x: 2
+y: 5
+op: +
+expected_result: 7

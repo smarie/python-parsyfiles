@@ -8,15 +8,34 @@ from parsyfiles.converting_core import Converter, ConverterFunction, T
 from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser
 
 
-def read_simpledf_from_xls(desired_type: Type[pd.DataFrame], file_object: TextIOBase,
+# def read_simpledf_from_xls_streaming(desired_type: Type[pd.DataFrame], file_object: TextIOBase,
+#                            logger: Logger, *args, **kwargs) -> pd.DataFrame:
+#     """
+#     Helper method to read a dataframe from a xls file stream. By default this is well suited for a dataframe with
+#     headers in the first row, for example a parameter dataframe.
+#     :param file_object:
+#     :return:
+#     """
+#     return pd.read_excel(file_object, *args, **kwargs)
+
+
+def read_simpledf_from_xls(desired_type: Type[T], file_path: str, encoding: str,
                            logger: Logger, *args, **kwargs) -> pd.DataFrame:
     """
-    Helper method to read a dataframe from a xls file stream. By default this is well suited for a dataframe with
-    headers in the first row, for example a parameter dataframe.
-    :param file_object:
+    We register this method rather than the other because pandas guesses the encoding by itself.
+
+    Also, it is easier to put a breakpoint and debug by trying various options to find the good one (in streaming mode
+    you just have one try and then the stream is consumed)
+
+    :param desired_type:
+    :param file_path:
+    :param encoding:
+    :param logger:
+    :param args:
+    :param kwargs:
     :return:
     """
-    return pd.read_excel(file_object, *args, **kwargs)
+    return pd.read_excel(file_path, *args, **kwargs)
 
 
 def read_simpledf_from_csv(desired_type: Type[pd.DataFrame], file_object: TextIOBase,
@@ -36,8 +55,8 @@ def get_default_dataframe_parsers() -> List[AnyParser]:
     :return:
     """
     return [SingleFileParserFunction(parser_function=read_simpledf_from_xls,
-                                     streaming_mode=True,
-                                     supported_exts={'.xls'},
+                                     streaming_mode=False,
+                                     supported_exts={'.xls', '.xlsx', '.xlsm'},
                                      supported_types={pd.DataFrame}),
             SingleFileParserFunction(parser_function=read_simpledf_from_csv,
                                      streaming_mode=True,

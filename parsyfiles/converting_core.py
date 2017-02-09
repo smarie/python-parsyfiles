@@ -56,7 +56,8 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
     """
 
     def __init__(self, from_type: Type[S], to_type: Type[T],
-                 is_able_to_convert_func: Callable[[bool, Type[S], Type[T]], bool] = None):
+                 is_able_to_convert_func: Callable[[bool, Type[S], Type[T]], bool] = None,
+                 can_chain: bool = True):
         """
         Constructor for a converter from one source type (from_type) to one destination type (to_type).
         from_type may be any type except Any or object. to_type may be Any.
@@ -70,6 +71,8 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         :param is_able_to_convert_func: an optional function taking a desired object type as an input and outputting a
         boolean. It will be called in 'is_able_to_convert'. This allows implementors to reject some conversions even if
         they are compliant with their declared 'to_type'.
+        :param can_chain: a boolean (default True) indicating if other converters can be appended at the end of this
+        converter to create a chain. Dont change this except if it really can never make sense.
         """
         # --from type
         self.from_type = get_validated_type(from_type, 'from_type')
@@ -83,6 +86,10 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         check_var(is_able_to_convert_func, var_types=Callable, var_name='is_able_to_convert_func',
                   enforce_not_none=False)
         self.is_able_to_convert_func = is_able_to_convert_func
+
+        # -- can chain
+        check_var(can_chain, var_types=bool, var_name='can_chain')
+        self.can_chain = can_chain
 
     def __len__(self):
         # as opposed to conversion chains.. for use in sorting methods
@@ -158,20 +165,26 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
           always more interesting to use the second converter directly for any potential input)
         * the second converter's output should not be a parent class of the first converter's input or output. Otherwise
         the chain does not even make any progress :)
+        * The first converter has to allow chaining (with converter.can_chain=True)
 
         :param left_converter:
         :param right_converter:
         :return:
         """
-        if right_converter.to_type is Any:
+        if not left_converter.can_chain:
+            return False
+
+        elif right_converter.to_type is Any:
             # Any is a capability to generate any type. So it is always interesting.
             return True
+
         elif issubclass(left_converter.from_type, right_converter.to_type) \
                 or issubclass(left_converter.to_type, right_converter.to_type) \
                 or issubclass(left_converter.from_type, right_converter.from_type):
+            # Not interesting : the outcome of the chain would be not better than one of the converters alone
             return False
         else:
-            # Not interesting
+            # interesting
             return True
 
     def can_be_appended_to(self, left_converter, strict: bool) -> bool:
@@ -214,7 +227,8 @@ class ConverterFunction(Converter[S, T]):
     """
     def __init__(self, from_type: Type[S], to_type: Type[T],
                  conversion_method: Callable[[Type[T], S, Logger, List, Dict], T],
-                 custom_name: str = None, is_able_to_convert_func: Callable[[Type[T]], bool] = None):
+                 custom_name: str = None, is_able_to_convert_func: Callable[[Type[T]], bool] = None,
+                 can_chain: bool = True):
         """
         Constructor with a conversion method. All calls to self.convert() will be delegated to this method. An optional
         name may be provided to override the provided conversion method's name. this might be useful for example if the
@@ -230,8 +244,10 @@ class ConverterFunction(Converter[S, T]):
         :param is_able_to_convert_func: an optional function taking a desired object type as an input and outputting a
         boolean. It will be called in 'is_able_to_convert'. This allows implementors to reject some conversions even if
         they are compliant with their declared 'to_type'.
+        :param can_chain: a boolean (default True) indicating if other converters can be appended at the end of this
+        converter to create a chain. Dont change this except if it really can never make sense.
         """
-        super(ConverterFunction, self).__init__(from_type, to_type, is_able_to_convert_func)
+        super(ConverterFunction, self).__init__(from_type, to_type, is_able_to_convert_func, can_chain)
         self.conversion_method = conversion_method
         self.custom_name = custom_name
 
@@ -262,7 +278,8 @@ class ConverterFunctionWithStaticArgs(ConverterFunction[S, T]):
     parameters will always be passed to the conversion function in addition to the usual parameters of convert()
     """
     def __init__(self, from_type: Type[S], to_type: Type[T], conversion_method: Callable[[S], T],
-                 custom_name: str = None, is_able_to_convert_func: Callable[[Type[T]], bool] = None, *args, **kwargs):
+                 custom_name: str = None, is_able_to_convert_func: Callable[[Type[T]], bool] = None,
+                 can_chain: bool = True, *args, **kwargs):
         """
         Constructor with static *args and **kwargs (preferred) for the conversion_method.
         See ConverterFunction class for details on other arguments.
@@ -275,12 +292,14 @@ class ConverterFunctionWithStaticArgs(ConverterFunction[S, T]):
         :param is_able_to_convert_func: an optional function taking a desired object type as an input and outputting a
         boolean. It will be called in 'is_able_to_convert'. This allows implementors to reject some conversions even if
         they are compliant with their declared 'to_type'.
+        :param can_chain: a boolean (default True) indicating if other converters can be appended at the end of this
+        converter to create a chain. Dont change this except if it really can never make sense.
         :param args: optional static arguments that will always be passed to the function
         :param kwargs: optional static arguments that will always be passed to the function
         """
         super(ConverterFunctionWithStaticArgs, self).__init__(from_type, to_type, conversion_method,
                                                               is_able_to_convert_func=is_able_to_convert_func,
-                                                              custom_name=custom_name)
+                                                              custom_name=custom_name, can_chain=can_chain)
         # remember the stati args values
         self.args = args
         self.kwargs = kwargs

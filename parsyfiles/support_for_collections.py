@@ -86,13 +86,6 @@ class MultifileDictParser(MultiFileParser):
         super(MultifileDictParser, self).__init__(supported_types={Dict, List})
         self.parser_finder = parser_finder
 
-    # Not useful : only Dict and List are supported already
-    # def is_able_to_parse(self, desired_type: Type[Any], desired_ext: str, strict: bool):
-    #     if not is_collection(desired_type, strict=True):
-    #         return False, None
-    #     else:
-    #         return super().is_able_to_parse(desired_type, desired_ext, strict)
-
     def __str__(self):
         return 'Multifile Dict parser (based on \'' + str(self.parser_finder) + '\' to find the parser for each item)'
 

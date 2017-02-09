@@ -463,9 +463,9 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
 
     Two kind of parser_function may be provided as implementations:
     * if streaming_mode=True (default), this class handles opening and closing the file, and parser_function should
-    have a signature such as my_func(desired_type: Type[T], opened_file: TextIOBase, *args, **kwargs) -> T
+    have a signature such as my_func(desired_type: Type[T], opened_file: TextIOBase, logger: Logger, *args, **kwargs) -> T
     * if streaming_mode=False, this class does not handle opening and closing the file. parser_function should be a
-    my_func(desired_type: Type[T], file_path: str, encoding: str, *args, **kwargs) -> T
+    my_func(desired_type: Type[T], file_path: str, encoding: str, logger: Logger, *args, **kwargs) -> T
     """
 
     def __init__(self, parser_function: Union[ParsingMethodForStream, ParsingMethodForFile],
