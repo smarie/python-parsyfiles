@@ -119,7 +119,8 @@ class DemoTests(TestCase):
         RootParser().print_capabilities_for_type(typ=DataFrame)
 
     def test_simple_objects(self):
-        # First define the function that we want to test (not useful, but just to show a complete story in the readme...)
+        # First define the function that we want to test
+        # (not useful, but just to show a complete story in the readme...)
         def exec_op(x: float, y: float, op: str) -> float:
             if op is '+':
                 return x + y
@@ -154,3 +155,7 @@ class DemoTests(TestCase):
 
         #
         RootParser().print_capabilities_for_type(typ=ExecOpTest)
+
+    def test_simple_collection_dataframe_all(self):
+        dfs = parse_collection('./test_data/demo/simple_collection_dataframe_inference', DataFrame)
+        pprint(dfs)

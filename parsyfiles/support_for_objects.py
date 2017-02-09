@@ -33,14 +33,14 @@ def read_object_from_yaml(desired_type: Type[Any], file_object: TextIOBase, logg
     return yaml.load(file_object)
 
 
-def read_object_from_pickle(desired_type: Type[Any], file_object: TextIOBase, logger: Logger,
+def read_object_from_pickle(desired_type: Type[T], file_path: str, encoding: str,
                             fix_imports: bool = True, errors: str = 'strict', *args, **kwargs) -> Any:
     """
     Parses a pickle file.
 
     :param desired_type:
-    :param file_object:
-    :param logger:
+    :param file_path:
+    :param encoding:
     :param fix_imports:
     :param errors:
     :param args:
@@ -48,7 +48,11 @@ def read_object_from_pickle(desired_type: Type[Any], file_object: TextIOBase, lo
     :return:
     """
     import pickle
-    return pickle.load(file_object, fix_imports=fix_imports, encoding=file_object.encoding, errors=errors)
+    file_object = open(file_path, mode='rb')
+    try:
+        return pickle.load(file_object, fix_imports=fix_imports, encoding=encoding, errors=errors)
+    finally:
+        file_object.close()
 
 
 def base64_ascii_str_pickle_to_object(desired_type: Type[T], b64_ascii_str: str, logger: Logger,
@@ -423,7 +427,7 @@ def get_default_object_parsers(parser_finder: ParserFinder, conversion_finder: C
     :return:
     """
     return [SingleFileParserFunction(parser_function=read_object_from_pickle,
-                                     streaming_mode=True,
+                                     streaming_mode=False,
                                      supported_exts={'.pyc'},
                                      supported_types={Any}),
             # yaml for any object
