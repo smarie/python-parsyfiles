@@ -103,7 +103,7 @@ print(dfs)
 ```
 
 Here is the result
-```bash
+```
 **** Starting to parse  collection of <DataFrame> at location ./test_data/demo/simple_collection ****
 Checking all files under ./test_data/demo/simple_collection
 ./test_data/demo/simple_collection (multifile)
