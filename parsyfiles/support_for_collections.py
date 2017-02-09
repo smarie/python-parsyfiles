@@ -153,7 +153,7 @@ class MultifileDictParser(MultiFileParser):
             for child_name, child_plan in sorted(parsing_plan_for_children.items()):
                 results[child_name] = child_plan.execute(logger, *args, **kwargs)
 
-            logger.info('--> Assembling all parsed child items into a ' + get_pretty_type_str(desired_type)
+            logger.info('Assembling all parsed child items into a ' + get_pretty_type_str(desired_type)
                         + ' to build ' + str(obj))
             if issubclass(desired_type, list):
                 # build a list sorted by the keys

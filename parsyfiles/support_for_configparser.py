@@ -122,5 +122,5 @@ def get_default_config_converters() -> List[Union[Converter[Any, ConfigParser], 
     and from other type to ConfigParser)
     :return:
     """
-    return [ConverterFunction(ConfigParser, dict, merge_all_config_sections_into_a_single_dict),
-            ConverterFunction(ConfigParser, DictOfDict, config_to_dict_of_dict)]
+    return [ConverterFunction(ConfigParser, DictOfDict, config_to_dict_of_dict),
+            ConverterFunction(ConfigParser, dict, merge_all_config_sections_into_a_single_dict)]

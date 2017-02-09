@@ -227,7 +227,7 @@ class ConverterFunction(Converter[S, T]):
     """
     def __init__(self, from_type: Type[S], to_type: Type[T],
                  conversion_method: Callable[[Type[T], S, Logger, List, Dict], T],
-                 custom_name: str = None, is_able_to_convert_func: Callable[[Type[T]], bool] = None,
+                 custom_name: str = None, is_able_to_convert_func: Callable[[bool, Type[S], Type[T]], bool] = None,
                  can_chain: bool = True):
         """
         Constructor with a conversion method. All calls to self.convert() will be delegated to this method. An optional
@@ -278,7 +278,7 @@ class ConverterFunctionWithStaticArgs(ConverterFunction[S, T]):
     parameters will always be passed to the conversion function in addition to the usual parameters of convert()
     """
     def __init__(self, from_type: Type[S], to_type: Type[T], conversion_method: Callable[[S], T],
-                 custom_name: str = None, is_able_to_convert_func: Callable[[Type[T]], bool] = None,
+                 custom_name: str = None, is_able_to_convert_func: Callable[[bool, Type[S], Type[T]], bool] = None,
                  can_chain: bool = True, *args, **kwargs):
         """
         Constructor with static *args and **kwargs (preferred) for the conversion_method.

@@ -292,7 +292,7 @@ class NoConverterAvailableForAttributeException(FileNotFoundError):
         super(NoConverterAvailableForAttributeException, self).__init__(contents)
 
     @staticmethod
-    def create_no_converter_found(parsed_att: Any, attribute_type: Type[Any], conversion_finder: ConversionFinder):
+    def create(conversion_finder: ConversionFinder, parsed_att: Any, attribute_type: Type[Any]):
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
         https://github.com/nose-devs/nose/issues/725
@@ -302,26 +302,18 @@ class NoConverterAvailableForAttributeException(FileNotFoundError):
         :param conversion_finder:
         :return:
         """
-        return NoConverterAvailableForAttributeException('No conversion chain found between parsed attribute \'' +
-                                                         str(parsed_att) + '\' of type \'' +
-                                                         get_pretty_type_str(type(parsed_att)) + '\' and expected type '
-                                                         + get_pretty_type_str(attribute_type) + ' using conversion '
-                                                         'finder \'' + str(conversion_finder) +'\'')
-
-    @staticmethod
-    def create_no_finder(parsed_att: Any, attribute_type: Type[Any]):
-        """
-        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
-        https://github.com/nose-devs/nose/issues/725
-
-        :param parsed_att:
-        :param attribute_type:
-        :return:
-        """
-        return NoConverterAvailableForAttributeException('No conversion finder provided to find a converter '
-                                                         'between parsed attribute \'' + str(parsed_att) + '\' of type \''
-                                                         + get_pretty_type_str(type(parsed_att)) + '\' and expected '
-                                                         'type \'' + get_pretty_type_str(attribute_type) + '\'.')
+        if conversion_finder is None:
+            return NoConverterAvailableForAttributeException('No conversion finder provided to find a converter '
+                                                             'between parsed attribute \'' + str(parsed_att) + '\' of '
+                                                             'type \'' + get_pretty_type_str(type(parsed_att)) + '\' '
+                                                             'and expected type \''
+                                                             + get_pretty_type_str(attribute_type) + '\'.')
+        else:
+            return NoConverterAvailableForAttributeException('No conversion chain found between parsed attribute \'' +
+                                                             str(parsed_att) + '\' of type \'' +
+                                                             get_pretty_type_str(type(parsed_att)) + '\' and expected type '
+                                                             + get_pretty_type_str(attribute_type) + ' using conversion '
+                                                             'finder \'' + str(conversion_finder) +'\'.')
 
 
 class ConversionException(Exception):
@@ -352,7 +344,7 @@ class ConversionException(Exception):
         :return:
         """
         base_msg = 'Error while trying to convert parsed attribute value \'' + str(parsed_att) + '\' of type \'' \
-                   + get_pretty_type_str(type(parsed_att)) + '\' for attribute' + str(att_name) + ' as a ' \
+                   + get_pretty_type_str(type(parsed_att)) + '\' for attribute \'' + str(att_name) + '\' as a ' \
                    + get_pretty_type_str(attribute_type) + ' with the converters found. \n Caught the following ' \
                    + 'exceptions from the various converters tried: \n'
         msg = StringIO()
@@ -377,32 +369,23 @@ def try_convert_attribute_value_to_correct_type(attr_name: str, attribute_type: 
     """
 
     if not isinstance(parsed_attr_value, attribute_type):
-        if conversion_finder is None:
-            # fallback : try to convert the type by simply casting
-            # TODO what about adding that 'generic converter' to the default primitive converters ?
-            # res = attribute_type(parsed_attr_value)
-
-            # rather throw an exception here
-            raise NoConverterAvailableForAttributeException.create_no_finder(parsed_attr_value, attribute_type)
-
-        else:
+        if conversion_finder is not None:
             # use the conversion_finder to try to convert
             chains_tuple = conversion_finder.get_all_conversion_chains(type(parsed_attr_value), attribute_type)
             generic, approx, exact = chains_tuple
             all_chains = generic + approx + exact
-            if len(all_chains) == 0:
-                raise NoConverterAvailableForAttributeException.create_no_converter_found(parsed_attr_value,
-                                                                                          attribute_type,
-                                                                                          conversion_finder)
-            else:
+            if len(all_chains) > 0:
                 all_errors = dict()
                 for chain in reversed(all_chains):
                     try:
                         return chain.convert(attribute_type, parsed_attr_value, logger, *args, ** kwargs)
                     except Exception as e:
                         all_errors[chain] = e
-
                 raise ConversionException.create(attr_name, parsed_attr_value, attribute_type, all_errors)
+
+        # if conversion finder is none or it did not find any converter
+        raise NoConverterAvailableForAttributeException.create(conversion_finder, parsed_attr_value, attribute_type)
+
     else:
         # we can safely use the value: it is already of the correct type
         return parsed_attr_value
@@ -446,14 +429,14 @@ def get_default_object_parsers(parser_finder: ParserFinder, conversion_finder: C
             # yaml for any object
             SingleFileParserFunction(parser_function=read_object_from_yaml,
                                      streaming_mode=True,
-                                     supported_exts={'.yaml'},
+                                     supported_exts={'.yaml','.yml'},
                                      supported_types={Any},
                                      ),
             # yaml for collection objects
             SingleFileParserFunction(parser_function=read_object_from_yaml,
                                      custom_name='read_collection_from_yaml',
                                      streaming_mode=True,
-                                     supported_exts={'.yaml'},
+                                     supported_exts={'.yaml','.yml'},
                                      supported_types={Tuple, Dict, List, Set},
                                      ),
             MultifileObjectParser(parser_finder, conversion_finder)
@@ -622,7 +605,7 @@ class MultifileObjectParser(MultiFileParser):
             results[child_name] = child_plan.execute(logger, *args, **kwargs)
 
         # 2) finally build the resulting object
-        logger.info('--> Assembling all parsed child attributes into constructor of '
+        logger.info('Assembling all parsed child attributes into constructor of '
                     + get_pretty_type_str(desired_type) + ' to build ' + str(obj))
         return dict_to_object(desired_type, results, logger, conversion_finder=self.conversion_finder, *args, **kwargs)
 

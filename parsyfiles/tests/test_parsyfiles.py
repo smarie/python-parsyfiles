@@ -110,8 +110,11 @@ class AllTests(TestCase):
 class DemoTests(TestCase):
 
     def test_simple_collection(self):
-        e = parse_collection('./test_data/demo/simple_collection', DataFrame)
-        pprint(e)
+        dfs = parse_collection('./test_data/demo/simple_collection', DataFrame)
+        pprint(dfs)
+
+        df = parse_item('./test_data/demo/simple_collection/c', DataFrame)
+        pprint(df)
 
         RootParser().print_capabilities_for_type(typ=DataFrame)
 
@@ -140,10 +143,14 @@ class DemoTests(TestCase):
             def __repr__(self):
                 return str(self.x) + ' ' + self.op + ' ' + str(self.y) + ' =? ' + str(self.expected_result)
 
+
         # create the parser and parse a single file
-        e = parse_item('./test_data/objects/test_diff_1', ExecOpTest)
-        pprint(e)
+        #e = parse_item('./test_data/objects/test_diff_1', ExecOpTest)
+        #pprint(e)
 
         # parse all of them
         e = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
         pprint(e)
+
+        #
+        RootParser().print_capabilities_for_type(typ=ExecOpTest)

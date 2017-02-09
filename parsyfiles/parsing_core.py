@@ -135,6 +135,7 @@ class _BaseParsingPlan(ParsingPlan[T]):
 
         try:
             res = super(_BaseParsingPlan, self).execute(logger, *args, **kwargs)
+            logger.info('--> Successfully parsed a ' + get_pretty_type_str(self.obj_type) + ' from ' + self.location)
             if in_root_call:
                 # print('Completed parsing successfully')
                 logger.info('Completed parsing successfully')

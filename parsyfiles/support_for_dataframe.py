@@ -19,8 +19,8 @@ from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser
 #     return pd.read_excel(file_object, *args, **kwargs)
 
 
-def read_simpledf_from_xls(desired_type: Type[T], file_path: str, encoding: str,
-                           logger: Logger, *args, **kwargs) -> pd.DataFrame:
+def read_dataframe_from_xls(desired_type: Type[T], file_path: str, encoding: str,
+                            logger: Logger, *args, **kwargs) -> pd.DataFrame:
     """
     We register this method rather than the other because pandas guesses the encoding by itself.
 
@@ -38,8 +38,8 @@ def read_simpledf_from_xls(desired_type: Type[T], file_path: str, encoding: str,
     return pd.read_excel(file_path, *args, **kwargs)
 
 
-def read_simpledf_from_csv(desired_type: Type[pd.DataFrame], file_object: TextIOBase,
-                           logger: Logger, *args, **kwargs) -> pd.DataFrame:
+def read_dataframe_from_csv(desired_type: Type[pd.DataFrame], file_object: TextIOBase,
+                            logger: Logger, *args, **kwargs) -> pd.DataFrame:
     """
     Helper method to read a dataframe from a csv file stream. By default this is well suited for a dataframe with
     headers in the first row, for example a parameter dataframe.
@@ -54,11 +54,11 @@ def get_default_dataframe_parsers() -> List[AnyParser]:
     Utility method to return the default parsers able to parse a dictionary from a file.
     :return:
     """
-    return [SingleFileParserFunction(parser_function=read_simpledf_from_xls,
+    return [SingleFileParserFunction(parser_function=read_dataframe_from_xls,
                                      streaming_mode=False,
                                      supported_exts={'.xls', '.xlsx', '.xlsm'},
                                      supported_types={pd.DataFrame}),
-            SingleFileParserFunction(parser_function=read_simpledf_from_csv,
+            SingleFileParserFunction(parser_function=read_dataframe_from_csv,
                                      streaming_mode=True,
                                      supported_exts={'.csv', '.txt'},
                                      supported_types={pd.DataFrame}),

@@ -124,6 +124,14 @@ class RootParser(ParserRegistryWithConverters):
                 warn_import_error('config', e)
 
             try:
+                # -- numpy
+                from parsyfiles.support_for_numpy import get_default_np_parsers, get_default_np_converters
+                self.register_parsers(get_default_np_parsers())
+                self.register_converters(get_default_np_converters())
+            except ImportError as e:
+                warn_import_error('numpy', e)
+
+            try:
                 # -- dataframe
                 from parsyfiles.support_for_dataframe import get_default_dataframe_parsers, get_default_dataframe_converters
                 self.register_parsers(get_default_dataframe_parsers())

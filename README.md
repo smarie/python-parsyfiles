@@ -83,7 +83,7 @@ As usual :
 The most simple case of all: you wish to parse a collection of files that all have the same type, and for which a parser is already registered. For example your data folder looks like this (you may find this example data folder in the [project sources](https://github.com/smarie/python-simple-file-collection-parsing-framework/tree/master/parsyfiles/test_data)):
 
 ```bash
-demo/simple_collection
+./demo/simple_collection
 ├── a.csv
 ├── b.txt
 ├── c.xls
@@ -98,8 +98,8 @@ from pprint import pprint
 from parsyfiles import parse_collection
 from pandas import DataFrame
 
-dfs = parse_collection('./test_data/simple_collection', DataFrame)
-print(dfs)
+dfs = parse_collection('./demo/simple_collection', DataFrame)
+pprint(dfs)
 ```
 
 Here is the result
@@ -116,22 +116,28 @@ File checks done
 
 Building a parsing plan to parse ./test_data/demo/simple_collection (multifile) into a Dict[str, DataFrame]
 ./test_data/demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
-./test_data/demo/simple_collection\a (singlefile, .csv) > DataFrame ------- using <read_simpledf_from_csv(stream mode)>
-./test_data/demo/simple_collection\b (singlefile, .txt) > DataFrame ------- using [Try '<read_simpledf_from_csv(stream mode)>' then '$<read_dict_from_properties(stream mode)> => <dict_to_object>$' then '$<read_str_from_txt(stream mode)> => <base64_ascii_str_pickle_to_object>$]
-./test_data/demo/simple_collection\b (singlefile, .txt) > DataFrame ------- using <read_simpledf_from_csv(stream mode)>
-./test_data/demo/simple_collection\c (singlefile, .xls) > DataFrame ------- using <read_simpledf_from_xls(file mode)>
-./test_data/demo/simple_collection\d (singlefile, .xlsx) > DataFrame ------- using <read_simpledf_from_xls(file mode)>
-./test_data/demo/simple_collection\e (singlefile, .xlsm) > DataFrame ------- using <read_simpledf_from_xls(file mode)>
+./test_data/demo/simple_collection\a (singlefile, .csv) > DataFrame ------- using <read_dataframe_from_csv(stream mode)>
+./test_data/demo/simple_collection\b (singlefile, .txt) > DataFrame ------- using [Try '<read_dataframe_from_csv(stream mode)>' then '$<read_dict_from_properties(stream mode)> => <dict_to_object>$' then '$<read_str_from_txt(stream mode)> => <base64_ascii_str_pickle_to_object>$]
+./test_data/demo/simple_collection\b (singlefile, .txt) > DataFrame ------- using <read_dataframe_from_csv(stream mode)>
+./test_data/demo/simple_collection\c (singlefile, .xls) > DataFrame ------- using <read_dataframe_from_xls(file mode)>
+./test_data/demo/simple_collection\d (singlefile, .xlsx) > DataFrame ------- using <read_dataframe_from_xls(file mode)>
+./test_data/demo/simple_collection\e (singlefile, .xlsm) > DataFrame ------- using <read_dataframe_from_xls(file mode)>
 Parsing Plan created successfully
 
 Executing Parsing Plan for ./test_data/demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
 Parsing ./test_data/demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
-Parsing ./test_data/demo/simple_collection\a (singlefile, .csv) > DataFrame ------- using <read_simpledf_from_csv(stream mode)>
-Parsing ./test_data/demo/simple_collection\b (singlefile, .txt) > DataFrame ------- using <read_simpledf_from_csv(stream mode)>
-Parsing ./test_data/demo/simple_collection\c (singlefile, .xls) > DataFrame ------- using <read_simpledf_from_xls(file mode)>
-Parsing ./test_data/demo/simple_collection\d (singlefile, .xlsx) > DataFrame ------- using <read_simpledf_from_xls(file mode)>
-Parsing ./test_data/demo/simple_collection\e (singlefile, .xlsm) > DataFrame ------- using <read_simpledf_from_xls(file mode)>
---> Assembling all parsed child items into a Dict[str, DataFrame] to build ./test_data/demo/simple_collection (multifile)
+Parsing ./test_data/demo/simple_collection\a (singlefile, .csv) > DataFrame ------- using <read_dataframe_from_csv(stream mode)>
+--> Successfully parsed a DataFrame from ./test_data/demo/simple_collection\a
+Parsing ./test_data/demo/simple_collection\b (singlefile, .txt) > DataFrame ------- using <read_dataframe_from_csv(stream mode)>
+--> Successfully parsed a DataFrame from ./test_data/demo/simple_collection\b
+Parsing ./test_data/demo/simple_collection\c (singlefile, .xls) > DataFrame ------- using <read_dataframe_from_xls(file mode)>
+--> Successfully parsed a DataFrame from ./test_data/demo/simple_collection\c
+Parsing ./test_data/demo/simple_collection\d (singlefile, .xlsx) > DataFrame ------- using <read_dataframe_from_xls(file mode)>
+--> Successfully parsed a DataFrame from ./test_data/demo/simple_collection\d
+Parsing ./test_data/demo/simple_collection\e (singlefile, .xlsm) > DataFrame ------- using <read_dataframe_from_xls(file mode)>
+--> Successfully parsed a DataFrame from ./test_data/demo/simple_collection\e
+Assembling all parsed child items into a Dict[str, DataFrame] to build ./test_data/demo/simple_collection (multifile)
+--> Successfully parsed a Dict[str, DataFrame] from ./test_data/demo/simple_collection
 Completed parsing successfully
 
 {'a':    a  b  c  d
@@ -156,22 +162,33 @@ Completed parsing successfully
 
 In this output you see a couple hints on how the parsing framework works:
 
-* first it recursively checks your folder to check that it is entirely compliant with the file mapping format. That is the log section beginning with `Checking all files under ./test_data/demo/simple_collection`. If the same item appears twice (e.g. `a.csv` and `a.txt`)  it will throw an error at this stage (an `ObjectPresentMultipleTimesOnFileSystemError`).
+* first it recursively checks your folder to check that it is entirely compliant with the file mapping format. That is the log section beginning with "`Checking all files under ./test_data/demo/simple_collection`". If the same item appears twice (e.g. `a.csv` and `a.txt`)  it will throw an error at this stage (an `ObjectPresentMultipleTimesOnFileSystemError`).
 
-* then it recursively creates a parsing plan that is able to produce an object the required type. That's the section beginning with `Building a parsing plan to parse ./test_data/demo/simple_collection (multifile) into a Dict[str, DataFrame]`. Here you may note that by default, a collection of items is actually parsed as an object of type dictionary, where the key is the name of the file without extension, and the value is the object that is parsed from the file. If at this stage it does not find a way to parse a given file into the required object type, it will fail. For example if you add a file in the folder, named `unknown_ext_for_dataframe.ukn`, you will get an error (a `NoParserFoundForObjectExt`).
+* then it recursively creates a parsing plan that is able to produce an object the required type. That's the section beginning with "`Building a parsing plan to parse ./test_data/demo/simple_collection (multifile) into a Dict[str, DataFrame]`". Here you may note that by default, a collection of items is actually parsed as an object of type dictionary, where the key is the name of the file without extension, and the value is the object that is parsed from the file. If at this stage it does not find a way to parse a given file into the required object type, it will fail. For example if you add a file in the folder, named `unknown_ext_for_dataframe.ukn`, you will get an error (a `NoParserFoundForObjectExt`).
 
-* finally it executes the parsing plan. That's the section beginning with `Executing Parsing Plan for ./test_data/demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)`.
+* finally it executes the parsing plan. That's the section beginning with "`Executing Parsing Plan for ./test_data/demo/simple_collection (multifile) > Dict[str, DataFrame] (...)`".
 
-It is important to understand these 3 log sections, since the main issue with complex framework is debugging when something unexpected.
+It is important to understand these 3 log sections, since the main issue with complex frameworks is debugging when something unexpected happens :-).
+
+#### Note: parsing a single file
+
+The following code may be used to parse a single file explicitly:
+
+```python
+from pprint import pprint
+from parsyfiles import parse_item
+from pandas import DataFrame
+
+df = parse_item('./demo/simple_collection/c', DataFrame)
+pprint(df)
+```
+
+Important : note that the file extension does not appear in the argument of the `parse_item` function. 
 
 
-### 2- Simple objects
+### 2- Simple user-defined types
 
-Simple objects are objects that can be read from a single file. We will see complex objects spanning across several files in [section 2](#2--complex-objects).
-
-#### a - Getting started
-
-Suppose that we want to test the following function.
+Suppose that you want to test the following function, and you want to read your test datasets from a bunch of files.
 
 ```python
 def exec_op(x: float, y: float, op: str) -> float:
@@ -183,7 +200,7 @@ def exec_op(x: float, y: float, op: str) -> float:
         raise ValueError('Unsupported operation : \'' + op + '\'')
 ```
 
-We would like each test configuration to be represented as an object, containing the inputs and expected outputs. So we define this class:
+Each test dataset could be represented as an object, containing the inputs and expected outputs. For example with this class:
 
 ```python
 class ExecOpTest(object):
@@ -193,37 +210,235 @@ class ExecOpTest(object):
         self.y = y
         self.op = op
         self.expected_result = expected_result
+    
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        return str(self.x) + ' ' + self.op + ' ' + str(self.y) + ' =? ' + str(self.expected_result)
 ```
 
-#### b - Parsing simple objects
+Obviously this class is not known by the `parsyfiles` framework: there is no registered parser for the specific type `ExecOpTest`. However the type is fairly simple, so it can actually fit into a dictionary easily. `parsyfiles` knows a couple ways to parse dictionaries, using python standard libraries:
 
-Simple objects such as instances of `ExecOpTest` may be represented by dictionaries. The following 3 "default" file formats are provided for convenience, relying on python standard libraries to parse a dictionary from a file:
+* From a `.cfg` or `.ini` file using the `configparser` module
+* From a `.json` file using the `json` module
+* From a `.properties` or `.txt` file using the `jprops` module
+* From a `.yaml` or `.yml` file using the `yaml` module
+* From a `.csv`, `.txt`, `.xls`, `.xlsx`, `.xlsm` file using the `pandas` module
+* ...
 
-* `.cfg` or `.ini`
-* `.json`
-* `.properties` or `.txt`
+It also knows how to convert a dictionary into an object, as long as the object constructor contains the right information about expected types. For example in the example above, the constructor has explicit PEP484 annotations `x: float, y: float, op: str, expected_result: float`.
 
-Our test data folder looks like this:
+So let's give it a try. Our test data folder looks like this:
 
 ```bash
-demo_simple
+./demo/simple_objects
 ├── test_diff_1.cfg
 ├── test_diff_2.ini
+├── test_diff_3_csv_format.txt
 ├── test_sum_1.json
 ├── test_sum_2.properties
-└── test_sum_3.txt
+├── test_sum_3_properties_format.txt
+├── test_sum_4.yaml
+├── test_sum_5.xls
+├── test_sum_6.xlsx
+└── test_sum_7.xlsm
 ```
 
-Note that the variety of file formats is not very realistic here - you will probably use one or two - but it is used to demonstrate all formats supported out of the box. You may find this example data folder in the [project sources](https://github.com/smarie/python-simple-file-collection-parsing-framework/tree/master/parsyfiles/test_data) by the way.
+As usual, we tell the framework that we want to parse a collection of objects of type `ExecOpTest`:
 
 ```python
-from parsyfiles import get_simple_object_parser
-simple_parser = get_simple_object_parser(ExecOpTest)
+from pprint import pprint
+from parsyfiles import parse_collection
+
+e = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
+pprint(e)
 ```
 
-To read a single object from a single file, for example `test_sum_1.json`, simply use
+Here is the result:
+
+```
+**** Starting to parse  collection of <ExecOpTest> at location ./test_data/demo/simple_objects ****
+Checking all files under ./test_data/demo/simple_objects
+./test_data/demo/simple_objects (multifile)
+./test_data/demo/simple_objects\test_diff_1 (singlefile, .cfg)
+./test_data/demo/simple_objects\test_diff_2 (singlefile, .ini)
+./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt)
+./test_data/demo/simple_objects\test_sum_1 (singlefile, .json)
+./test_data/demo/simple_objects\test_sum_2 (singlefile, .properties)
+./test_data/demo/simple_objects\test_sum_3_properties_format (singlefile, .txt)
+./test_data/demo/simple_objects\test_sum_4 (singlefile, .yaml)
+./test_data/demo/simple_objects\test_sum_5 (singlefile, .xls)
+./test_data/demo/simple_objects\test_sum_6 (singlefile, .xlsx)
+./test_data/demo/simple_objects\test_sum_7 (singlefile, .xlsm)
+File checks done
+
+Building a parsing plan to parse ./test_data/demo/simple_objects (multifile) into a Dict[str, ExecOpTest]
+./test_data/demo/simple_objects (multifile) > Dict[str, ExecOpTest] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
+./test_data/demo/simple_objects\test_diff_1 (singlefile, .cfg) > ExecOpTest ------- using [Try '$<read_config(stream mode)> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$' then '$<read_config(stream mode)> => <config_to_dict_of_dict> -> <dict_of_dict_to_object>$' then '$<read_config(stream mode)> => <config_to_dict_of_dict> -> <dict_to_object>$]
+./test_data/demo/simple_objects\test_diff_1 (singlefile, .cfg) > ExecOpTest ------- using $<read_config(stream mode)> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$
+./test_data/demo/simple_objects\test_diff_2 (singlefile, .ini) > ExecOpTest ------- using [Try '$<read_config(stream mode)> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$' then '$<read_config(stream mode)> => <config_to_dict_of_dict> -> <dict_of_dict_to_object>$' then '$<read_config(stream mode)> => <config_to_dict_of_dict> -> <dict_to_object>$]
+./test_data/demo/simple_objects\test_diff_2 (singlefile, .ini) > ExecOpTest ------- using $<read_config(stream mode)> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$
+./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using [Try '$<read_dict_from_properties(stream mode)> => <dict_to_object>$' then '$<read_str_from_txt(stream mode)> => <base64_ascii_str_pickle_to_object>$' then '$<read_str_from_txt(stream mode)> => <construct_from_str>$' then '$<read_dataframe_from_csv(stream mode)> => <single_row_df_to_dict> -> <dict_to_object>$]
+./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_dict_from_properties(stream mode)> => <dict_to_object>$
+./test_data/demo/simple_objects\test_sum_1 (singlefile, .json) > ExecOpTest ------- using $<read_dict_or_list_from_json(stream mode)> => <dict_to_object>$
+./test_data/demo/simple_objects\test_sum_2 (singlefile, .properties) > ExecOpTest ------- using $<read_dict_from_properties(stream mode)> => <dict_to_object>$
+./test_data/demo/simple_objects\test_sum_3_properties_format (singlefile, .txt) > ExecOpTest ------- using [Try '$<read_dict_from_properties(stream mode)> => <dict_to_object>$' then '$<read_str_from_txt(stream mode)> => <base64_ascii_str_pickle_to_object>$' then '$<read_str_from_txt(stream mode)> => <construct_from_str>$' then '$<read_dataframe_from_csv(stream mode)> => <single_row_df_to_dict> -> <dict_to_object>$]
+./test_data/demo/simple_objects\test_sum_3_properties_format (singlefile, .txt) > ExecOpTest ------- using $<read_dict_from_properties(stream mode)> => <dict_to_object>$
+./test_data/demo/simple_objects\test_sum_4 (singlefile, .yaml) > ExecOpTest ------- using [Try '<read_object_from_yaml(stream mode)>' then '$<read_collection_from_yaml> => <dict_to_object>$]
+./test_data/demo/simple_objects\test_sum_4 (singlefile, .yaml) > ExecOpTest ------- using <read_object_from_yaml(stream mode)>
+./test_data/demo/simple_objects\test_sum_5 (singlefile, .xls) > ExecOpTest ------- using $<read_dataframe_from_xls(file mode)> => <single_row_df_to_dict> -> <dict_to_object>$
+./test_data/demo/simple_objects\test_sum_6 (singlefile, .xlsx) > ExecOpTest ------- using $<read_dataframe_from_xls(file mode)> => <single_row_df_to_dict> -> <dict_to_object>$
+./test_data/demo/simple_objects\test_sum_7 (singlefile, .xlsm) > ExecOpTest ------- using $<read_dataframe_from_xls(file mode)> => <single_row_df_to_dict> -> <dict_to_object>$
+Parsing Plan created successfully
+
+Executing Parsing Plan for ./test_data/demo/simple_objects (multifile) > Dict[str, ExecOpTest] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
+Parsing ./test_data/demo/simple_objects (multifile) > Dict[str, ExecOpTest] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
+
+(... removed for readability ...)
+
+Parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_dict_from_properties(stream mode)> => <dict_to_object>$
+!!!! Caught error during execution : 
+  File "C:\W_dev\_pycharm_workspace\python-parsyfiles\parsyfiles\support_for_objects.py", line 266, in dict_to_object
+    attr_name)
+  ParsingException : Error while parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) as a ExecOpTest with parser '$<read_dict_from_properties(stream mode)> => <dict_to_object>$' using args=(()) and kwargs=({}) : caught 
+  InvalidAttributeNameForConstructorError : Cannot parse object of type <ExecOpTest> using the provided configuration file: configuration contains a property name ('x,y,op,expected_result')that is not an attribute of the object constructor. <ExecOpTest> constructor attributes are : ['op', 'expected_result', 'y', 'x']
+----- Rebuilding local parsing plan with next candidate parser:
+./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_str_from_txt(stream mode)> => <base64_ascii_str_pickle_to_object>$
+Parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_str_from_txt(stream mode)> => <base64_ascii_str_pickle_to_object>$
+!!!! Caught error during execution : 
+  File "C:\Anaconda3\envs\azuremlbricks\lib\base64.py", line 88, in b64decode
+    return binascii.a2b_base64(s)
+  ParsingException : Error while parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) as a ExecOpTest with parser '$<read_str_from_txt(stream mode)> => <base64_ascii_str_pickle_to_object>$' using args=(()) and kwargs=({}) : caught 
+  Error : Incorrect padding
+----- Rebuilding local parsing plan with next candidate parser:
+./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_str_from_txt(stream mode)> => <construct_from_str>$
+Parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_str_from_txt(stream mode)> => <construct_from_str>$
+!!!! Caught error during execution : 
+  File "C:\W_dev\_pycharm_workspace\python-parsyfiles\parsyfiles\support_for_primitive_types.py", line 23, in primitive_to_anything_by_constructor_call
+    return desired_type(source)
+  ParsingException : Error while parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) as a ExecOpTest with parser '$<read_str_from_txt(stream mode)> => <construct_from_str>$' using args=(()) and kwargs=({}) : caught 
+  TypeError : __init__() missing 3 required positional arguments: 'y', 'op', and 'expected_result'
+----- Rebuilding local parsing plan with next candidate parser:
+./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_dataframe_from_csv(stream mode)> => <single_row_df_to_dict> -> <dict_to_object>$
+Parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_dataframe_from_csv(stream mode)> => <single_row_df_to_dict> -> <dict_to_object>$
+--> Successfully parsed a ExecOpTest from ./test_data/demo/simple_objects\test_diff_3_csv_format
+
+(... removed for readability ...)
+
+Parsing ./test_data/demo/simple_objects\test_sum_4 (singlefile, .yaml) > ExecOpTest ------- using <read_object_from_yaml(stream mode)>
+!!!! Caught error during execution : 
+  File "C:\W_dev\_pycharm_workspace\python-parsyfiles\parsyfiles\parsing_core_api.py", line 365, in execute
+    res, *args, **kwargs)
+  ParsingException : Error while parsing ./test_data/demo/simple_objects\test_sum_4 (singlefile, .yaml) as a <class 'test_parsyfiles.DemoTests.test_simple_objects.<locals>.ExecOpTest'> with parser '<read_object_from_yaml(stream mode)>' using args=(()) and kwargs=({}) : parser returned {'y': 5, 'x': 2, 'op': '+', 'expected_result': 7} of type <class 'dict'> which is not an instance of <class 'test_parsyfiles.DemoTests.test_simple_objects.<locals>.ExecOpTest'>
+----- Rebuilding local parsing plan with next candidate parser:
+./test_data/demo/simple_objects\test_sum_4 (singlefile, .yaml) > ExecOpTest ------- using $<read_collection_from_yaml> => <dict_to_object>$
+Parsing ./test_data/demo/simple_objects\test_sum_4 (singlefile, .yaml) > ExecOpTest ------- using $<read_collection_from_yaml> => <dict_to_object>$
+--> Successfully parsed a ExecOpTest from ./test_data/demo/simple_objects\test_sum_4
+
+(... removed for readability ...)
+
+Assembling all parsed child items into a Dict[str, ExecOpTest] to build ./test_data/demo/simple_objects (multifile)
+--> Successfully parsed a Dict[str, ExecOpTest] from ./test_data/demo/simple_objects
+Completed parsing successfully
+
+{'test_diff_1': 1.0 - 1.0 =? 0.0,
+ 'test_diff_2': 0.0 - 1.0 =? -1.0,
+ 'test_diff_3_csv_format': 5.0 - 4.0 =? 1.0,
+ 'test_sum_1': 1.0 + 2.0 =? 3.0,
+ 'test_sum_2': 0.0 + 1.0 =? 1.0,
+ 'test_sum_3_properties_format': 1.0 + 1.0 =? 2.0,
+ 'test_sum_4': 2.0 + 5.0 =? 7.0,
+ 'test_sum_5': 56.0 + 12.0 =? 68.0,
+ 'test_sum_6': 56.0 + 13.0 =? 69.0,
+ 'test_sum_7': 56.0 + 14.0 =? 70.0}
+```
+
+This time the parser is a little bit more verbose. This is because there was a bit of ambiguity about how to parse our object, in particular for two files: `test_diff_3_csv_format.txt` and `test_sum_4.yaml`.
+
+* For `test_diff_3_csv_format.txt`, the challenge is that this is a text file containing csv-format data. You can see from the logs that the framework successively tries several ways to parse this file :
+
+    * `$<read_dict_from_properties(stream mode)> => <dict_to_object>$`: the txt file is read in the 'properties' format (using jprops) into a dictionary, and then the dictionary is converted to a `ExecOpTest` object. This fails.
+    * `$<read_str_from_txt(stream mode)> => <base64_ascii_str_pickle_to_object>$` : the txt file is read as a string, and then the string is interpreted as a base64-encoded pickle `ExecOpTest` object. This fails.
+    * `$<read_str_from_txt(stream mode)> => <construct_from_str>$`: the txt file is read as a string, and then the constructor of `ExecOpTest` is called with that string as unique argument. This fails again.
+    * `$<read_dataframe_from_csv(stream mode)> => <single_row_df_to_dict> -> <dict_to_object>$`: the txt file is read as a csv into a DataFrame, then the DataFrame is converted to a dictionary, and finally the dictionary is converted into a `ExecOpTest` object. This succeeds.
+    
+* For `test_sum_4.yaml`, the difficulty is that yaml format may contain a dictionary or a collection directly, but is also able to contain any object thanks to the object directive. You can see from the logs that the framework successively tries several ways to parse this file :
+
+    * `<read_object_from_yaml(stream mode)>`: the file is read according to the yaml format, as a `ExecOpTest` object directly. This fails.
+    
+    * `$<read_collection_from_yaml> => <dict_to_object>$`: the file is read according to the yaml format, as a dictionary. Then this dictionary is converted into a `ExecOpTest` object. This succeeds
 
 
+This example shows how `parsyfiles` intelligently combines all registered parsers and converters to create parsing chains that make sense. These parsing chains are tried in order until a solution is found. Note that the order is deterministic:
+
+* First all "exact match" parsers. This includes combinations of {parser + converter chain} that lead to an exact match, sorted by converter chain size: first the small conversion chains, last the large conversion chains.
+
+* Then all "approximative match" parsers. This is similar to the "exact match" except that these are parsers able to parse a **subclass** of what you're asking for.
+
+* Finally all "generic" parsers. This includes combinations of {parser + converter chain} that end with a generic converter (for example the "dict to object" converter seen in the example above)
+
+
+You may wish to check what are all known ways to parse a given type:
+
+```python
+from parsyfiles import RootParser
+RootParser().print_capabilities_for_type(typ=ExecOpTest)
+```
+
+The result is a dictionary where each entry is a file extension:
+```
+{'.cfg': {'1_exact_match': [],
+          '2_approx_match': [],
+          '3_generic': [$<read_config(stream mode)> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$,
+                        $<read_config(stream mode)> => <config_to_dict_of_dict> -> <dict_of_dict_to_object>$,
+                        $<read_config(stream mode)> => <config_to_dict_of_dict> -> <dict_to_object>$]},
+ '.csv': {'1_exact_match': [],
+          '2_approx_match': [],
+          '3_generic': [$<read_simpledf_from_csv(stream mode)> => <single_row_df_to_dict> -> <dict_to_object>$]},
+ '.ini': {'1_exact_match': [],
+          '2_approx_match': [],
+          '3_generic': [$<read_config(stream mode)> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$,
+                        $<read_config(stream mode)> => <config_to_dict_of_dict> -> <dict_of_dict_to_object>$,
+                        $<read_config(stream mode)> => <config_to_dict_of_dict> -> <dict_to_object>$]},
+ '.json': {'1_exact_match': [],
+           '2_approx_match': [],
+           '3_generic': [$<read_dict_or_list_from_json(stream mode)> => <dict_to_object>$]},
+ '.properties': {'1_exact_match': [],
+                 '2_approx_match': [],
+                 '3_generic': [$<read_dict_from_properties(stream mode)> => <dict_to_object>$]},
+ '.pyc': {'1_exact_match': [],
+          '2_approx_match': [],
+          '3_generic': [<read_object_from_pickle(stream mode)>]},
+ '.txt': {'1_exact_match': [],
+          '2_approx_match': [],
+          '3_generic': [$<read_dict_from_properties(stream mode)> => <dict_to_object>$,
+                        $<read_str_from_txt(stream mode)> => <base64_ascii_str_pickle_to_object>$,
+                        $<read_str_from_txt(stream mode)> => <construct_from_str>$,
+                        $<read_simpledf_from_csv(stream mode)> => <single_row_df_to_dict> -> <dict_to_object>$]},
+ '.xls': {'1_exact_match': [],
+          '2_approx_match': [],
+          '3_generic': [$<read_simpledf_from_xls(file mode)> => <single_row_df_to_dict> -> <dict_to_object>$]},
+ '.xlsm': {'1_exact_match': [],
+           '2_approx_match': [],
+           '3_generic': [$<read_simpledf_from_xls(file mode)> => <single_row_df_to_dict> -> <dict_to_object>$]},
+ '.xlsx': {'1_exact_match': [],
+           '2_approx_match': [],
+           '3_generic': [$<read_simpledf_from_xls(file mode)> => <single_row_df_to_dict> -> <dict_to_object>$]},
+ '.yaml': {'1_exact_match': [],
+           '2_approx_match': [],
+           '3_generic': [<read_object_from_yaml(stream mode)>,
+                         $<read_collection_from_yaml> => <dict_to_object>$]},
+ '.yml': {'1_exact_match': [],
+          '2_approx_match': [],
+          '3_generic': [<read_object_from_yaml(stream mode)>,
+                        $<read_collection_from_yaml> => <dict_to_object>$]},
+ '<multifile>': {'1_exact_match': [],
+                 '2_approx_match': [],
+                 '3_generic': [Generic MF Object parser (based on 'parsyfiles defaults' to find the parser for each attribute),
+                               $Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item) => <dict_to_object>$]}}
+```
+Looking at the entries for `.txt` and `.yaml`, we can find back the list of parsers tried in the above example
 
 
 ### 2- Complex objects
