@@ -4,46 +4,42 @@ A declarative framework that combines many popular python parsers (json, jprops,
 This library provides a *framework*, not a specific parser for a specific file format. By default several classic parsers from the python world are already registered, but it is also extremely easy to add more if your favourite parser is missing. Even better: if you just need to parse a derived type of a type that can already be parsed, you may simply need to register a *type converter*, the framework will link it to any compliant parser for you. 
 
 
-## Intended audience
+**Intended audience:**
 
 * developers looking for an easy way to parse dictionaries and simple objects from various formats (json, properties, cfg, csv...) using standard python libraries. They can combine this library with [classtools_autocode](https://github.com/smarie/python-classtools-autocode) to preserve compact, readable and content-validated classes.
 
 * developers who already know how to parse their various files independently, but looking for a higher-level tool to read complex objects made of several files/folders and potentially requiring to combine several parsers.
 
 
-## Typical use cases
+**Typical use cases:**
 
 * **read collections of test cases** on the file system - each test case being composed of several files (for example 2 'test inputs' .csv files, 1 'test configuration' .cfg file, and one 'reference test results' json or yaml file)
 * more generally, **read complex objects that for some reason are not represented by a single file representation**, for example objects made of several csv files (timeseries + descriptive data), combinations of csv and xml/json files, configuration files, pickle files, etc.
 
 
-### Note on the Intelligence/Speed tradeoff
-This framework contains a bit of nontrivial logic in order to transparently infer which parser and conversion chain to use, and even in some cases to try several alternatives in order to guess what was your intent. This makes it quite powerful but will certainly be slower and more memory-consuming than writing a dedicated parser tailored for your specific case. However if you are looking for a tool to speedup your development so that you may focus on what's important (your business logic, algorithm implementation, test logic, etc) then it might do the job.
+*Note on the Intelligence/Speed tradeoff:*
+This framework contains a bit of nontrivial logic in order to transparently infer which parser and conversion chain to use, and even in some cases to try several alternatives in order to guess what was your intent. This makes it quite powerful but will certainly be slower and more memory-consuming than writing a dedicated parser tailored for your specific case. However if you are looking for a tool to speedup your development so that you may focus on what's important (your business logic, algorithm implementation, test logic, etc) then have a try, it might do the job.
 
 
 ## Main features
 
 * **Declarative (class-based)**: you *first* define the objects to parse - by creating or importing their class -, *then* you use `parse_item` or `parse_collection` on the appropriate folder or file path. 
-* **Simple objects out of the box**: if you're interested in parsing singlefile objects only requiring simple types in their constructor, then the framework is probably already able to parse them, for many singlefile formats (json, properties, txt, csv, yaml and more.). 
-* **Serialization out of the box**: pickle files (.pyc) are supported too. Base64-encoded pickle objects can also be included in any simple file content.
-* **Multifile objects out of the box**: the library comes with two ways to organize multifile objects: *wrapped* (each object is a folder), or *flat* (all files are in the same folder, files belonging to the same object have the same prefix)
+* **Simple objects out-of-the-box**: if you're interested in parsing singlefile objects only requiring simple types in their constructor, then the framework is *already* able to parse them, for many singlefile formats (json, properties, txt, csv, yaml and more.).
+* **Multifile collections out-of-the-box**: the framework is able to parse collections of objects, each represented by a file. Parsing may be done in a lazy fashion (each item is only read if needed) or in the background (in a separate thread).
+* **Serialization**: pickle files (.pyc) are supported too. Base64-encoded pickle objects can also be included in any simple file content.
+* **Multiparser**: the library will use the best parser adapted to each file format and desired type. At the time of writing the library:
+    * knows **41** ways to parse a file
+    * is able to parse **11** object types (including *'Any'* for generic parsers)
+    * from **13** file extensions
+* **Multifile+Multiparser objects**: You may therefore parse complex objects requiring a combination of several parsers to be built from several files. The framework will introspect the object constructor in order to know the list of required attributes to parse as well as their their type, and if they are mandatory or optional.
+* **Recursive**: attributes may themselves be collections or complex types.
+* Supports **two main file mapping flavours for Multifile objects**: the library comes with two ways to organize multifile objects such as collections: *wrapped* (each multifile object is a folder), or *flat* (all files are in the same folder, files belonging to the same multifile object have the same prefix)
+
+In addition the library is
 
 * **Extensible**. You may register any number of additional file parsers, or type converters, or both. When registering a parser you just have to declare the object types that it can parse, *and* the file extensions it can read. The same goes for converters: you declare the object type it can read, and the object type it can convert to. 
 * **Intelligent** Since several parsers may be registered for the same file extension, and more generally several parsing chains (parser + converters) may be eligible to a given task, the library has a built-in set of rules to select the relevant parsing chains and test them in most plausible order. This provides you with several ways to parse the same object. This might be useful for example if some of your data comes from nominal tests, some other from field tests, some other from web service calls, etc. You don't need anymore to convert all of these to the same format before using it.
 * **No annotations required**: as opposed to some data binding frameworks, this library is meant to parse object types that may already exist, and potentially only for tests. Therefore the framework does not require annotations on the type if there is there is a registered way to parse it. However if you wish to build higher-level objects encapsulating the result of several parsers, then PEP484 type hints are required. But that's probably less a problem since these objects are yours (they are part of your tests for example) 
-
-
-**TODO**
- 
- 
-* **Supports complex classes** : the main interest of this framework is its ability to define complex classes that spans across several files. For example, a `MyTestCase` class that would have two fields `input: DataFrame` and `expected_output: str`. The class constructor is introspected in order to find the *required* and *optional* fields and their names. Fields may be objects or collections (that should be declared with the `typing` module such as `Dict[str, Foo]`) in order for the framework to keep track of the underlying collection types) 
-* **Recursive**: fields may themselves be collections or complex types. In which case they are represented by several files.
-* Supports **two main file mapping flavours**: 
-    * *flat*, where all items are represented as files in the same folder (even fields and collection elements)
-    * *wrapped*, where all items that represent collections or complex types are represented by folders, and all ready-to-parse items are represented by files.
-* **Safe**: files are opened and finally closed by the framework, your parsing function may exit without closing
-* **Lazy-parsing** : TODO, a later version will allow to only trigger parsing when objects are read, in the case of collections 
-* Last but not least, you may change the *encoding* used to parse the files (but as of today all files are open with the same global encoding)
 
 
 ## Installation
@@ -421,6 +417,26 @@ Looking at the entries for `.txt` and `.yaml`, we can find back the ordered list
 
 Now that we've seen that parsyfiles is able to combine parsers and converters, we can try to parse `DataFrame` objects from many more sources:
 
+```
+./demo/simple_collection_dataframe_inference
+├── a.csv
+├── b.txt
+├── c.xls
+├── d.xlsx
+├── s_b64_pickle.txt
+├── t_pickle.pyc
+├── u.json
+├── v_properties.txt
+├── w.properties
+├── x.yaml
+├── y.cfg
+└── z.ini
+```
+
+*Note: once again you may find this example data folder in the [project sources](https://github.com/smarie/python-simple-file-collection-parsing-framework/tree/master/parsyfiles/test_data)*
+
+The code is the same:
+
 ```python
 from pprint import pprint
 from parsyfiles import parse_collection
@@ -429,6 +445,44 @@ from pandas import DataFrame
 dfs = parse_collection('./demo/simple_collection_dataframe_inference', DataFrame)
 pprint(dfs)
 ```
+
+And here is the result
+
+```
+{'a':    a  b  c  d
+      0  1  2  3  4,
+ 'b':    a  b  c  d
+      0  1  2  3  4,
+ 'c': Empty DataFrame
+Columns: []
+Index: [],
+ 'd': Empty DataFrame
+Columns: []
+Index: [],
+ 's_b64_pickle': Empty DataFrame
+Columns: [gANjcGFuZGFzLmNvcmUuZnJhbWUKRGF0YUZyYW1lCnEAKYFxAX1xAihYCQAAAF9tZXRhZGF0YXEDXXEEWAQAAABfdHlwcQVYCQAAAGRhdGFmcmFtZXEGWAUAAABfZGF0YXEHY3BhbmRhcy5jb3JlLmludGVybmFscwpCbG9ja01hbmFnZXIKcQgpgXEJKF1xCihjcGFuZGFzLmluZGV4ZXMuYmFzZQpfbmV3X0luZGV4CnELY3BhbmRhcy5pbmRleGVzLmJhc2UKSW5kZXgKcQx9cQ0oWAQAAABkYXRhcQ5jbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxD2NudW1weQpuZGFycmF5CnEQSwCFcRFDAWJxEodxE1JxFChLAUsChXEVY251bXB5CmR0eXBlCnEWWAIAAABPOHEXSwBLAYdxGFJxGShLA1gBAAAAfHEaTk5OSv////9K/////0s/dHEbYoldcRwoWAEAAABjcR1LBWV0cR5iWAQAAABuYW1lcR9OdYZxIFJxIWgLY3BhbmRhcy5pbmRleGVzLnJhbmdlClJhbmdlSW5kZXgKcSJ9cSMoWAUAAABzdGFydHEkSwBYBAAAAHN0ZXBxJUsBWAQAAABzdG9wcSZLA2gfTnWGcSdScShlXXEpKGgPaBBLAIVxKmgSh3ErUnEsKEsBSwFLA4ZxLWgWWAIAAABpOHEuSwBLAYdxL1JxMChLA1gBAAAAPHExTk5OSv////9K/////0sAdHEyYolDGAgAAAAAAAAADAAAAAAAAAADAAAAAAAAAHEzdHE0YmgPaBBLAIVxNWgSh3E2UnE3KEsBSwFLA4ZxOGgZiV1xOShYAQAAAGRxOlgBAAAAZXE7WAEAAABmcTxldHE9YmVdcT4oaAtoDH1xPyhoDmgPaBBLAIVxQGgSh3FBUnFCKEsBSwGFcUNoGYldcURLBWF0cUViaB9OdYZxRlJxR2gLaAx9cUgoaA5oD2gQSwCFcUloEodxSlJxSyhLAUsBhXFMaBmJXXFNaB1hdHFOYmgfTnWGcU9ScVBlfXFRWAYAAAAwLjE0LjFxUn1xUyhYBAAAAGF4ZXNxVGgKWAYAAABibG9ja3NxVV1xVih9cVcoWAYAAAB2YWx1ZXNxWGgsWAgAAABtZ3JfbG9jc3FZY2J1aWx0aW5zCnNsaWNlCnFaSwFLAksBh3FbUnFcdX1xXShoWGg3aFloWksASwFLAYdxXlJxX3VldXN0cWBidWIu]
+Index: [],
+ 't_pickle':    c   5
+             0  d   8
+             1  e  12
+             2  f   3,
+ 'u':    a  b  c  d
+      0  1  2  +  3,
+ 'v_properties':    a = 1
+                 0  b = 1
+                 1  c = +
+                 2  d = 2,
+ 'w':    a  b  c  d
+      0  0  1  +  1,
+ 'x':    r  t  u  x
+      0  7  +  5  2,
+ 'y':    d  r  s  t
+      0  0  1  1  -,
+ 'z':     d  r  s  t
+      0  -1  0  1  -
+}
+```
+
 
 ### 5- Complex and multifile types
 
