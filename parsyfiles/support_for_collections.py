@@ -1,6 +1,7 @@
+from collections import Mapping, ItemsView, ValuesView
 from io import TextIOBase
 from logging import Logger
-from typing import Dict, Any, List, Union, Type, Set, Tuple
+from typing import Dict, Any, List, Union, Type, Set, Tuple, Callable
 
 from parsyfiles.converting_core import Converter, ConverterFunction
 from parsyfiles.filesystem_mapping import PersistedObject
@@ -58,7 +59,6 @@ def read_dict_or_list_from_json(desired_type: Type[dict], file_object: TextIOBas
     :return:
     """
     # lazy import in order not to force use of jprops
-    #jsonStr = StringIO(file_object).getvalue()
     import json
     return json.load(file_object)
 
@@ -69,6 +69,101 @@ class DictOfDict(Dict[str, Dict[str, Any]]):
     subclass of 'DictOfDict'
     """
     pass
+
+
+class LazyDictionary(dict):
+    """
+    A dictionary that loads items lazily. It is read-only and relies on code from collections.Mapping for proper
+    implementation for values() and items().
+    """
+
+    class ReadOnlyDictProxy(Mapping):
+        """
+        A read-only proxy for a dictionary
+        """
+        def __init__(self, data):
+            self._data = data
+
+        def __getitem__(self, key):
+            return self._data[key]
+
+        def __len__(self):
+            return len(self._data)
+
+        def __iter__(self):
+            return iter(self._data)
+
+    def __init__(self, lazyloadable_keys: List[str], loading_method: Callable[[str], Any]):
+        """
+        Constructor with a list of keys for which the value can actually be loaded later (when needed) from a
+        loading_method.
+
+        :param lazyloadable_keys:
+        :param loading_method:
+        """
+        # initialize the inner dictionary
+        self.inner_dict = dict()
+        self.inner_dict_readonly_wrapper = LazyDictionary.ReadOnlyDictProxy(self.inner_dict)
+
+        # store the list of loadable keys
+        check_var(lazyloadable_keys, var_types=list, var_name='initial_keys')
+        self.lazyloadable_keys = lazyloadable_keys
+
+        # loading method
+        check_var(loading_method, var_types=Callable, var_name='loading_method')
+        self.loading_method = loading_method
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        if len(self.inner_dict) == len(self):
+            return self.inner_dict.__repr__()
+        else:
+            return 'LazyDictionary - not entirely loaded yet. Keys: ' + str(self.lazyloadable_keys)
+
+    def __contains__(self, item):
+        return self.lazyloadable_keys.__contains__(item)
+
+    def keys(self):
+        return set(self.lazyloadable_keys)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def __getitem__(self, name):
+        if name in self.inner_dict.keys():
+            # return the cached value
+            return self.inner_dict[name]
+        elif name in self.lazyloadable_keys:
+            # load the value
+            val = self.loading_method(name)
+            # remember it for next time
+            self.inner_dict[name] = val
+            return val
+        else:
+            # as usual
+            raise KeyError(name)
+
+    def __len__(self):
+        return len(self.lazyloadable_keys)
+
+    def __iter__(self):
+        return iter(self.lazyloadable_keys)
+
+    def items(self):
+        "D.items() -> a set-like object providing a view on D's items"
+        return ItemsView(self)
+
+    def values(self):
+        "D.values() -> an object providing a view on D's values"
+        return ValuesView(self)
+
+    def __getattr__(self, name):
+        return getattr(self.inner_dict_readonly_wrapper, name)
 
 
 class MultifileDictParser(MultiFileParser):
@@ -138,8 +233,11 @@ class MultifileDictParser(MultiFileParser):
             raise ValueError('lazy_parsing and background_parsing cannot be set to true at the same time')
 
         if lazy_parsing:
-            # -- TODO make a lazy dictionary
-            raise ValueError('Lazy parsing is not yet supported')
+            # return a lazy dictionary
+            return LazyDictionary(list(parsing_plan_for_children.keys()),
+                                  loading_method=lambda x: parsing_plan_for_children[x].execute(logger, *args,
+                                                                                                **kwargs))
+
         elif background_parsing:
             # -- TODO create a thread to perform the parsing in the background
             raise ValueError('Background parsing is not yet supported')

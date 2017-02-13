@@ -122,6 +122,27 @@ class DemoTests(TestCase):
 
         RootParser().print_capabilities_for_type(typ=DataFrame)
 
+    def test_simple_collection_lazy(self):
+        dfs = parse_collection('./test_data/demo/simple_collection', DataFrame, lazy_parsing_for_mf_collections=True)
+        # check len
+        self.assertEquals(len(dfs), 5)
+        # check keys
+        self.assertEquals(dfs.keys(), {'a','b','c','d','e'})
+        # check contains
+        self.assertTrue(dfs.__contains__('b'))
+        # check iter
+        self.assertEquals({key for key in dfs}, {'a', 'b', 'c', 'd', 'e'})
+        # check get
+        self.assertIsNotNone(dfs.get('b'))
+        # check values
+        for value in dfs.values():
+            print(value)
+        # check items
+        for key, value in dfs.items():
+            print(value)
+        # finally print
+        pprint(dfs)
+
     def test_simple_objects(self):
         # First define the function that we want to test
         # (not useful, but just to show a complete story in the readme...)
