@@ -1,5 +1,28 @@
 # python simple file collection parsing framework (parsyfiles)
-A declarative framework that combines many popular python parsers (json, jprops, yaml, pickle...) with your user-defined parsers and type converters, in order to easily read objects from files. It is able to read an object even if the object's content comes from several files requiring several parsers: this is typically useful to read test data where you want to combine datasets, parameters, expected results and what not. 
+A declarative framework that combines many popular python parsers (json, jprops, yaml, pickle, pandas...) with your user-defined parsers and type converters, in order to easily read objects from files. It is able to read an object even if the object's content comes from several files requiring several parsers. This is typically useful to read test data where you want to combine datasets, parameters, expected results and what not. 
+
+## Contents
+
+  * [Main features](#main-features)
+  * [Installation](#installation)
+     * [Recommended : create a clean virtual environment](#recommended--create-a-clean-virtual-environment)
+     * [Installation steps](#installation-steps)
+     * [Uninstalling](#uninstalling)
+  * [Usage](#usage)
+     * [1- Collections of known types : a list of DataFrame](#1--collections-of-known-types--a-list-of-dataframe)
+        * [Note: parsing a single file](#note-parsing-a-single-file)
+     * [2- Simple user-defined types](#2--simple-user-defined-types)
+     * [4- Dataframes - revisited](#4--dataframes---revisited)
+     * [5- Complex and multifile types](#5--complex-and-multifile-types)
+        * [d - main complex type and final parsing execution](#d---main-complex-type-and-final-parsing-execution)
+     * [Advanced topics](#advanced-topics)
+        * [Flat mode](#flat-mode)
+        * [Item collections](#item-collections)
+  * [See Also](#see-also)
+  * [Combining parsyfiles and classtools_autocode (combo!)](#combining-parsyfiles-and-classtools_autocode-combo)
+  * [Developers](#developers)
+     * [Packaging](#packaging)
+     * [Releasing memo](#releasing-memo)
 
 This library provides a *framework*, not a specific parser for a specific file format. By default several classic parsers from the python world are already registered, but it is also extremely easy to add more if your favourite parser is missing. Even better: if you just need to parse a derived type of a type that can already be parsed, you may simply need to register a *type converter*, the framework will link it to any compliant parser for you. 
 
