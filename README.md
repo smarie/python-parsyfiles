@@ -1,9 +1,13 @@
 # python simple file collection parsing framework (parsyfiles)
 A declarative framework that combines many popular python parsers (json, jprops, yaml, pickle, pandas...) with your user-defined parsers and type converters, in order to easily read objects from files. It is able to read an object even if the object's content comes from several files requiring several parsers. This is typically useful to read test data where you want to combine datasets, parameters, expected results and what not. 
 
-## Contents
+This library provides a *framework*, not a specific parser for a specific file format. By default several classic parsers from the python world are already registered, but it is also extremely easy to add more if your favourite parser is missing. Even better: if you just need to parse a derived type of a type that can already be parsed, you may simply need to register a *type converter*, the framework will link it to any compliant parser for you. 
 
-  * [Main features](#main-features)
+## Contents
+  * [Overview](#overview)
+     * [Intended audience](#intended-audience)
+     * [Typical use cases](#typical-use-cases)
+     * [Main features](#main-features)
   * [Installation](#installation)
      * [Recommended : create a clean virtual environment](#recommended--create-a-clean-virtual-environment)
      * [Installation steps](#installation-steps)
@@ -24,17 +28,16 @@ A declarative framework that combines many popular python parsers (json, jprops,
      * [Packaging](#packaging)
      * [Releasing memo](#releasing-memo)
 
-This library provides a *framework*, not a specific parser for a specific file format. By default several classic parsers from the python world are already registered, but it is also extremely easy to add more if your favourite parser is missing. Even better: if you just need to parse a derived type of a type that can already be parsed, you may simply need to register a *type converter*, the framework will link it to any compliant parser for you. 
+## Overview
 
-
-**Intended audience:**
+### Intended audience
 
 * developers looking for an easy way to parse dictionaries and simple objects from various formats (json, properties, cfg, csv...) using standard python libraries. They can combine this library with [classtools_autocode](https://github.com/smarie/python-classtools-autocode) to preserve compact, readable and content-validated classes.
 
 * developers who already know how to parse their various files independently, but looking for a higher-level tool to read complex objects made of several files/folders and potentially requiring to combine several parsers.
 
 
-**Typical use cases:**
+### Typical use cases
 
 * **read collections of test cases** on the file system - each test case being composed of several files (for example 2 'test inputs' .csv files, 1 'test configuration' .cfg file, and one 'reference test results' json or yaml file)
 * more generally, **read complex objects that for some reason are not represented by a single file representation**, for example objects made of several csv files (timeseries + descriptive data), combinations of csv and xml/json files, configuration files, pickle files, etc.
@@ -44,7 +47,7 @@ This library provides a *framework*, not a specific parser for a specific file f
 This framework contains a bit of nontrivial logic in order to transparently infer which parser and conversion chain to use, and even in some cases to try several alternatives in order to guess what was your intent. This makes it quite powerful but will certainly be slower and more memory-consuming than writing a dedicated parser tailored for your specific case. However if you are looking for a tool to speedup your development so that you may focus on what's important (your business logic, algorithm implementation, test logic, etc) then have a try, it might do the job.
 
 
-## Main features
+### Main features
 
 * **Declarative (class-based)**: you *first* define the objects to parse - by creating or importing their class -, *then* you use `parse_item` or `parse_collection` on the appropriate folder or file path. 
 * **Simple objects out-of-the-box**: if you're interested in parsing singlefile objects only requiring simple types in their constructor, then the framework is *already* able to parse them, for many singlefile formats (json, properties, txt, csv, yaml and more.).
