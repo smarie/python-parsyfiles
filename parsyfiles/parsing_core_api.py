@@ -2,7 +2,7 @@ from abc import abstractmethod
 from logging import Logger
 from typing import TypeVar, Generic, Type, Callable, Dict, Any, Set, Tuple
 
-from parsyfiles.converting_core import get_validated_types
+from parsyfiles.converting_core import get_validated_types, S, Converter
 from parsyfiles.filesystem_mapping import EXT_SEPARATOR, MULTIFILE_EXT, PersistedObject
 from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
@@ -60,7 +60,7 @@ class _BaseParserDeclarationForRegistries(object):
     should not be called, nor extended by users - please rather extend AnyParser or any of its subclasses.
     """
 
-    def __init__(self, supported_types: Set[Type], supported_exts: Set[str],
+    def __init__(self, supported_types: Set[Type], supported_exts: Set[str], can_chain: bool = True,
                  is_able_to_parse_func: Callable[[bool, Type[Any]], bool] = None):
         """
         Constructor for a parser declaring support for possibly both singlefile and multifile, with a mandatory list of
@@ -76,6 +76,8 @@ class _BaseParserDeclarationForRegistries(object):
         :param supported_types: a set of supported object types that may be parsed. To declare that a parser is able to
         parse any type this should be {Any} ({object} is allowed but will be automatically replaced with {Any}).
         :param supported_exts: a set of supported file extensions that may be parsed
+        :param can_chain: a boolean (default True) indicating if converters can be appended at the end of this
+        parser to create a chain. Dont change this except if it really can never make sense.
         :param is_able_to_parse_func: an optional custom function to allow parsers to reject some types. This function
         signature should be my_func(strict_mode, desired_type) -> bool
         """
@@ -85,6 +87,10 @@ class _BaseParserDeclarationForRegistries(object):
         # -- check extensions
         check_extensions(supported_exts, allow_multifile=True)
         self.supported_exts = supported_exts
+
+        # -- check can_chain
+        check_var(can_chain, var_types=bool, var_name='can_chain')
+        self.can_chain = can_chain
 
         # -- check is_able_to_parse_func
         check_var(is_able_to_parse_func, var_types=Callable, var_name='is_able_to_parse_func', enforce_not_none=False)
@@ -171,6 +177,38 @@ class _BaseParserDeclarationForRegistries(object):
         :return: True if the parser is able to read multifiles, False otherwise
         """
         return MULTIFILE_EXT in self.supported_exts
+
+    @staticmethod
+    def are_worth_chaining(parser, to_type: Type[S], converter: Converter[S, T]) -> bool:
+        """
+        Utility method to check if it makes sense to chain this parser with the given destination type, and the given
+        converter to create a parsing chain. Returns True if it brings value to chain them.
+
+        To bring value,
+        * the second converter's output should not be a parent class of the first converter's output. Otherwise
+        the chain does not even make any progress :)
+        * The first converter has to allow chaining (with converter.can_chain=True)
+
+        :param parser:
+        :param to_type:
+        :param converter:
+        :return:
+        """
+        if not parser.can_chain:
+            # The base parser prevents chaining
+            return False
+
+        elif converter.to_type is Any:
+            # Any is a capability to generate any type. So it is always interesting.
+            return True
+
+        elif issubclass(to_type, converter.to_type):
+            # Not interesting : the outcome of the chain would be not better than one of the parser alone
+            return False
+
+        else:
+            # Interesting
+            return True
 
 
 class ParsingException(Exception):
@@ -397,6 +435,8 @@ class Parser(_BaseParserDeclarationForRegistries):
     rather extend 'AnyParser' or any of its subclasses such as 'SingleFileParser', 'MultiFileParser', or
     'SingleFileParsingFunction'.
     """
+
+    # TODO split 'parsingplan factory' concept from 'singlefile parser' and 'multifile parser' > 3 Distinct interfaces
 
     @abstractmethod
     def create_parsing_plan(self, desired_type: Type[T], filesystem_object: PersistedObject, logger: Logger,

@@ -3,6 +3,8 @@ from pydoc import locate
 from typing import Type, Any, Tuple, List, Set, Dict, Generic
 from warnings import warn
 
+from parsyfiles.var_checker import check_var
+
 
 def get_pretty_type_str(object_type):
     """
@@ -122,6 +124,8 @@ def _extract_collection_base_type(collection_object_type: Type[Any]):
     """
     contents_item_type = None
     contents_key_type = None
+
+    check_var(collection_object_type, var_types=type, var_name='collection_object_type')
 
     if issubclass(collection_object_type, Dict):
         # Dictionary

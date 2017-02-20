@@ -228,7 +228,7 @@ class ConverterFunction(Converter[S, T]):
     def __init__(self, from_type: Type[S], to_type: Type[T],
                  conversion_method: Callable[[Type[T], S, Logger, List, Dict], T],
                  custom_name: str = None, is_able_to_convert_func: Callable[[bool, Type[S], Type[T]], bool] = None,
-                 can_chain: bool = True):
+                 can_chain: bool = True, function_args: dict = None):
         """
         Constructor with a conversion method. All calls to self.convert() will be delegated to this method. An optional
         name may be provided to override the provided conversion method's name. this might be useful for example if the
@@ -246,22 +246,40 @@ class ConverterFunction(Converter[S, T]):
         they are compliant with their declared 'to_type'.
         :param can_chain: a boolean (default True) indicating if other converters can be appended at the end of this
         converter to create a chain. Dont change this except if it really can never make sense.
+        :param function_args: kwargs that will be passed to the function at every call
         """
         super(ConverterFunction, self).__init__(from_type, to_type, is_able_to_convert_func, can_chain)
+
+        # the method
+        check_var(conversion_method, var_types=Callable, var_name='conversion_method')
         self.conversion_method = conversion_method
+
+        # custom name
+        check_var(custom_name, var_types=str, var_name='custom_name', enforce_not_none=False)
         self.custom_name = custom_name
 
+        # remember the static args values
+        check_var(function_args, var_types=dict, var_name='function_args', enforce_not_none=False)
+        self.function_args = function_args
+
     def __str__(self):
-        return '<' + (self.custom_name or self.conversion_method.__name__) + '>'
+        if self.custom_name is None:
+            if self.function_args is None:
+                return '<' + self.conversion_method.__name__ + '>'
+            else:
+                return '<' + self.conversion_method.__name__ + '(' + str(self.function_args) + ')>'
+        else:
+            return '<' + self.custom_name + '>'
 
     def __repr__(self):
         # __repr__ is supposed to offer an unambiguous representation,
         # but pprint uses __repr__ so we'd like users to see the small and readable version
         return self.__str__()
 
-    def convert(self, desired_type: Type[T], source_obj: S, logger: Logger, *args, **kwargs) -> T:
+    def convert(self, desired_type: Type[T], source_obj: S, logger: Logger, **kwargs) -> T:
         """
         Delegates to the user-provided method
+
         :param desired_type:
         :param source_obj:
         :param logger:
@@ -269,52 +287,10 @@ class ConverterFunction(Converter[S, T]):
         :param kwargs:
         :return:
         """
-        return self.conversion_method(desired_type, source_obj, logger, *args, **kwargs)
-
-
-class ConverterFunctionWithStaticArgs(ConverterFunction[S, T]):
-    """
-    A dedicated class of ConverterFunction converters that can receive some parameters in the constructor. These
-    parameters will always be passed to the conversion function in addition to the usual parameters of convert()
-    """
-    def __init__(self, from_type: Type[S], to_type: Type[T], conversion_method: Callable[[S], T],
-                 custom_name: str = None, is_able_to_convert_func: Callable[[bool, Type[S], Type[T]], bool] = None,
-                 can_chain: bool = True, *args, **kwargs):
-        """
-        Constructor with static *args and **kwargs (preferred) for the conversion_method.
-        See ConverterFunction class for details on other arguments.
-
-        :param from_type: the source type
-        :param to_type: the destination type, or Any (for generic converters)
-        :param conversion_method: the function the conversion step will be delegated to
-        :param custom_name: an optional custom name to override the provided function name. this might be useful for
-        example if the same function is used in several converters
-        :param is_able_to_convert_func: an optional function taking a desired object type as an input and outputting a
-        boolean. It will be called in 'is_able_to_convert'. This allows implementors to reject some conversions even if
-        they are compliant with their declared 'to_type'.
-        :param can_chain: a boolean (default True) indicating if other converters can be appended at the end of this
-        converter to create a chain. Dont change this except if it really can never make sense.
-        :param args: optional static arguments that will always be passed to the function
-        :param kwargs: optional static arguments that will always be passed to the function
-        """
-        super(ConverterFunctionWithStaticArgs, self).__init__(from_type, to_type, conversion_method,
-                                                              is_able_to_convert_func=is_able_to_convert_func,
-                                                              custom_name=custom_name, can_chain=can_chain)
-        # remember the stati args values
-        self.args = args
-        self.kwargs = kwargs
-
-    def __str__(self):
-        if self.custom_name is None:
-            return '<' + self.conversion_method.__name__ + '(' + str(self.args) + str(self.kwargs) + ')>'
+        if self.function_args is not None:
+            return self.conversion_method(desired_type, source_obj, logger, **self.function_args, **kwargs)
         else:
-            # the goal is to entirely hide the param values here
-            return '<' + self.custom_name + '>'
-
-    def convert(self, desired_type: Type[T], source_obj: S, logger: Logger, *args, **kwargs) -> T:
-        # call the super with our additional arguments
-        return super(ConverterFunctionWithStaticArgs, self).convert(desired_type, source_obj, logger, *self.args,
-                                                                    *args, **self.kwargs, **kwargs)
+            return self.conversion_method(desired_type, source_obj, logger, **kwargs)
 
 
 class ConversionChain(Converter[S, T]):

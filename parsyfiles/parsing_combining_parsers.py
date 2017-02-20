@@ -3,10 +3,10 @@ from io import StringIO, TextIOBase
 from logging import Logger
 from typing import Type, Dict, Any, List
 
-from parsyfiles.converting_core import Converter, S, ConversionChain
+from parsyfiles.converting_core import Converter, T, S, ConversionChain
 from parsyfiles.filesystem_mapping import PersistedObject
-from parsyfiles.parsing_core import AnyParser, T, ParsingPlan
-from parsyfiles.parsing_core_api import get_parsing_plan_log_str, Parser
+from parsyfiles.parsing_core import AnyParser
+from parsyfiles.parsing_core_api import get_parsing_plan_log_str, Parser, ParsingPlan
 from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
 
@@ -84,14 +84,21 @@ class CascadeError(Exception):
         :param caught:
         :return:
         """
-        base_msg = 'Error while trying to build parsing plan to parse  ' + str(parent_plan.obj_on_fs_to_parse) \
-                   + ' as a ' + get_pretty_type_str(parent_plan.obj_type) + ' with parser \'' \
-                   + str(origin_parser) + '\'. \n Caught the following exceptions from the various parsers tried: \n'
+        base_msg = 'Error while trying to build parsing plan to parse \'' + str(parent_plan.obj_on_fs_to_parse) \
+                   + '\' : \n' \
+                   + '   - required object type is \'' + get_pretty_type_str(parent_plan.obj_type) + '\' \n' \
+                   + '   - cascading parser is : ' + str(origin_parser) + '\n'
+
         msg = StringIO()
-        for parser, err in caught.items():
-            msg.writelines('--------------- From ' + str(parser) + ' caught: \n')
-            print_error_to_io_stream(err, msg)
-            msg.write('\n')
+        if len(list(caught.keys())) > 0:
+            msg.writelines('   - parsers tried are : \n      * ')
+            msg.writelines('\n      * '.join([str(p) for p in caught.keys()]))
+            msg.writelines(' \n Caught the following exceptions: \n')
+
+            for p, err in caught.items():
+                msg.writelines('--------------- From ' + str(p) + ' caught: \n')
+                print_error_to_io_stream(err, msg)
+                msg.write('\n')
 
         return CascadeError(base_msg + msg.getvalue())
 
@@ -107,14 +114,21 @@ class CascadeError(Exception):
         :param caught_exec:
         :return:
         """
-        base_msg = 'Error while trying to execute parsing plan to parse  ' + str(parent_plan.obj_on_fs_to_parse) \
-                   + ' as a ' + get_pretty_type_str(parent_plan.obj_type) + ' with parser \'' \
-                   + str(origin_parser) + '\'. \n Caught the following exceptions from the various parsers tried: \n'
+        base_msg = 'Error while trying to execute parsing plan to parse \'' + str(parent_plan.obj_on_fs_to_parse) \
+                   + '\' : \n' \
+                   + '   - required object type is \'' + get_pretty_type_str(parent_plan.obj_type) + '\' \n' \
+                   + '   - cascading parser is : ' + str(origin_parser) + '\n'
+
         msg = StringIO()
-        for parser, err in caught_exec.items():
-            msg.writelines('--------------- From ' + str(parser) + ' caught: \n')
-            print_error_to_io_stream(err, msg)
-            msg.write('\n')
+        if len(list(caught_exec.keys())) > 0:
+            msg.writelines('   - parsers tried are : \n      * ')
+            msg.writelines('\n      * '.join([str(p) for p in caught_exec.keys()]))
+            msg.writelines(' \n Caught the following exceptions: \n')
+
+            for p, err in caught_exec.items():
+                msg.writelines('--------------- From ' + str(p) + ' caught: \n')
+                print_error_to_io_stream(err, msg)
+                msg.write('\n')
 
         return CascadeError(base_msg + msg.getvalue())
 
@@ -132,7 +146,7 @@ class CascadingParser(DelegatingParser):
         """
 
         # -- init
-        # explicitly dont use base constructor
+        # explicitly DONT use base constructor
         # super(CascadingParser, self).__init__(supported_types=set(), supported_exts=set())
         self.configured = False
         self._parsers_list = []
@@ -214,7 +228,7 @@ class CascadingParser(DelegatingParser):
         """
 
         def __init__(self, pp, cascadeparser):
-            # -- explicitly dont use base constructor : we are just a proxy
+            # -- explicitly DONT use base constructor : we are just a proxy
             # super(CascadingParser.ActiveParsingPlan, self).__init__()
             self.pp = pp
             self.cascadeparser = cascadeparser
@@ -377,6 +391,8 @@ class CascadingParser(DelegatingParser):
 class ParsingChain(AnyParser):
     """
     Represents a parsing chain made of a base parser and a list of converters.
+    It creates a parsing plan as in AnyParser, but delegates the parsing methods of AnyParser to the base parser and
+    then applies the converters
     """
 
     def __init__(self, base_parser: AnyParser, converter: Converter[S, T], strict: bool,
@@ -388,6 +404,9 @@ class ParsingChain(AnyParser):
         the parser to a unique destination type explicitly
 
         :param base_parser:
+        :param converter:
+        :param strict:
+        :param base_parser_chosen_dest_type
         """
         check_var(base_parser, var_types=AnyParser, var_name='base_parser')
         if Any in base_parser.supported_types:
@@ -475,3 +494,23 @@ class ParsingChain(AnyParser):
 
         # then apply the conversion chain
         return self._converter.convert(desired_type, first, logger, *args, **kwargs)
+
+    @staticmethod
+    def are_worth_chaining(base_parser: Parser, to_type: Type[S], converter: Converter[S,T]) -> bool:
+        """
+        Utility method to check if it makes sense to chain this parser configured with the given to_type, with this
+        converter.  It is an extension of ConverterChain.are_worth_chaining
+
+        :param base_parser:
+        :param to_type:
+        :param converter:
+        :return:
+        """
+        if isinstance(converter, ConversionChain):
+            for conv in converter._converters_list:
+                if not Parser.are_worth_chaining(base_parser, to_type, conv):
+                    return False
+            # all good
+            return True
+        else:
+            return Parser.are_worth_chaining(base_parser, to_type, converter)

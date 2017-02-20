@@ -155,11 +155,11 @@ class LazyDictionary(dict):
         return iter(self.lazyloadable_keys)
 
     def items(self):
-        "D.items() -> a set-like object providing a view on D's items"
+        "implementation of a view, from collections.Mapping"
         return ItemsView(self)
 
     def values(self):
-        "D.values() -> an object providing a view on D's values"
+        "implementation of a view, from collections.Mapping"
         return ValuesView(self)
 
     def __getattr__(self, name):
@@ -178,11 +178,27 @@ class MultifileDictParser(MultiFileParser):
         collection
         :param parser_finder:
         """
-        super(MultifileDictParser, self).__init__(supported_types={Dict, List})
+        # prevent chaining with converters. Indeed otherwise the information about the inner collection type will not
+        # be known, therefore it will be impossible to parse the multifile children
+        super(MultifileDictParser, self).__init__(supported_types={Dict, List}, can_chain=False)
         self.parser_finder = parser_finder
 
     def __str__(self):
         return 'Multifile Dict parser (based on \'' + str(self.parser_finder) + '\' to find the parser for each item)'
+
+    # def is_able_to_parse(self, desired_type: Type[Any], desired_ext: str, strict: bool):
+    #     if desired_type is None:
+    #         return True, True
+    #     else:
+    #         if is_collection(desired_type):
+    #             return True, True
+    #         else:
+    #             return False, None
+    #         # try:
+    #         #     subtype, key_type = _extract_collection_base_type(desired_type)
+    #         #     return True, True
+    #         # except:
+    #         #     return False, None
 
     def _get_parsing_plan_for_multifile_children(self, obj_on_fs: PersistedObject, desired_type: Type[Any],
                                                  logger: Logger) -> Dict[str, Any]:

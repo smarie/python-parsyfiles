@@ -709,7 +709,7 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
         # ask the parser for the parsing plan
         return combined_parser.create_parsing_plan(desired_type, filesystem_object, logger)
 
-    def build_parser_for_fileobject_and_desiredtype(self, obj_on_filesystem: PersistedObject, object_type: Type[T],
+    def build_parser_for_fileobject_and_desiredtype(self, obj_on_filesystem: PersistedObject, object_typ: Type[T],
                                                     logger: Logger = None) -> Parser:
         """
         Builds from the registry, a parser to parse object obj_on_filesystem as an object of type object_type.
@@ -719,13 +719,13 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
         If several parsers match, it returns a cascadingparser that will try them in order.
 
         :param obj_on_filesystem:
-        :param object_type:
+        :param object_typ:
         :param logger:
         :return:
         """
 
         # first remove any non-generic customization
-        object_type = get_base_generic_type(object_type)
+        object_type = get_base_generic_type(object_typ)
 
         # find all matching parsers for this
         matching, no_type_match_but_ext_match, no_ext_match_but_type_match, no_match = \
@@ -876,14 +876,17 @@ class ConverterCache(AbstractConverterCache):
             # create new generic chain by appending this converter at the end of an existing *non-generic* one
             for existing_specific in self._specific_conversion_chains:
                 if converter.can_be_appended_to(existing_specific, strict=True):
-                    generic_chains.append(ConversionChain.chain(existing_specific, converter, strict=True))
+                    if ConversionChain.are_worth_chaining(existing_specific, converter):
+                        generic_chains.append(ConversionChain.chain(existing_specific, converter, strict=True))
                 elif (not self.strict) and converter.can_be_appended_to(existing_specific, strict=False):
-                    generic_nonstrict_chains.append(ConversionChain.chain(existing_specific, converter,
+                    if ConversionChain.are_worth_chaining(existing_specific, converter):
+                        generic_nonstrict_chains.append(ConversionChain.chain(existing_specific, converter,
                                                                           strict=False))
 
             for existing_specific_ns in self._specific_non_strict_conversion_chains:
                 if converter.can_be_appended_to(existing_specific_ns, strict=False):
-                    generic_nonstrict_chains.append(ConversionChain.chain(existing_specific_ns, converter,
+                    if ConversionChain.are_worth_chaining(existing_specific_ns, converter):
+                        generic_nonstrict_chains.append(ConversionChain.chain(existing_specific_ns, converter,
                                                                           strict=False))
 
             # FOLLOWING IS NOT POSSIBLE : generic
@@ -1141,10 +1144,10 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
                 for converter in reversed(all_matching_converters):
                     # if converter is able to source from this parser
                     if converter.is_able_to_convert(self.is_strict, from_type=typ, to_type=desired_type):
-
-                        # insert it at the beginning since it should have less priority
-                        no_ext_match_but_type_match.insert(0, ParsingChain(parser, converter, strict=self.is_strict,
-                                                                           base_parser_chosen_dest_type=typ))
+                        if ParsingChain.are_worth_chaining(parser, typ, converter):
+                            # insert it at the beginning since it should have less priority
+                            no_ext_match_but_type_match.insert(0, ParsingChain(parser, converter, strict=self.is_strict,
+                                                                               base_parser_chosen_dest_type=typ))
 
         # Finally sort by chain length
         matching_p_generic = sorted(matching_p_generic, key=len, reverse=True)
@@ -1155,13 +1158,13 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
         return (matching_p_generic, matching_p_approx, matching_p_exact), no_type_match_but_ext_match, \
                no_ext_match_but_type_match, no_match
 
-    def _complete_parsers_with_converters(self, parser, typ, desired_type, matching_c_generic_to_type,
+    def _complete_parsers_with_converters(self, parser, parser_supported_type, desired_type, matching_c_generic_to_type,
                                           matching_c_approx_to_type, matching_c_exact_to_type):
         """
         Internal method to create parsing chains made of a parser and converters from the provided lists.
 
         :param parser:
-        :param typ:
+        :param parser_supported_type:
         :param desired_type:
         :param matching_c_generic_to_type:
         :param matching_c_approx_to_type:
@@ -1177,38 +1180,53 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
         for converter in matching_c_generic_to_type:
             # if the converter can attach to this parser, we have a matching parser !
             # --start from strict
-            if converter.is_able_to_convert(True, from_type=typ, to_type=desired_type)[0]:
-                chain = ParsingChain(parser, converter, strict=True, base_parser_chosen_dest_type=typ)
-                # insert it at the beginning since it should have less priority
-                matching_p_generic.append(chain)
-            elif (not self.strict) and converter.is_able_to_convert(False, from_type=typ, to_type=desired_type)[0]:
-                chain = ParsingChain(parser, converter, strict=False, base_parser_chosen_dest_type=typ)
-                # insert it at the beginning since it should have less priority
-                matching_p_generic_with_approx_chain.append(chain)
+            if converter.is_able_to_convert(True, from_type=parser_supported_type, to_type=desired_type)[0]:
+                if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
+                    chain = ParsingChain(parser, converter, strict=True,
+                                         base_parser_chosen_dest_type=parser_supported_type)
+                    # insert it at the beginning since it should have less priority
+                    matching_p_generic.append(chain)
+            elif (not self.strict) and converter.is_able_to_convert(False, from_type=parser_supported_type,
+                                                                    to_type=desired_type)[0]:
+                if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
+                    chain = ParsingChain(parser, converter, strict=False,
+                                         base_parser_chosen_dest_type=parser_supported_type)
+                    # insert it at the beginning since it should have less priority
+                    matching_p_generic_with_approx_chain.append(chain)
 
         # ---- Approx to_type
         for converter in matching_c_approx_to_type:
             # if the converter can attach to this parser, we have a matching parser !
-            if converter.is_able_to_convert(True, from_type=typ, to_type=desired_type)[0]:
-                chain = ParsingChain(parser, converter, strict=True, base_parser_chosen_dest_type=typ)
-                # insert it at the beginning since it should have less priority
-                matching_p_approx.append(chain)
-            elif (not self.strict) and converter.is_able_to_convert(False, from_type=typ, to_type=desired_type)[0]:
-                chain = ParsingChain(parser, converter, strict=False, base_parser_chosen_dest_type=typ)
-                # insert it at the beginning since it should have less priority
-                matching_p_approx_with_approx_chain.append(chain)
+            if converter.is_able_to_convert(True, from_type=parser_supported_type, to_type=desired_type)[0]:
+                if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
+                    chain = ParsingChain(parser, converter, strict=True,
+                                         base_parser_chosen_dest_type=parser_supported_type)
+                    # insert it at the beginning since it should have less priority
+                    matching_p_approx.append(chain)
+            elif (not self.strict) and converter.is_able_to_convert(False, from_type=parser_supported_type,
+                                                                    to_type=desired_type)[0]:
+                if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
+                    chain = ParsingChain(parser, converter, strict=False,
+                                         base_parser_chosen_dest_type=parser_supported_type)
+                    # insert it at the beginning since it should have less priority
+                    matching_p_approx_with_approx_chain.append(chain)
 
         # ---- Exact to_type
         for converter in matching_c_exact_to_type:
             # if the converter can attach to this parser, we have a matching parser !
-            if converter.is_able_to_convert(True, from_type=typ, to_type=desired_type)[0]:
-                chain = ParsingChain(parser, converter, strict=True, base_parser_chosen_dest_type=typ)
-                # insert it at the beginning since it should have less priority
-                matching_p_exact.append(chain)
-            elif (not self.strict) and converter.is_able_to_convert(False, from_type=typ, to_type=desired_type)[0]:
-                chain = ParsingChain(parser, converter, strict=False, base_parser_chosen_dest_type=typ)
-                # insert it at the beginning since it should have less priority
-                matching_p_exact_with_approx_chain.append(chain)
+            if converter.is_able_to_convert(True, from_type=parser_supported_type, to_type=desired_type)[0]:
+                if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
+                    chain = ParsingChain(parser, converter, strict=True,
+                                         base_parser_chosen_dest_type=parser_supported_type)
+                    # insert it at the beginning since it should have less priority
+                    matching_p_exact.append(chain)
+            elif (not self.strict) and converter.is_able_to_convert(False, from_type=parser_supported_type,
+                                                                    to_type=desired_type)[0]:
+                if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
+                    chain = ParsingChain(parser, converter, strict=False,
+                                         base_parser_chosen_dest_type=parser_supported_type)
+                    # insert it at the beginning since it should have less priority
+                    matching_p_exact_with_approx_chain.append(chain)
 
         # Preferred is LAST, so approx should be first
         return matching_p_generic_with_approx_chain, matching_p_generic, \

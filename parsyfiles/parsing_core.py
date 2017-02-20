@@ -250,6 +250,7 @@ class AnyParser(_BaseParser):
     # flag used for create_parsing_plan logs (to prevent recursive print messages)
     thrd_locals = threading.local()
 
+    # note: it is normal that signature does not match parent.
     def create_parsing_plan(self, desired_type: Type[T], filesystem_object: PersistedObject, logger: Logger,
                             _main_call: bool = True):
         """
@@ -334,7 +335,8 @@ class SingleFileParser(AnyParser):
     * (2) a factory able to create ParsingPlan[T] objects on demand in order to parse files into objects of type T.
     """
 
-    def __init__(self, supported_exts: Set[str], supported_types: Set[Type]):
+    def __init__(self, supported_exts: Set[str], supported_types: Set[Type], can_chain: bool = True,
+                 is_able_to_parse_func: Callable[[bool, Type[Any]], bool] = None):
         """
         Constructor, with
         * a mandatory set of supported extensions
@@ -342,13 +344,18 @@ class SingleFileParser(AnyParser):
 
         :param supported_exts: mandatory list of supported singlefile extensions ('.txt', '.json' ...)
         :param supported_types: mandatory list of supported object types that may be parsed
+        :param can_chain: a boolean (default True) indicating if converters can be appended at the end of this
+        parser to create a chain. Dont change this except if it really can never make sense.
+        :param is_able_to_parse_func: an optional custom function to allow parsers to reject some types. This function
+        signature should be my_func(strict_mode, desired_type) -> bool
         """
         # -- check that we are really a singlefile parser
         if supported_exts is not None and MULTIFILE_EXT in supported_exts:
             raise ValueError('Cannot create a SingleFileParser supporting multifile extensions ! Use AnyParser to '
                              'support both, or MultiFileParser to support MultiFile')
         # -- call super
-        super(SingleFileParser, self).__init__(supported_types=supported_types, supported_exts=supported_exts)
+        super(SingleFileParser, self).__init__(supported_types=supported_types, supported_exts=supported_exts,
+                                               can_chain=can_chain, is_able_to_parse_func=is_able_to_parse_func)
 
     def _get_parsing_plan_for_multifile_children(self, obj_on_fs: PersistedObject, desired_type: Type[Any],
                                                  logger: Logger) -> Dict[str, Any]:
@@ -391,13 +398,19 @@ class MultiFileParser(AnyParser):
     * (2) a factory able to create ParsingPlan[T] objects on demand in order to parse files into objects of type T.
     """
 
-    def __init__(self, supported_types: Set[Type[T]]):
+    def __init__(self, supported_types: Set[Type[T]], can_chain: bool = True,
+                 is_able_to_parse_func: Callable[[bool, Type[Any]], bool] = None):
         """
         Constructor, with a mandatory list of supported object types
 
         :param supported_types: mandatory list of supported object types that may be parsed
+        :param can_chain: a boolean (default True) indicating if converters can be appended at the end of this
+        parser to create a chain. Dont change this except if it really can never make sense.
+        :param is_able_to_parse_func: an optional custom function to allow parsers to reject some types. This function
+        signature should be my_func(strict_mode, desired_type) -> bool
         """
-        super(MultiFileParser, self).__init__(supported_types=supported_types, supported_exts={MULTIFILE_EXT})
+        super(MultiFileParser, self).__init__(supported_types=supported_types, supported_exts={MULTIFILE_EXT},
+                                              can_chain=can_chain, is_able_to_parse_func=is_able_to_parse_func)
 
     def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger,
                           *args, **kwargs) -> T:
@@ -471,7 +484,7 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
 
     def __init__(self, parser_function: Union[ParsingMethodForStream, ParsingMethodForFile],
                  supported_types: Set[Type[T]], supported_exts: Set[str], streaming_mode: bool = True,
-                 custom_name: str = None):
+                 custom_name: str = None, function_args: dict = None):
         """
         Constructor from a parser function , a mandatory set of supported types, and a mandatory set of supported
         extensions.
@@ -487,6 +500,7 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
         open stream or with a file path
         :param supported_types: mandatory set of supported types, or {
         :param supported_exts: mandatory set of supported singlefile extensions ('.txt', '.json' ...)
+        :param function_args: kwargs that will be passed to the function at every call
         """
         super(SingleFileParserFunction, self).__init__(supported_types=supported_types, supported_exts=supported_exts)
 
@@ -503,19 +517,25 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
         check_var(streaming_mode, var_types=bool, var_name='streaming_mode')
         self._streaming_mode = streaming_mode
 
+        # -- remember the static args values
+        check_var(function_args, var_types=dict, var_name='function_args', enforce_not_none=False)
+        self.function_args = function_args
+
     def __str__(self):
         if self._custom_name:
             return '<' + self._custom_name + '>'
         else:
-            return '<' + self._parser_func.__name__ + '(' + ('stream' if self._streaming_mode else 'file') + ' mode)>'
+            if self.function_args is None:
+                return '<' + self._parser_func.__name__ + '>'
+            else:
+                return '<' + self._parser_func.__name__ + '(' + str(self.function_args) + ')>'
 
     def __repr__(self):
         # __repr__ is supposed to offer an unambiguous representation,
         # but pprint uses __repr__ so we'd like users to see the small and readable version
         return self.__str__()
 
-    def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger,
-                          *args, **kwargs) -> T:
+    def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger, **kwargs) -> T:
         """
         Relies on the inner parsing function to parse the file.
         If _streaming_mode is True, the file will be opened and closed by this method. Otherwise the parsing function
@@ -524,7 +544,6 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
         :param desired_type:
         :param file_path:
         :param encoding:
-        :param args:
         :param kwargs:
         :return:
         """
@@ -537,7 +556,10 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
                 file_stream = open(file_path, 'r', encoding=encoding)
 
                 # Apply the parsing function
-                return self._parser_func(desired_type, file_stream, logger, *args, **kwargs)
+                if self.function_args is None:
+                    return self._parser_func(desired_type, file_stream, logger, **kwargs)
+                else:
+                    return self._parser_func(desired_type, file_stream, logger, **self.function_args, **kwargs)
 
             except TypeError as e:
                 raise CaughtTypeError.create(self._parser_func, e)
@@ -549,4 +571,7 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
 
         else:
             # the parsing function will open the file itself
-            return self._parser_func(desired_type, file_path, encoding, logger, *args, **kwargs)
+            if self.function_args is None:
+                return self._parser_func(desired_type, file_path, encoding, logger, **kwargs)
+            else:
+                return self._parser_func(desired_type, file_path, encoding, logger, **self.function_args, **kwargs)

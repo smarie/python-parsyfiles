@@ -133,7 +133,7 @@ class RootParser(ParserRegistryWithConverters):
 
             try:
                 # -- dataframe
-                from parsyfiles.support_for_dataframe import get_default_dataframe_parsers, get_default_dataframe_converters
+                from parsyfiles.support_for_pandas import get_default_dataframe_parsers, get_default_dataframe_converters
                 self.register_parsers(get_default_dataframe_parsers())
                 self.register_converters(get_default_dataframe_converters())
             except ImportError as e:

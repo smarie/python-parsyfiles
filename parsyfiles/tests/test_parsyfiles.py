@@ -3,7 +3,7 @@ from pprint import pprint
 from typing import List, Any
 from unittest import TestCase
 
-from pandas import DataFrame
+from pandas import DataFrame, Series
 
 from parsyfiles import parse_collection, RootParser, parse_item
 
@@ -156,7 +156,6 @@ class DemoTests(TestCase):
 
         # Then define the simple class representing your test case
         class ExecOpTest(object):
-
             def __init__(self, x: float, y: float, op: str, expected_result: float):
                 self.x = x
                 self.y = y
@@ -179,6 +178,31 @@ class DemoTests(TestCase):
 
         #
         RootParser().print_capabilities_for_type(typ=ExecOpTest)
+
+    def test_multifile_objects(self):
+
+        class AlgoConf(object):
+            def __init__(self, foo_param: str, bar_param: int):
+                self.foo_param = foo_param
+                self.bar_param = bar_param
+
+        class AlgoResults(object):
+            def __init__(self, score: float, perf: float):
+                self.score = score
+                self.perf = perf
+
+        def exec_op_series(x: Series, y: AlgoConf) -> AlgoResults:
+            pass
+
+        class ExecOpSeriesTest(object):
+            def __init__(self, x: Series, y: AlgoConf, expected_results: AlgoResults):
+                self.x = x
+                self.y = y
+                self.expected_results = expected_results
+
+        # parse all of them
+        g = parse_collection('./test_data/demo/complex objects', ExecOpSeriesTest)
+        pprint(g)
 
     def test_simple_collection_dataframe_all(self):
         dfs = parse_collection('./test_data/demo/simple_collection_dataframe_inference', DataFrame)

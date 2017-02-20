@@ -4,7 +4,7 @@ from io import TextIOBase
 from logging import Logger, warning
 from typing import Type, Any, List, Dict, Union, Tuple, Set
 
-from parsyfiles.converting_core import Converter, S, T, ConverterFunctionWithStaticArgs, ConverterFunction
+from parsyfiles.converting_core import Converter, S, T, ConverterFunction
 from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_combining_parsers import print_error_to_io_stream
 from parsyfiles.parsing_core import MultiFileParser, AnyParser, SingleFileParserFunction
@@ -229,7 +229,8 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
                 if not is_dict_of_dicts:
                     if isinstance(attr_type_required, type):
                         # this will not fail if type information is not present - the attribute will only be used "as is"
-                        dict_for_init[attr_name] = try_convert_attribute_value_to_correct_type(attr_name,
+                        full_attr_name = get_pretty_type_str(desired_type) + '.' + attr_name
+                        dict_for_init[attr_name] = try_convert_attribute_value_to_correct_type(full_attr_name,
                                                                                                attr_type_required,
                                                                                                provided_attr_value,
                                                                                                conversion_finder,
@@ -347,15 +348,21 @@ class ConversionException(Exception):
         :param caught_exec:
         :return:
         """
-        base_msg = 'Error while trying to convert parsed attribute value \'' + str(parsed_att) + '\' of type \'' \
-                   + get_pretty_type_str(type(parsed_att)) + '\' for attribute \'' + str(att_name) + '\' as a ' \
-                   + get_pretty_type_str(attribute_type) + ' with the converters found. \n Caught the following ' \
-                   + 'exceptions from the various converters tried: \n'
+        base_msg = 'Error while trying to convert parsed attribute value for attribute \'' + str(att_name) + '\' : \n' \
+                   + '   - parsed value is : \'' + str(parsed_att) + '\' of type \'' + get_pretty_type_str(type(parsed_att)) + '\'\n' \
+                   + '   - attribute type required by object constructor is \'' + get_pretty_type_str(attribute_type) \
+                   + '\' \n'
+
         msg = StringIO()
-        for converter, err in caught_exec.items():
-            msg.writelines('--------------- From ' + str(converter) + ' caught: \n')
-            print_error_to_io_stream(err, msg)
-            msg.write('\n')
+        if len(list(caught_exec.keys())) > 0:
+            msg.writelines('   - converters tried are : \n      * ')
+            msg.writelines('\n      * '.join([str(converter) for converter in caught_exec.keys()]))
+            msg.writelines(' \n Caught the following exceptions: \n')
+
+            for converter, err in caught_exec.items():
+                msg.writelines('--------------- From ' + str(converter) + ' caught: \n')
+                print_error_to_io_stream(err, msg)
+                msg.write('\n')
 
         return ConversionException(base_msg + msg.getvalue())
 
@@ -472,12 +479,12 @@ def get_default_object_converters(conversion_finder: ConversionFinder) \
     """
     return [
             ConverterFunction(str, Any, base64_ascii_str_pickle_to_object),
-            ConverterFunctionWithStaticArgs(DictOfDict, Any, dict_to_object, custom_name='dict_of_dict_to_object',
-                                            is_able_to_convert_func=_not_able_to_convert_collections,
-                                            conversion_finder=conversion_finder, is_dict_of_dicts=True),
-            ConverterFunctionWithStaticArgs(dict, Any, dict_to_object, custom_name='dict_to_object',
-                                            is_able_to_convert_func=_not_able_to_convert_collections,
-                                            conversion_finder=conversion_finder, is_dict_of_dicts=False)
+            ConverterFunction(DictOfDict, Any, dict_to_object, custom_name='dict_of_dict_to_object',
+                              is_able_to_convert_func=_not_able_to_convert_collections,
+                              function_args={'conversion_finder': conversion_finder, 'is_dict_of_dicts': True}),
+            ConverterFunction(dict, Any, dict_to_object, custom_name='dict_to_object',
+                              is_able_to_convert_func=_not_able_to_convert_collections,
+                              function_args={'conversion_finder': conversion_finder, 'is_dict_of_dicts': False})
             ]
 
 
