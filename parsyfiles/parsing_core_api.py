@@ -268,7 +268,7 @@ class ParsingException(Exception):
         """
         return ParsingException('Error while parsing ' + str(obj) + ' as a ' + str(desired_type) + ' with parser \''
                                 + str(parser) + '\' using args=(' + str(args) + ') and kwargs=(' + str(kwargs)
-                                + ') : parser returned ' + str(result) + ' of type ' + str(type(result))
+                                + ') : \n      parser returned ' + str(result) + ' of type ' + str(type(result))
                                 + ' which is not an instance of ' + str(desired_type))
 
     @staticmethod
@@ -395,12 +395,15 @@ class ParsingPlan(Generic[T], PersistedObject):
                                                            e, *args, **kwargs)
 
         # Check that the returned parsed object has the correct type
-        if res is not None and isinstance(res, self.obj_type):
-            return res
-        else:
-            # wrong type : error
-            raise ParsingException.create_for_wrong_result_type(self.parser, self.obj_type, self.obj_on_fs_to_parse,
-                                                                res, *args, **kwargs)
+        if res is not None:
+            # we have to avoid the exception raised by isinstance with typing.Tuple
+            if (issubclass(self.obj_type, Tuple) and isinstance(res, tuple)) \
+                    or (not issubclass(self.obj_type, Tuple) and isinstance(res, self.obj_type)):
+                return res
+
+        # wrong type : error
+        raise ParsingException.create_for_wrong_result_type(self.parser, self.obj_type, self.obj_on_fs_to_parse,
+                                                            res, *args, **kwargs)
 
     @abstractmethod
     def _execute(self, logger: Logger, *args, **kwargs) -> T:
@@ -436,7 +439,8 @@ class Parser(_BaseParserDeclarationForRegistries):
     'SingleFileParsingFunction'.
     """
 
-    # TODO split 'parsingplan factory' concept from 'singlefile parser' and 'multifile parser' > 3 Distinct interfaces
+    # TODO split 'parsingplan factory' concept from 'single/multi file parser' > Distinct interfaces
+    # That would make the rootparser clearer
 
     @abstractmethod
     def create_parsing_plan(self, desired_type: Type[T], filesystem_object: PersistedObject, logger: Logger,

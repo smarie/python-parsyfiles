@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from io import StringIO
 from logging import Logger
 from pprint import pprint
 from typing import Type, Dict, Any, List, Set, Tuple
@@ -6,7 +7,8 @@ from warnings import warn
 
 from parsyfiles.converting_core import S, Converter, ConversionChain
 from parsyfiles.filesystem_mapping import PersistedObject
-from parsyfiles.parsing_combining_parsers import ParsingChain, CascadingParser, DelegatingParser
+from parsyfiles.parsing_combining_parsers import ParsingChain, CascadingParser, DelegatingParser, \
+    print_error_to_io_stream
 from parsyfiles.parsing_core import _InvalidParserException
 from parsyfiles.parsing_core_api import Parser, ParsingPlan, T
 from parsyfiles.type_inspection_tools import get_pretty_type_str, get_base_generic_type, get_pretty_type_keys_dict
@@ -755,10 +757,98 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
             return CascadingParser(list(reversed(matching_parsers)))
 
 
+class ConversionException(Exception):
+    """
+    Raised whenever parsing fails
+    """
+
+    def __init__(self, contents):
+        """
+        We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+        That's why we have a helper static method create()
+
+        :param contents:
+        """
+        super(ConversionException, self).__init__(contents)
+
+    @staticmethod
+    def create(att_name: str, parsed_att: S, attribute_type: Type[T], caught_exec: Dict[Converter[S, T], Exception]):
+        """
+        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+
+        :param att_name:
+        :param parsed_att:
+        :param attribute_type:
+        :param caught_exec:
+        :return:
+        """
+        base_msg = 'Error while trying to convert parsed attribute value for attribute \'' + str(att_name) + '\' : \n' \
+                   + '   - parsed value is : \'' + str(parsed_att) + '\' of type \'' + get_pretty_type_str(type(parsed_att)) + '\'\n' \
+                   + '   - attribute type required by object constructor is \'' + get_pretty_type_str(attribute_type) \
+                   + '\' \n'
+
+        msg = StringIO()
+        if len(list(caught_exec.keys())) > 0:
+            msg.writelines('   - converters tried are : \n      * ')
+            msg.writelines('\n      * '.join([str(converter) for converter in caught_exec.keys()]))
+            msg.writelines(' \n Caught the following exceptions: \n')
+
+            for converter, err in caught_exec.items():
+                msg.writelines('--------------- From ' + str(converter) + ' caught: \n')
+                print_error_to_io_stream(err, msg)
+                msg.write('\n')
+
+        return ConversionException(base_msg + msg.getvalue())
+
+
+class NoConverterAvailableForAttributeException(FileNotFoundError):
+    """
+    Raised whenever no ConversionFinder has been provided, while a dictionary value needs conversion to be used as an
+     object constructor attribute
+    """
+
+    def __init__(self, contents: str):
+        """
+        We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+        That's why we have a helper static method create()
+
+        :param contents:
+        """
+        super(NoConverterAvailableForAttributeException, self).__init__(contents)
+
+    @staticmethod
+    def create(conversion_finder, parsed_att: Any, attribute_type: Type[Any]):
+        """
+        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+
+        :param parsed_att:
+        :param attribute_type:
+        :param conversion_finder:
+        :return:
+        """
+        if conversion_finder is None:
+            return NoConverterAvailableForAttributeException('No conversion finder provided to find a converter '
+                                                             'between parsed attribute \'' + str(parsed_att) + '\' of '
+                                                             'type \'' + get_pretty_type_str(type(parsed_att)) + '\' '
+                                                             'and expected type \''
+                                                             + get_pretty_type_str(attribute_type) + '\'.')
+        else:
+            return NoConverterAvailableForAttributeException('No conversion chain found between parsed attribute \'' +
+                                                             str(parsed_att) + '\' of type \'' +
+                                                             get_pretty_type_str(type(parsed_att)) + '\' and expected type '
+                                                             + get_pretty_type_str(attribute_type) + ' using conversion '
+                                                             'finder \'' + str(conversion_finder) +'\'.')
+
+
 class ConversionFinder(metaclass=ABCMeta):
     """
     Abstract class for objects able to find a conversion chain between two types
     """
+
     def get_all_conversion_chains_to_type(self, to_type: Type[Any])\
             -> Tuple[List[Converter], List[Converter], List[Converter]]:
         """
@@ -794,6 +884,72 @@ class ConversionFinder(metaclass=ABCMeta):
         :return: a tuple of lists of matching converters, by type of *dest_type* match : generic, approximate, exact
         """
         pass
+
+    def find_and_convert(self, attr_name: str, attr_value: S, desired_attr_type: Type[T], logger: Logger,
+                         *args, **kwargs) -> T:
+        """
+        Utility method to convert some value into the desired type. It relies on get_all_conversion_chains to find the
+        converters, and apply them in correct order
+        :return:
+        """
+
+        # we have to avoid the exception raised by isinstance with typing.Tuple
+        if (issubclass(desired_attr_type, Tuple) and isinstance(attr_value, tuple)) \
+                or (not issubclass(desired_attr_type, Tuple) and isinstance(attr_value, desired_attr_type)):
+            # value is already of the correct type
+            return attr_value
+
+        else:
+            # try to find conversion chains
+            generic, approx, exact = self.get_all_conversion_chains(type(attr_value), desired_attr_type)
+            all_chains = generic + approx + exact
+
+            if len(all_chains) > 0:
+                all_errors = dict()
+                for chain in reversed(all_chains):
+                    try:
+                        return chain.convert(desired_attr_type, attr_value, logger, *args, **kwargs)
+                    except Exception as e:
+                        all_errors[chain] = e
+                raise ConversionException.create(attr_name, attr_value, desired_attr_type, all_errors)
+
+            else:
+                # did not find any conversion chain
+                raise NoConverterAvailableForAttributeException.create(self, attr_value, desired_attr_type)
+
+    @staticmethod
+    def try_convert_value(conversion_finder, attr_name: str, attr_value: S, desired_attr_type: Type[T], logger: Logger,
+                         *args, **kwargs) -> T:
+        """
+        Utility method to try to use provided conversion_finder to convert attr_value into desired_attr_type.
+        If no conversion is required, the conversion finder is not even used (it can be None)
+
+        :param conversion_finder:
+        :param attr_name:
+        :param attr_value:
+        :param desired_attr_type:
+        :param logger:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+
+        # check if we need additional conversion
+        # --- for some reason Tuple does not work with isinstance so there is a special check here
+        if (issubclass(desired_attr_type, Tuple) and not isinstance(attr_value, tuple)) \
+                or (not issubclass(desired_attr_type, Tuple) and not isinstance(attr_value, desired_attr_type)):
+            if conversion_finder is not None:
+                return conversion_finder.find_and_convert(attr_name,
+                                                          attr_value,
+                                                          desired_attr_type,
+                                                          logger, *args, **kwargs)
+            else:
+                raise NoConverterAvailableForAttributeException.create(conversion_finder,
+                                                                       attr_value,
+                                                                       desired_attr_type)
+        else:
+            # we can safely use the value: it is already of the correct type
+            return attr_value
 
 
 class AbstractConverterCache(ConversionFinder):

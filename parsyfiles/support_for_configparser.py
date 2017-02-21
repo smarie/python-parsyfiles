@@ -5,7 +5,9 @@ from typing import List, Union, Any, Dict, Type
 
 from parsyfiles.converting_core import Converter, ConverterFunction, T
 from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser
-from parsyfiles.support_for_collections import DictOfDict
+from parsyfiles.parsing_registries import ConversionFinder
+from parsyfiles.support_for_collections import DictOfDict, convert_collection_values_according_to_pep
+from parsyfiles.type_inspection_tools import _extract_collection_base_type
 
 
 def read_config(desired_type: Type[ConfigParser], file_object: TextIOBase,
@@ -81,7 +83,8 @@ class MultipleKeyOccurenceInConfigurationError(Exception):
 #     """
 #     return dict(config)
 
-def config_to_dict_of_dict(desired_type: Type[T], config: ConfigParser, logger: Logger, *args, **kwargs) -> DictOfDict:
+def config_to_dict_of_dict(desired_type: Type[T], config: ConfigParser, logger: Logger,
+                           conversion_finder: ConversionFinder, **kwargs) -> DictOfDict:
     """
     Helper method to read a configuration file according to the 'configparser' format, and return it as a dictionary
     of dictionaries [section > [property > value]].
@@ -89,11 +92,26 @@ def config_to_dict_of_dict(desired_type: Type[T], config: ConfigParser, logger: 
     :param file_object:
     :return:
     """
-    return dict(config)
+    # return dict(config)
+
+    # get the base collection type if provided
+    base_typ, discarded = _extract_collection_base_type(desired_type, exception_if_none=False)
+    # if none, at least declare dict
+    base_typ = base_typ or Dict
+
+    # convert the whole config to a dictionary by flattening all sections. If a key is found twice in two different
+    # sections an error is raised
+    results = dict()
+    for section, props in config.items():
+        # convert all values of the sub-dictionary
+        results[section] = convert_collection_values_according_to_pep(props, base_typ, conversion_finder, logger,
+                                                                      **kwargs)
+
+    return results
 
 
 def merge_all_config_sections_into_a_single_dict(desired_type: Type[T], config: ConfigParser, logger: Logger,
-                                                 *args, **kwargs) -> Dict[str, Any]:
+                                                 conversion_finder: ConversionFinder, **kwargs) -> Dict[str, Any]:
     """
     Helper method to convert a 'configparser' into a dictionary [property > value].
     Properties from all sections are collected. If the same key appears in several sections, an
@@ -102,6 +120,7 @@ def merge_all_config_sections_into_a_single_dict(desired_type: Type[T], config: 
     :param file_object:
     :return:
     """
+
     # convert the whole config to a dictionary by flattening all sections. If a key is found twice in two different
     # sections an error is raised
     results = dict()
@@ -113,14 +132,17 @@ def merge_all_config_sections_into_a_single_dict(desired_type: Type[T], config: 
                 raise MultipleKeyOccurenceInConfigurationError.create(key, sections_where_it_appears)
             else:
                 results[key] = value
-    return results
+
+    return convert_collection_values_according_to_pep(results, desired_type, conversion_finder, logger, **kwargs)
 
 
-def get_default_config_converters() -> List[Union[Converter[Any, ConfigParser], Converter[ConfigParser, Any]]]:
+def get_default_config_converters(conv_finder: ConversionFinder) -> List[Union[Converter[Any, ConfigParser], Converter[ConfigParser, Any]]]:
     """
     Utility method to return the default converters associated to ConfigParser (from ConfigParser to other type,
     and from other type to ConfigParser)
     :return:
     """
-    return [ConverterFunction(ConfigParser, DictOfDict, config_to_dict_of_dict),
-            ConverterFunction(ConfigParser, dict, merge_all_config_sections_into_a_single_dict)]
+    return [ConverterFunction(ConfigParser, DictOfDict, config_to_dict_of_dict,
+                              function_args={'conversion_finder': conv_finder}),
+            ConverterFunction(ConfigParser, dict, merge_all_config_sections_into_a_single_dict,
+                              function_args={'conversion_finder': conv_finder})]

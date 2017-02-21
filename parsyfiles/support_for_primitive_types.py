@@ -110,7 +110,8 @@ def get_default_primitive_converters():
     # eventually had drawbacks in specific cases. The following points are essential to not exponentially create
     # conversion chains that dont make sense
     # - first, for most primitive converters, dont allow chaining. Otherwise chains such as str > bool > int > float
-    # will be created, thats pointless
+    # will be created, thats pointless. A possible alternative would be to have a SINGLE converter to convert between
+    # any primitive and any primitive. This would be capable of chaining with others, but not with itself > good.
     # - second, separate known functions (such as str to int) from generic functions (str to anything), otherwise it is
     # harder to understand and debug. This led to the following list organized by target type.
     return [ConverterFunction(from_type=t, to_type=int, conversion_method=primitive_to_int,

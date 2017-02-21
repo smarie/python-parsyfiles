@@ -1,6 +1,6 @@
 import time
 from pprint import pprint
-from typing import List, Any
+from typing import List, Any, Tuple, Dict, Set
 from unittest import TestCase
 
 from pandas import DataFrame, Series
@@ -103,11 +103,11 @@ class AllTests(TestCase):
         print(e.op)
         print(e.expected_result)
 
-        l = parse_collection('./test_data/objects/test_diff_1', ExecOpTest)
+        l = parse_collection('./test_data/objects', ExecOpTest)
         pprint(l)
 
     def test_collections(self):
-        l = parse_collection('./test_data/objects/test_diff_1', List[int])
+        l = parse_item('./test_data/collections', Tuple[Dict[str, int], List[int], Set[int], Tuple[str, int, str]])
         print(l)
 
 
@@ -173,8 +173,8 @@ class DemoTests(TestCase):
         # pprint(e)
 
         # parse all of them
-        e = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
-        pprint(e)
+        sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
+        pprint(sf_tests)
 
         #
         RootParser().print_capabilities_for_type(typ=ExecOpTest)
@@ -201,8 +201,10 @@ class DemoTests(TestCase):
                 self.expected_results = expected_results
 
         # parse all of them
-        g = parse_collection('./test_data/demo/complex objects', ExecOpSeriesTest)
-        pprint(g)
+        mf_tests = parse_collection('./test_data/demo/complex_objects', ExecOpSeriesTest)
+        pprint(mf_tests)
+
+        RootParser().print_capabilities_for_type(typ=ExecOpSeriesTest)
 
     def test_simple_collection_dataframe_all(self):
         dfs = parse_collection('./test_data/demo/simple_collection_dataframe_inference', DataFrame)

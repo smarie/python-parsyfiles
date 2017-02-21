@@ -1,12 +1,10 @@
 from inspect import Parameter
-from io import StringIO
 from io import TextIOBase
 from logging import Logger, warning
 from typing import Type, Any, List, Dict, Union, Tuple, Set
 
-from parsyfiles.converting_core import Converter, S, T, ConverterFunction
+from parsyfiles.converting_core import Converter, T, ConverterFunction
 from parsyfiles.filesystem_mapping import PersistedObject
-from parsyfiles.parsing_combining_parsers import print_error_to_io_stream
 from parsyfiles.parsing_core import MultiFileParser, AnyParser, SingleFileParserFunction
 from parsyfiles.parsing_registries import ParserFinder, ConversionFinder
 from parsyfiles.support_for_collections import DictOfDict
@@ -228,13 +226,14 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
 
                 if not is_dict_of_dicts:
                     if isinstance(attr_type_required, type):
-                        # this will not fail if type information is not present - the attribute will only be used "as is"
+                        # this will not fail if type information is not present;the attribute will only be used 'as is'
                         full_attr_name = get_pretty_type_str(desired_type) + '.' + attr_name
-                        dict_for_init[attr_name] = try_convert_attribute_value_to_correct_type(full_attr_name,
-                                                                                               attr_type_required,
-                                                                                               provided_attr_value,
-                                                                                               conversion_finder,
-                                                                                               logger, *args, **kwargs)
+
+                        dict_for_init[attr_name] = ConversionFinder.try_convert_value(conversion_finder, full_attr_name,
+                                                                                      provided_attr_value,
+                                                                                      attr_type_required, logger,
+                                                                                      *args, **kwargs)
+
                     else:
                         warning('Constructor for type <' + get_pretty_type_str(desired_type) + '> has no PEP484 Type '
                                 'hint, trying to use the parsed value in the dict directly')
@@ -279,127 +278,6 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
 
     except TypeError as e:
         raise CaughtTypeErrorDuringInstantiation.create(desired_type, contents_dict, e)
-
-class NoConverterAvailableForAttributeException(FileNotFoundError):
-    """
-    Raised whenever no ConversionFinder has been provided, while a dictionary value needs conversion to be used as an
-     object constructor attribute
-    """
-
-    def __init__(self, contents: str):
-        """
-        We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
-        https://github.com/nose-devs/nose/issues/725
-        That's why we have a helper static method create()
-
-        :param contents:
-        """
-        super(NoConverterAvailableForAttributeException, self).__init__(contents)
-
-    @staticmethod
-    def create(conversion_finder: ConversionFinder, parsed_att: Any, attribute_type: Type[Any]):
-        """
-        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
-        https://github.com/nose-devs/nose/issues/725
-
-        :param parsed_att:
-        :param attribute_type:
-        :param conversion_finder:
-        :return:
-        """
-        if conversion_finder is None:
-            return NoConverterAvailableForAttributeException('No conversion finder provided to find a converter '
-                                                             'between parsed attribute \'' + str(parsed_att) + '\' of '
-                                                             'type \'' + get_pretty_type_str(type(parsed_att)) + '\' '
-                                                             'and expected type \''
-                                                             + get_pretty_type_str(attribute_type) + '\'.')
-        else:
-            return NoConverterAvailableForAttributeException('No conversion chain found between parsed attribute \'' +
-                                                             str(parsed_att) + '\' of type \'' +
-                                                             get_pretty_type_str(type(parsed_att)) + '\' and expected type '
-                                                             + get_pretty_type_str(attribute_type) + ' using conversion '
-                                                             'finder \'' + str(conversion_finder) +'\'.')
-
-
-class ConversionException(Exception):
-    """
-    Raised whenever parsing fails
-    """
-
-    def __init__(self, contents):
-        """
-        We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
-        https://github.com/nose-devs/nose/issues/725
-        That's why we have a helper static method create()
-
-        :param contents:
-        """
-        super(ConversionException, self).__init__(contents)
-
-    @staticmethod
-    def create(att_name: str, parsed_att: S, attribute_type: Type[T], caught_exec: Dict[Converter[S, T], Exception]):
-        """
-        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
-        https://github.com/nose-devs/nose/issues/725
-
-        :param att_name:
-        :param parsed_att:
-        :param attribute_type:
-        :param caught_exec:
-        :return:
-        """
-        base_msg = 'Error while trying to convert parsed attribute value for attribute \'' + str(att_name) + '\' : \n' \
-                   + '   - parsed value is : \'' + str(parsed_att) + '\' of type \'' + get_pretty_type_str(type(parsed_att)) + '\'\n' \
-                   + '   - attribute type required by object constructor is \'' + get_pretty_type_str(attribute_type) \
-                   + '\' \n'
-
-        msg = StringIO()
-        if len(list(caught_exec.keys())) > 0:
-            msg.writelines('   - converters tried are : \n      * ')
-            msg.writelines('\n      * '.join([str(converter) for converter in caught_exec.keys()]))
-            msg.writelines(' \n Caught the following exceptions: \n')
-
-            for converter, err in caught_exec.items():
-                msg.writelines('--------------- From ' + str(converter) + ' caught: \n')
-                print_error_to_io_stream(err, msg)
-                msg.write('\n')
-
-        return ConversionException(base_msg + msg.getvalue())
-
-
-def try_convert_attribute_value_to_correct_type(attr_name: str, attribute_type: Type[Any],
-                                                parsed_attr_value: Any, conversion_finder: ConversionFinder,
-                                                logger: Logger, *args, ** kwargs):
-    """
-    Utility method to try to convert the provided attribute value to the correct type
-
-    :param object_type:
-    :param attribute_type:
-    :param parsed_attr_value:
-    :return:
-    """
-
-    if not isinstance(parsed_attr_value, attribute_type):
-        if conversion_finder is not None:
-            # use the conversion_finder to try to convert
-            chains_tuple = conversion_finder.get_all_conversion_chains(type(parsed_attr_value), attribute_type)
-            generic, approx, exact = chains_tuple
-            all_chains = generic + approx + exact
-            if len(all_chains) > 0:
-                all_errors = dict()
-                for chain in reversed(all_chains):
-                    try:
-                        return chain.convert(attribute_type, parsed_attr_value, logger, *args, ** kwargs)
-                    except Exception as e:
-                        all_errors[chain] = e
-                raise ConversionException.create(attr_name, parsed_attr_value, attribute_type, all_errors)
-
-        # if conversion finder is none or it did not find any converter
-        raise NoConverterAvailableForAttributeException.create(conversion_finder, parsed_attr_value, attribute_type)
-
-    else:
-        # we can safely use the value: it is already of the correct type
-        return parsed_attr_value
 
 
 def print_dict(dict_name, dict_value, logger: Logger = None):
@@ -616,8 +494,8 @@ class MultifileObjectParser(MultiFileParser):
             results[child_name] = child_plan.execute(logger, *args, **kwargs)
 
         # 2) finally build the resulting object
-        logger.info('Assembling all parsed child attributes into constructor of '
-                    + get_pretty_type_str(desired_type) + ' to build ' + str(obj))
+        logger.info('Assembling a ' + get_pretty_type_str(desired_type) + ' from all parsed children of ' + str(obj)
+                    + ' by passing them as attributes of the constructor')
         return dict_to_object(desired_type, results, logger, conversion_finder=self.conversion_finder, *args, **kwargs)
 
 

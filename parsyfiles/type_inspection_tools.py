@@ -18,10 +18,13 @@ def get_pretty_type_str(object_type):
 
     try:
         contents_item_type, contents_key_type = _extract_collection_base_type(object_type)
-        if contents_key_type is not None:
-            return object_type.__name__ + '[' + contents_key_type.__name__ + ', ' + contents_item_type.__name__ + ']'
-        elif contents_item_type is not None:
-            return object_type.__name__ + '[' + contents_item_type.__name__ + ']'
+        if isinstance(contents_item_type, tuple):
+            return object_type.__name__ + '[' + ', '.join([item_type.__name__ for item_type in contents_item_type]) + ']'
+        else:
+            if contents_key_type is not None:
+                return object_type.__name__ + '[' + contents_key_type.__name__ + ', ' + contents_item_type.__name__ + ']'
+            elif contents_item_type is not None:
+                return object_type.__name__ + '[' + contents_item_type.__name__ + ']'
     except Exception as e:
         pass
 
@@ -34,9 +37,10 @@ def get_pretty_type_str(object_type):
 def get_pretty_type_keys_dict(dict):
     return {get_pretty_type_str(typ): val for typ, val in dict.items()}
 
+
 def is_generic(object_type):
     """
-    Utility method to check if a type is a subclass of typing.{List,Dict,Set,Tuple}
+    Utility method to check for example if a type is a subclass of typing.{List,Dict,Set,Tuple}
     or of list, dict, set, tuple
 
     :param object_type:
@@ -46,16 +50,24 @@ def is_generic(object_type):
         return issubclass(object_type, Generic)
     except TypeError as e:
         if e.args[0].startswith('descriptor \'__subclasses__\' of'):
-            # known bug
+            # known bug that is supposed to be fixed by now https://github.com/python/typing/issues/266.
+            # as a fallback, at least return true if class is a subclass of the 'must know' classes
+            # (todo find a better way?)
+            return issubclass(object_type, (List, Set, Tuple, Dict))
+
+        elif e.args[0].startswith('cannot create weak reference to'):
+            # assuming this is fixed : https://github.com/python/typing/issues/345
+            # then what remains is a type that is does not extend the typing module
             return False
+
         else:
             raise e
 
 
 def get_base_generic_type(object_type):
     """
-    Utility method to check if a type is a subclass of typing.{List,Dict,Set,Tuple}
-    or of list, dict, set, tuple
+    Utility method to return the equivalent non-customized type for a Generic type, including user-defined ones.
+    for example calling it on typing.List<~T>[int] will return typing.List<~T>
 
     :param object_type:
     :return:
@@ -108,7 +120,7 @@ def is_collection(object_type, strict: bool = False):
                or issubclass(object_type, set)
 
 
-def _extract_collection_base_type(collection_object_type: Type[Any]):
+def _extract_collection_base_type(collection_object_type: Type[Any], exception_if_none: bool = True):
     """
     Utility method to extract the base item type from a collection/iterable item type.
     Throws
@@ -146,9 +158,8 @@ def _extract_collection_base_type(collection_object_type: Type[Any]):
     elif issubclass(collection_object_type, Tuple):
         # Tuple
         # noinspection PyUnresolvedReferences
-        if hasattr(collection_object_type, '__args__'):
-            contents_item_type = collection_object_type.__args__[0]
-            raise TypeError('Tuple attributes are not supported yet')
+        if hasattr(collection_object_type, '__tuple_params__'):
+            contents_item_type = collection_object_type.__tuple_params__
 
     elif issubclass(collection_object_type, dict) or issubclass(collection_object_type, list) \
                 or issubclass(collection_object_type, tuple) or issubclass(collection_object_type, set):
@@ -161,7 +172,7 @@ def _extract_collection_base_type(collection_object_type: Type[Any]):
                              + ' is not a collection')
 
     # Finally return if something was found, otherwise tell it
-    if contents_item_type is None:
+    if contents_item_type is None and exception_if_none:
         raise TypeInformationRequiredError.create_for_collection_items(collection_object_type)
     else:
         return contents_item_type, contents_key_type
@@ -220,7 +231,7 @@ class TypeInformationRequiredError(Exception):
         #     prt_type = get_pretty_type_str(item_type)
         # except:
         #     prt_type = str(item_type)
-        return TypeInformationRequiredError('Cannot parse object of type <' + str(item_type) + '> as a'
+        return TypeInformationRequiredError('Cannot parse object of type ' + str(item_type) + ' as a'
                                             ' collection: this type has no valid PEP484 type hint about its contents.'
                                             ' Please use a full declaration such as Dict[str, Foo] or List[Foo]')
 

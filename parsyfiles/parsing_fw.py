@@ -8,7 +8,7 @@ from warnings import warn
 from parsyfiles.filesystem_mapping import FileMappingConfiguration, WrappedFileMappingConfiguration
 from parsyfiles.parsing_core_api import T
 from parsyfiles.parsing_registries import ParserRegistryWithConverters
-from parsyfiles.support_for_collections import MultifileDictParser
+from parsyfiles.support_for_collections import MultifileCollectionParser
 from parsyfiles.support_for_objects import MultifileObjectParser
 from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
@@ -102,8 +102,8 @@ class RootParser(ParserRegistryWithConverters):
             try:
                 # -- collections
                 from parsyfiles.support_for_collections import get_default_collection_parsers, get_default_collection_converters
-                self.register_parsers(get_default_collection_parsers(self))
-                self.register_converters(get_default_collection_converters())
+                self.register_parsers(get_default_collection_parsers(self, self))
+                self.register_converters(get_default_collection_converters(self))
             except ImportError as e:
                 warn_import_error('dict', e)
 
@@ -119,7 +119,7 @@ class RootParser(ParserRegistryWithConverters):
                 # -- config
                 from parsyfiles.support_for_configparser import get_default_config_parsers, get_default_config_converters
                 self.register_parsers(get_default_config_parsers())
-                self.register_converters(get_default_config_converters())
+                self.register_converters(get_default_config_converters(self))
             except ImportError as e:
                 warn_import_error('config', e)
 
@@ -151,7 +151,7 @@ class RootParser(ParserRegistryWithConverters):
         :return:
         """
         if not self.multifile_installed:
-            self.register_parser(MultifileDictParser(self))
+            self.register_parser(MultifileCollectionParser(self))
             self.register_parser(MultifileObjectParser(self, self))
             self.multifile_installed = True
         else:

@@ -10,14 +10,6 @@ EXT_SEPARATOR = '.'
 MULTIFILE_EXT = '<multifile>'
 
 
-class FolderAndFilesStructureError(Exception):
-    """
-    Raised whenever the folder and files structure does not match with the one expected
-    """
-    def __init__(self, contents):
-        super(FolderAndFilesStructureError, self).__init__(contents)
-        
-
 class ObjectPresentMultipleTimesOnFileSystemError(Exception):
     """
     Raised whenever a given attribute is present several times in the filesystem (with multiple extensions)
@@ -309,6 +301,20 @@ class PersistedObject(metaclass=ABCMeta):
         :return: 
         """
         pass
+
+
+class FolderAndFilesStructureError(Exception):
+    """
+    Raised whenever the folder and files structure does not match with the one expected
+    """
+    def __init__(self, contents):
+        super(FolderAndFilesStructureError, self).__init__(contents)
+
+    @staticmethod
+    def create_for_multifile_tuple(obj_on_fs: PersistedObject, expected_size: int, found_size: int):
+        return FolderAndFilesStructureError('Error trying to find a tuple of length ' + expected_size + ' at location '
+                                            + str(obj_on_fs) + '. Nb of child files found is not correct, found '
+                                            + found_size + ' files')
 
 
 class FileMappingConfiguration(AbstractFileMappingConfiguration):
