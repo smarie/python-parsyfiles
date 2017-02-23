@@ -13,44 +13,42 @@ from parsyfiles.support_for_objects import MultifileObjectParser
 from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
 
-# default logger with handler to print to std out.
-default_logger = getLogger()
-ch = StreamHandler(sys.stdout)
-default_logger.addHandler(ch)
 
-
-def parse_item(item_file_prefix: str, item_type: Type[T], item_name_for_log: str = None,
+def parse_item(location: str, item_type: Type[T], item_name_for_log: str = None,
                file_mapping_conf: FileMappingConfiguration = None,
-               lazy_parsing_for_mf_collections: bool = False) -> T:
+               logger: Logger = None, lazy_mfcollection_parsing: bool = False) -> T:
     """
     Creates a RootParser() and calls its parse_item() method
 
-    :param item_file_prefix:
+    :param location:
     :param item_type:
     :param item_name_for_log:
     :param file_mapping_conf:
-    :param lazy_parsing_for_mf_collections:
+    :param lazy_mfcollection_parsing:
     :return:
     """
-    rp = RootParser('parsyfiles defaults')
-    return rp.parse_item(item_file_prefix, item_type, item_name_for_log, file_mapping_conf, lazy_parsing_for_mf_collections)
+    rp = RootParser('parsyfiles defaults', logger=logger)
+    return rp.parse_item(location, item_type, item_name_for_log=item_name_for_log, file_mapping_conf=file_mapping_conf,
+                         lazy_mfcollection_parsing=lazy_mfcollection_parsing)
 
 
-def parse_collection(item_file_prefix: str, base_item_type: Type[T], item_name_for_log: str = None,
-                     file_mapping_conf: FileMappingConfiguration = None, lazy_parsing_for_mf_collections: bool = False)\
+def parse_collection(location: str, base_item_type: Type[T], item_name_for_log: str = None,
+                     file_mapping_conf: FileMappingConfiguration = None, logger: Logger = None,
+                     lazy_mfcollection_parsing: bool = False)\
         -> Dict[str, T]:
     """
     Utility method to create a RootParser() with default configuration and call its parse_collection() method
 
-    :param item_file_prefix:
+    :param location:
     :param base_item_type:
     :param item_name_for_log:
     :param file_mapping_conf:
-    :param lazy_parsing_for_mf_collections:
+    :param lazy_mfcollection_parsing:
     :return:
     """
-    rp = RootParser('parsyfiles defaults')
-    return rp.parse_collection(item_file_prefix, base_item_type, item_name_for_log, file_mapping_conf, lazy_parsing_for_mf_collections)
+    rp = RootParser('parsyfiles defaults', logger=logger)
+    return rp.parse_collection(location, base_item_type, item_name_for_log=item_name_for_log,
+                               file_mapping_conf=file_mapping_conf, lazy_mfcollection_parsing=lazy_mfcollection_parsing)
 
 
 def warn_import_error(type_of_obj_support: str, caught: ImportError):
@@ -73,6 +71,11 @@ class RootParser(ParserRegistryWithConverters):
     """
     The root parser
     """
+
+    # default logger that prints on stdout
+    _default_logger = getLogger()
+    ch = StreamHandler(sys.stdout)
+    _default_logger.addHandler(ch)
 
     def __init__(self, pretty_name: str = None, strict_matching: bool = False,
                  register_default_parsers: bool = True, logger: Logger = None):
@@ -141,7 +144,8 @@ class RootParser(ParserRegistryWithConverters):
 
         if logger is None:
             # Configure with default logger that also print logs to std out
-            logger = default_logger
+            logger = RootParser._default_logger
+
         self._logger = logger
 
     def install_basic_multifile_support(self):
@@ -159,7 +163,7 @@ class RootParser(ParserRegistryWithConverters):
 
     def parse_collection(self, item_file_prefix: str, base_item_type: Type[T], item_name_for_log: str = None,
                          file_mapping_conf: FileMappingConfiguration = None,
-                         lazy_parsing_for_mf_collections: bool = False) -> Dict[str, T]:
+                         lazy_mfcollection_parsing: bool = False) -> Dict[str, T]:
         """
         Main method to parse a collection of items of type 'base_item_type'.
 
@@ -167,7 +171,7 @@ class RootParser(ParserRegistryWithConverters):
         :param base_item_type:
         :param item_name_for_log:
         :param file_mapping_conf:
-        :param lazy_parsing_for_mf_collections:
+        :param lazy_mfcollection_parsing:
         :return:
         """
         # -- item_name_for_log
@@ -180,19 +184,18 @@ class RootParser(ParserRegistryWithConverters):
                           + get_pretty_type_str(base_item_type) + '> at location ' + item_file_prefix +' ****')
 
         # common steps
-        return self._parse__item(collection_type, item_file_prefix, file_mapping_conf, lazy_parsing_for_mf_collections)
+        return self._parse__item(collection_type, item_file_prefix, file_mapping_conf, lazy_mfcollection_parsing)
 
-    def parse_item(self, item_file_prefix: str, item_type: Type[T], item_name_for_log: str = None,
-                   file_mapping_conf: FileMappingConfiguration = None,
-                   lazy_parsing_for_mf_collections: bool = False) -> T:
+    def parse_item(self, location: str, item_type: Type[T], item_name_for_log: str = None,
+                   file_mapping_conf: FileMappingConfiguration = None, lazy_mfcollection_parsing: bool = False) -> T:
         """
         Main method to parse an item of type item_type
 
-        :param item_file_prefix:
+        :param location:
         :param item_type:
         :param item_name_for_log:
         :param file_mapping_conf:
-        :param lazy_parsing_for_mf_collections:
+        :param lazy_mfcollection_parsing:
         :return:
         """
 
@@ -201,21 +204,21 @@ class RootParser(ParserRegistryWithConverters):
         check_var(item_name_for_log, var_types=str, var_name='item_name_for_log')
 
         print('**** Starting to parse single object ' + item_name_for_log + ' of type <'
-                          + get_pretty_type_str(item_type) + '> at location ' + item_file_prefix +' ****')
+              + get_pretty_type_str(item_type) + '> at location ' + location + ' ****')
 
         # common steps
-        return self._parse__item(item_type, item_file_prefix, file_mapping_conf, lazy_parsing_for_mf_collections)
+        return self._parse__item(item_type, location, file_mapping_conf, lazy_mfcollection_parsing)
 
     def _parse__item(self, item_type: Type[T], item_file_prefix: str,
                      file_mapping_conf: FileMappingConfiguration = None,
-                     lazy_parsing_for_mf_collections: bool = False) -> T:
+                     lazy_mfcollection_parsing: bool = False) -> T:
         """
         Common parsing steps to parse an item
 
         :param item_type:
         :param item_file_prefix:
         :param file_mapping_conf:
-        :param lazy_parsing_for_mf_collections:
+        :param lazy_mfcollection_parsing:
         :return:
         """
 
@@ -231,7 +234,10 @@ class RootParser(ParserRegistryWithConverters):
         self._logger.info('')
 
         # parse
-        res = pp.execute(logger=self._logger, lazy_parsing=lazy_parsing_for_mf_collections)
+        res = pp.execute(logger=self._logger, options={MultifileCollectionParser.__name__:
+                                                           {'lazy_parsing': lazy_mfcollection_parsing}
+                                                       }
+                         )
         # print('')
         self._logger.info('')
 

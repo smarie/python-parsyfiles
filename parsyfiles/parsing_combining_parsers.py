@@ -18,7 +18,7 @@ class DelegatingParser(AnyParser):
     """
 
     def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger,
-                          *args, **kwargs) -> T:
+                          options: Dict[str, Dict[str, Any]]) -> T:
         """
         Implementation of AnyParser API with an exception
         """
@@ -33,7 +33,7 @@ class DelegatingParser(AnyParser):
 
     def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
                          parsing_plan_for_children: Dict[str, AnyParser._RecursiveParsingPlan],
-                         logger: Logger, *args, **kwargs) -> T:
+                         logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
         Implementation of AnyParser API
         """
@@ -236,11 +236,11 @@ class CascadingParser(DelegatingParser):
         def __str__(self):
             return str(self.pp) + ' (currently active parsing plan in ' + str(self.cascadeparser) + ')'
 
-        def execute(self, logger: Logger, *args, **kwargs) -> T:
-            return self.pp.execute(logger, *args, **kwargs)
+        def execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
+            return self.pp.execute(logger, options)
 
-        def _execute(self, logger: Logger, *args, **kwargs) -> T:
-            return self.pp._execute(logger, *args, **kwargs)
+        def _execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
+            return self.pp._execute(logger, options)
 
         def _get_children_parsing_plan(self) -> Dict[str, ParsingPlan]:
             return self.pp._get_children_parsing_plan()
@@ -263,7 +263,7 @@ class CascadingParser(DelegatingParser):
         plan
         """
 
-        def _execute(self, logger: Logger, *args, **kwargs) -> T:
+        def _execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
             raise NotImplementedError('This method is not implemented directly but through inner parsing plans. '
                                       'This should not be called normally')
 
@@ -302,12 +302,16 @@ class CascadingParser(DelegatingParser):
                     if i > 0:
                         # print('----- Rebuilding local parsing plan with next candidate parser:')
                         if logger is not None:
-                            logger.info('----- Rebuilding local parsing plan with next candidate parser:')
+                            logger.info('')
+                            logger.info('Rebuilding local parsing plan with next candidate parser: ' + str(p))
                     try:
                         # -- try to rebuild a parsing plan with next parser, and remember it if is succeeds
                         self.active_parsing_plan = CascadingParser.ActiveParsingPlan(p.create_parsing_plan(
                             self.obj_type, self.obj_on_fs_to_parse, self.logger, _main_call=False), self.parser)
                         self.active_parser_idx = i
+                        # if i > 0:
+                        #     if logger is not None:
+                        #         logger.info(' < Done rebuilding local parsing plan. Resuming parsing... >')
                         return
 
                     except Exception as e:
@@ -331,14 +335,13 @@ class CascadingParser(DelegatingParser):
                 caught.update(already_caught_execution_errors)
                 raise CascadeError.create_for_execution(self.parser, self, caught)
 
-        def execute(self, logger: Logger, *args, **kwargs):
+        def execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]):
             """
             Delegates execution to currently active parser. In case of an exception, recompute the parsing plan and
             do it again on the next one.
 
             :param logger:
-            :param args:
-            :param kwargs:
+            :param options:
             :return:
             """
             if self.active_parsing_plan is not None:
@@ -346,13 +349,13 @@ class CascadingParser(DelegatingParser):
                 while self.active_parsing_plan is not None:
                     try:
                         # -- try to execute current plan
-                        return self.active_parsing_plan.execute(logger, *args, **kwargs)
+                        return self.active_parsing_plan.execute(logger, options)
 
                     except Exception as e:
                         # -- log the error
                         msg = StringIO()
                         print_error_to_io_stream(e, msg, print_big_traceback=False)
-                        logger.warning('!!!! Caught error during execution : ')
+                        logger.warning('  !! Caught error during execution !!')
                         logger.warning(msg.getvalue())
                         # print('----- WARNING: Caught error during execution : ')
                         # print(msg.getvalue())
@@ -465,16 +468,16 @@ class ParsingChain(AnyParser):
         return self.__str__()
 
     def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger,
-                          *args, **kwargs) -> T:
+                          options: Dict[str, Dict[str, Any]]) -> T:
         """
         Implementation of AnyParser API
         """
         # first use the base parser to parse something compliant with the conversion chain
         first = self._base_parser._parse_singlefile(self._converter.from_type, file_path, encoding,
-                                                    logger, *args, **kwargs)
+                                                    logger, options)
 
         # then apply the conversion chain
-        return self._converter.convert(desired_type, first, logger, *args, **kwargs)
+        return self._converter.convert(desired_type, first, logger, options)
 
     def _get_parsing_plan_for_multifile_children(self, obj_on_fs: PersistedObject, desired_type: Type[Any],
                                                  logger: Logger) -> Dict[str, Any]:
@@ -485,15 +488,15 @@ class ParsingChain(AnyParser):
 
     def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
                          parsing_plan_for_children: Dict[str, ParsingPlan],
-                         logger: Logger, *args, **kwargs) -> T:
+                         logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
         Implementation of AnyParser API
         """
         # first use the base parser
-        first = self._base_parser._parse_multifile(desired_type, obj, parsing_plan_for_children, logger, *args, **kwargs)
+        first = self._base_parser._parse_multifile(desired_type, obj, parsing_plan_for_children, logger, options)
 
         # then apply the conversion chain
-        return self._converter.convert(desired_type, first, logger, *args, **kwargs)
+        return self._converter.convert(desired_type, first, logger, options)
 
     @staticmethod
     def are_worth_chaining(base_parser: Parser, to_type: Type[S], converter: Converter[S,T]) -> bool:

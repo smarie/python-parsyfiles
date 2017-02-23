@@ -118,7 +118,7 @@ def get_default_primitive_converters():
                               custom_name=t.__name__ + '_to_int', can_chain=False) for t in {str, bool, float}] \
            + [ConverterFunction(from_type=t, to_type=float, conversion_method=primitive_to_float,
                                 custom_name=t.__name__ + '_to_float', can_chain=False) for t in {str, bool, int}] \
-           + [ConverterFunction(from_type=t, to_type=float, conversion_method=primitive_to_bool,
+           + [ConverterFunction(from_type=t, to_type=bool, conversion_method=primitive_to_bool,
                                 custom_name=t.__name__ + '_to_bool', can_chain=False) for t in {str, float, int}] \
            + [ConverterFunction(from_type=t, to_type=str, conversion_method=to_str, can_chain=False)
               for t in {bool, float, int}] \

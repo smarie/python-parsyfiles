@@ -1,4 +1,5 @@
 import time
+from logging import getLogger
 from pprint import pprint
 from typing import List, Any, Tuple, Dict, Set
 from unittest import TestCase
@@ -123,7 +124,7 @@ class DemoTests(TestCase):
         RootParser().print_capabilities_for_type(typ=DataFrame)
 
     def test_simple_collection_lazy(self):
-        dfs = parse_collection('./test_data/demo/simple_collection', DataFrame, lazy_parsing_for_mf_collections=True)
+        dfs = parse_collection('./test_data/demo/simple_collection', DataFrame, lazy_mfcollection_parsing=True)
         # check len
         self.assertEquals(len(dfs), 5)
         # check keys
@@ -173,7 +174,7 @@ class DemoTests(TestCase):
         # pprint(e)
 
         # parse all of them
-        sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
+        sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest, logger=getLogger())
         pprint(sf_tests)
 
         #

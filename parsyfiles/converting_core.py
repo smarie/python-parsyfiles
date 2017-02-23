@@ -204,31 +204,103 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         """
         return self.is_able_to_convert(strict, from_type=left_converter.to_type, to_type=None)[0]
 
+    def get_id_for_options(self):
+        """
+        Default implementation : the id to use in the options is the class name
+        :return:
+        """
+        return self.__class__.__name__
+
+    def get_applicable_options(self, options: Dict[str, Dict[str, Any]]):
+        """
+        Returns the options that are applicable to this particular converter, from the full map of options.
+        It first uses 'get_id_for_options()' to know the id of this parser, and then simply extracts the contents of
+        the options corresponding to this id, or returns an empty dict().
+
+        :param options: a dictionary converter_id > options
+        :return:
+        """
+        return get_options_for_id(options, self.get_id_for_options())
+
     @abstractmethod
-    def convert(self, desired_type: Type[T], source_obj: S, logger: Logger, *args, **kwargs) -> T:
+    def convert(self, desired_type: Type[T], source_obj: S, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
         Implementing classes should implement this method to perform the conversion itself
 
         :param desired_type: the destination type of the conversion
         :param source_obj: the source object that should be converter
         :param logger: a logger to use if any is available, or None
-        :param args: additional arguments. Note that this may contain options for other parsers/converters, implementing
-         classes should just ignore them
-        :param kwargs: additional arguments. Note that this may contain options for other parsers/converters,
-        implementing classes should just ignore them
+        :param options: additional options map. Implementing classes may use 'self.get_applicable_options()' to get the
+        options that are of interest for this converter.
         :return:
         """
         pass
+
+
+def get_options_for_id(options: Dict[str, Dict[str, Any]], identifier: str):
+    """
+    Helper method, from the full options dict of dicts, to return either the options related to this parser or an
+    empty dictionary. It also performs all the var type checks
+
+    :param options:
+    :param identifier:
+    :return:
+    """
+    check_var(options, var_types=dict, var_name='options')
+    res = options[identifier] if identifier in options.keys() else dict()
+    check_var(res, var_types=dict, var_name='options[' + identifier + ']')
+    return res
+
+
+# an alias for the conversion method signature
+ConversionMethod = Callable[[Type[T], S, Logger], T]
+conversion_method_example_signature_str = 'def my_convert_fun(desired_type: Type[T], source: S, logger: Logger, ' \
+                                          '**kwargs) -> T'
+MultiOptionsConversionMethod = Callable[[Type[T], S, Logger, Dict[str, Dict[str, Any]]], T]
+multioptions_conversion_method_example_signature_str = 'def my_convert_fun(desired_type: Type[T], source: S, ' \
+                                                   'logger: Logger, options: Dict[str, Dict[str, Any]]) -> T'
+
+
+class CaughtTypeError(Exception):
+    """
+    Raised whenever a TypeError is caught during ConverterFunction's converter function execution
+    """
+
+    def __init__(self, contents):
+        """
+        We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+        That's why we have a helper static method create()
+
+        :param contents:
+        """
+        super(CaughtTypeError, self).__init__(contents)
+
+    @staticmethod
+    def create(converter_func: ConversionMethod, caught: Exception):
+        """
+        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+
+        :param converter_func:
+        :param caught:
+        :return:
+        """
+        msg = 'Caught TypeError while calling conversion function \'' + str(converter_func.__name__) + '\'. ' \
+              'Note that the conversion function signature should be \'' + conversion_method_example_signature_str \
+              + '\' (unpacked options mode - default) or ' + multioptions_conversion_method_example_signature_str \
+              + ' (unpack_options = False).' \
+              + 'Caught error message is : ' + caught.__class__.__name__ + ' : ' + str(caught)
+        return CaughtTypeError(msg).with_traceback(caught.__traceback__)
 
 
 class ConverterFunction(Converter[S, T]):
     """
     Helper class to create a Converter from a user-provided function. See Converter class for details.
     """
-    def __init__(self, from_type: Type[S], to_type: Type[T],
-                 conversion_method: Callable[[Type[T], S, Logger, List, Dict], T],
+    def __init__(self, from_type: Type[S], to_type: Type[T], conversion_method: ConversionMethod,
                  custom_name: str = None, is_able_to_convert_func: Callable[[bool, Type[S], Type[T]], bool] = None,
-                 can_chain: bool = True, function_args: dict = None):
+                 can_chain: bool = True, function_args: dict = None, unpack_options: bool = True):
         """
         Constructor with a conversion method. All calls to self.convert() will be delegated to this method. An optional
         name may be provided to override the provided conversion method's name. this might be useful for example if the
@@ -247,6 +319,8 @@ class ConverterFunction(Converter[S, T]):
         :param can_chain: a boolean (default True) indicating if other converters can be appended at the end of this
         converter to create a chain. Dont change this except if it really can never make sense.
         :param function_args: kwargs that will be passed to the function at every call
+        :param unpack_options: if False, the full options dictionary will be passed to the conversion method, instead of
+        the unpacked options for this conversion function id only.
         """
         super(ConverterFunction, self).__init__(from_type, to_type, is_able_to_convert_func, can_chain)
 
@@ -262,6 +336,10 @@ class ConverterFunction(Converter[S, T]):
         check_var(function_args, var_types=dict, var_name='function_args', enforce_not_none=False)
         self.function_args = function_args
 
+        #
+        check_var(unpack_options, var_types=bool, var_name='unpack_options')
+        self.unpack_options = unpack_options
+
     def __str__(self):
         if self.custom_name is None:
             if self.function_args is None:
@@ -276,21 +354,35 @@ class ConverterFunction(Converter[S, T]):
         # but pprint uses __repr__ so we'd like users to see the small and readable version
         return self.__str__()
 
-    def convert(self, desired_type: Type[T], source_obj: S, logger: Logger, **kwargs) -> T:
+    def get_id_for_options(self):
+        return self.custom_name or self.conversion_method.__name__
+
+    def convert(self, desired_type: Type[T], source_obj: S, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
-        Delegates to the user-provided method
+        Delegates to the user-provided method. Passes the appropriate part of the options according to the
+        function name.
 
         :param desired_type:
         :param source_obj:
         :param logger:
-        :param args:
-        :param kwargs:
+        :param options:
         :return:
         """
-        if self.function_args is not None:
-            return self.conversion_method(desired_type, source_obj, logger, **self.function_args, **kwargs)
-        else:
-            return self.conversion_method(desired_type, source_obj, logger, **kwargs)
+        try:
+            if self.unpack_options:
+                opts = self.get_applicable_options(options)
+                if self.function_args is not None:
+                    return self.conversion_method(desired_type, source_obj, logger, **self.function_args, **opts)
+                else:
+                    return self.conversion_method(desired_type, source_obj, logger, **opts)
+            else:
+                if self.function_args is not None:
+                    return self.conversion_method(desired_type, source_obj, logger, options, **self.function_args)
+                else:
+                    return self.conversion_method(desired_type, source_obj, logger, options)
+
+        except TypeError as e:
+            raise CaughtTypeError.create(self.conversion_method, e)
 
 
 class ConversionChain(Converter[S, T]):
@@ -507,7 +599,7 @@ class ConversionChain(Converter[S, T]):
                             get_pretty_type_str(self.to_type) + ' (this chain performs '
                             + ('' if self.strict else 'non-') + 'strict mode matching)')
 
-    def convert(self, desired_type: Type[T], obj: S, logger: Logger, *args, **kwargs) -> T:
+    def convert(self, desired_type: Type[T], obj: S, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
         Apply the converters of the chain in order to produce the desired result. Only the last converter will see the
         'desired type', the others will be asked to produce their declared to_type.
@@ -515,16 +607,15 @@ class ConversionChain(Converter[S, T]):
         :param desired_type:
         :param obj:
         :param logger:
-        :param args:
-        :param kwargs:
+        :param options:
         :return:
         """
         for converter in self._converters_list[:-1]:
             # convert into each converters destination type
-            obj = converter.convert(converter.to_type, obj, logger, *args, **kwargs)
+            obj = converter.convert(converter.to_type, obj, logger, options)
 
         # the last converter in the chain should convert to desired type
-        return self._converters_list[-1].convert(desired_type, obj, logger, *args, **kwargs)
+        return self._converters_list[-1].convert(desired_type, obj, logger, options)
 
     @staticmethod
     def are_worth_chaining(first_converter: Converter, second_converter: Converter) -> bool:

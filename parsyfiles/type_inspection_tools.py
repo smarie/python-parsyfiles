@@ -142,7 +142,7 @@ def _extract_collection_base_type(collection_object_type: Type[Any], exception_i
     if issubclass(collection_object_type, Dict):
         # Dictionary
         # noinspection PyUnresolvedReferences
-        if hasattr(collection_object_type, '__args__'):
+        if hasattr(collection_object_type, '__args__') and collection_object_type.__args__ is not None:
             contents_key_type, contents_item_type = collection_object_type.__args__
             if not issubclass(contents_key_type, str):
                 raise TypeError('Collection object has type Dict, but its PEP484 type hints declare '
@@ -152,13 +152,13 @@ def _extract_collection_base_type(collection_object_type: Type[Any], exception_i
     elif issubclass(collection_object_type, List) or issubclass(collection_object_type, Set):
         # List or Set
         # noinspection PyUnresolvedReferences
-        if hasattr(collection_object_type, '__args__'):
+        if hasattr(collection_object_type, '__args__') and collection_object_type.__args__ is not None:
             contents_item_type = collection_object_type.__args__[0]
 
     elif issubclass(collection_object_type, Tuple):
         # Tuple
         # noinspection PyUnresolvedReferences
-        if hasattr(collection_object_type, '__tuple_params__'):
+        if hasattr(collection_object_type, '__tuple_params__') and collection_object_type.__tuple_params__ is not None:
             contents_item_type = collection_object_type.__tuple_params__
 
     elif issubclass(collection_object_type, dict) or issubclass(collection_object_type, list) \

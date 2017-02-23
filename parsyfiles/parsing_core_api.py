@@ -2,7 +2,7 @@ from abc import abstractmethod
 from logging import Logger
 from typing import TypeVar, Generic, Type, Callable, Dict, Any, Set, Tuple
 
-from parsyfiles.converting_core import get_validated_types, S, Converter
+from parsyfiles.converting_core import get_validated_types, S, Converter, get_options_for_id
 from parsyfiles.filesystem_mapping import EXT_SEPARATOR, MULTIFILE_EXT, PersistedObject
 from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
@@ -228,7 +228,7 @@ class ParsingException(Exception):
 
     @staticmethod
     def create_for_caught_error(parser: _BaseParserDeclarationForRegistries, desired_type: Type[T],
-                                obj: PersistedObject, caught: Exception, *args, **kwargs):
+                                obj: PersistedObject, caught: Exception, options: Dict[str, Dict[str, Any]]):
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
         https://github.com/nose-devs/nose/issues/725
@@ -237,8 +237,7 @@ class ParsingException(Exception):
         :param desired_type:
         :param obj:
         :param caught:
-        :param args:
-        :param kwargs:
+        :param options:
         :return:
         """
         try:
@@ -247,13 +246,13 @@ class ParsingException(Exception):
             typ = str(desired_type)
 
         return ParsingException('Error while parsing ' + str(obj) + ' as a ' + typ + ' with parser \''
-                                + str(parser) + '\' using args=(' + str(args) + ') and kwargs=(' + str(kwargs)
-                                + ') : caught \n  ' + str(caught.__class__.__name__) + ' : ' + str(caught))\
+                                + str(parser) + '\' using options=(' + str(options) + ') : caught \n  '
+                                + str(caught.__class__.__name__) + ' : ' + str(caught))\
             .with_traceback(caught.__traceback__) # 'from e' was hiding the inner traceback. This is much better for debug
 
     @staticmethod
     def create_for_wrong_result_type(parser: _BaseParserDeclarationForRegistries, desired_type: Type[T],
-                                     obj: PersistedObject, result: T, *args, **kwargs):
+                                     obj: PersistedObject, result: T, options: Dict[str, Dict[str, Any]]):
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
         https://github.com/nose-devs/nose/issues/725
@@ -262,13 +261,12 @@ class ParsingException(Exception):
         :param desired_type:
         :param obj:
         :param result:
-        :param args:
-        :param kwargs:
+        :param options:
         :return:
         """
         return ParsingException('Error while parsing ' + str(obj) + ' as a ' + str(desired_type) + ' with parser \''
-                                + str(parser) + '\' using args=(' + str(args) + ') and kwargs=(' + str(kwargs)
-                                + ') : \n      parser returned ' + str(result) + ' of type ' + str(type(result))
+                                + str(parser) + '\' using options=(' + str(options) + ') : \n      parser returned '
+                                + str(result) + ' of type ' + str(type(result))
                                 + ' which is not an instance of ' + str(desired_type))
 
     @staticmethod
@@ -377,22 +375,21 @@ class ParsingPlan(Generic[T], PersistedObject):
     def get_pretty_type_str(self) -> str:
         return get_pretty_type_str(self.obj_type)
 
-    def execute(self, logger: Logger, *args, **kwargs) -> T:
+    def execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
         Called to parse the object as described in this parsing plan, using the provided arguments for the parser.
         * Exceptions are caught and wrapped into ParsingException
         * If result does not match expected type, an error is thrown
 
         :param logger: the logger to use during parsing (optional: None is supported)
-        :param args:
-        :param kwargs:
+        :param options: a dictionary of option sets. Each option set is identified with an id in the dictionary.
         :return:
         """
         try:
-            res = self._execute(logger, *args, **kwargs)
+            res = self._execute(logger, options)
         except Exception as e:
-            raise ParsingException.create_for_caught_error(self.parser, self.obj_type, self.obj_on_fs_to_parse,
-                                                           e, *args, **kwargs)
+            raise ParsingException.create_for_caught_error(self.parser, self.obj_type, self.obj_on_fs_to_parse, e,
+                                                           options)
 
         # Check that the returned parsed object has the correct type
         if res is not None:
@@ -403,16 +400,15 @@ class ParsingPlan(Generic[T], PersistedObject):
 
         # wrong type : error
         raise ParsingException.create_for_wrong_result_type(self.parser, self.obj_type, self.obj_on_fs_to_parse,
-                                                            res, *args, **kwargs)
+                                                            res, options)
 
     @abstractmethod
-    def _execute(self, logger: Logger, *args, **kwargs) -> T:
+    def _execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
         Implementing classes should perform the parsing here, possibly using custom methods of self.parser.
 
         :param logger:
-        :param args:
-        :param kwargs:
+        :param options:
         :return:
         """
         pass
@@ -442,9 +438,27 @@ class Parser(_BaseParserDeclarationForRegistries):
     # TODO split 'parsingplan factory' concept from 'single/multi file parser' > Distinct interfaces
     # That would make the rootparser clearer
 
+    def get_id_for_options(self):
+        """
+        Default implementation : the id to use in the options is the class name
+        :return:
+        """
+        return self.__class__.__name__
+
+    def get_applicable_options(self, options: Dict[str, Dict[str, Any]]):
+        """
+        Returns the options that are applicable to this particular parser, from the full map of options.
+        It first uses 'get_id_for_options()' to know the id of this parser, and then simply extracts the contents of
+        the options corresponding to this id, or returns an empty dict().
+
+        :param options: a dictionary parser_id > options
+        :return:
+        """
+        return get_options_for_id(options, self.get_id_for_options())
+
     @abstractmethod
     def create_parsing_plan(self, desired_type: Type[T], filesystem_object: PersistedObject, logger: Logger,
-                            *args, **kwargs) -> ParsingPlan[T]:
+                            options: Dict[str, Dict[str, Any]]) -> ParsingPlan[T]:
         """
         Creates a parsing plan to parse the given filesystem object into the given desired_type.
         Implementing classes may wish to support additional parameters.
@@ -452,8 +466,9 @@ class Parser(_BaseParserDeclarationForRegistries):
         :param desired_type: the type of object that should be created as the output of parsing plan execution.
         :param filesystem_object: the persisted object that should be parsed
         :param logger: an optional logger to log all parsing plan creation and execution information
-        :param args: additional implementation-specific parameters
-        :param kwargs: additional implementation-specific parameters
+        :param options: a dictionary additional implementation-specific parameters (one dict per parser id).
+        Implementing classes may use 'self.get_applicable_options()' to get the options that are of interest for this
+        parser.
         :return:
         """
         pass

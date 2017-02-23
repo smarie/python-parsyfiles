@@ -193,15 +193,18 @@ class CaughtTypeErrorDuringInstantiation(Exception):
 
 
 def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger: Logger,
-                   conversion_finder: ConversionFinder = None, is_dict_of_dicts: bool = False,
-                   *args, ** kwargs) -> T:
+                   options: Dict[str, Dict[str, Any]], conversion_finder: ConversionFinder = None,
+                   is_dict_of_dicts: bool = False) -> T:
     """
     Utility method to create an object from a dictionary of constructor arguments. Constructor arguments that dont have
     the correct type are intelligently converted if possible
 
     :param desired_type:
-    :param constructor_args_types:
     :param contents_dict:
+    :param logger:
+    :param options:
+    :param conversion_finder:
+    :param is_dict_of_dicts:
     :return:
     """
     check_var(desired_type, var_types=type, var_name='obj_type')
@@ -232,7 +235,7 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
                         dict_for_init[attr_name] = ConversionFinder.try_convert_value(conversion_finder, full_attr_name,
                                                                                       provided_attr_value,
                                                                                       attr_type_required, logger,
-                                                                                      *args, **kwargs)
+                                                                                      options)
 
                     else:
                         warning('Constructor for type <' + get_pretty_type_str(desired_type) + '> has no PEP484 Type '
@@ -250,8 +253,8 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
                         else:
                             # we can build the attribute from the sub-dict
                             dict_for_init[attr_name] = dict_to_object(attr_type_required, provided_attr_value,
-                                                                      logger, conversion_finder=conversion_finder,
-                                                                      *args, **kwargs)
+                                                                      logger, options,
+                                                                      conversion_finder=conversion_finder)
 
                     else:
                         raise ValueError('Error while trying to build object of type ' + str(desired_type) + ' from a '
@@ -355,12 +358,13 @@ def get_default_object_converters(conversion_finder: ConversionFinder) \
     and from other type to dict)
     :return:
     """
+
     return [
             ConverterFunction(str, Any, base64_ascii_str_pickle_to_object),
             ConverterFunction(DictOfDict, Any, dict_to_object, custom_name='dict_of_dict_to_object',
-                              is_able_to_convert_func=_not_able_to_convert_collections,
+                              is_able_to_convert_func=_not_able_to_convert_collections, unpack_options=False,
                               function_args={'conversion_finder': conversion_finder, 'is_dict_of_dicts': True}),
-            ConverterFunction(dict, Any, dict_to_object, custom_name='dict_to_object',
+            ConverterFunction(dict, Any, dict_to_object, custom_name='dict_to_object', unpack_options=False,
                               is_able_to_convert_func=_not_able_to_convert_collections,
                               function_args={'conversion_finder': conversion_finder, 'is_dict_of_dicts': False})
             ]
@@ -474,13 +478,14 @@ class MultifileObjectParser(MultiFileParser):
 
     def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
                          parsing_plan_for_children: Dict[str, AnyParser._RecursiveParsingPlan], logger: Logger,
-                         *args, **kwargs) -> T:
+                         options: Dict[str, Dict[str, Any]]) -> T:
         """
 
         :param desired_type:
         :param obj:
-        :param parsed_children:
+        :param parsing_plan_for_children:
         :param logger:
+        :param options:
         :return:
         """
 
@@ -491,11 +496,12 @@ class MultifileObjectParser(MultiFileParser):
         # -- use key-based sorting on children to lead to reproducible results
         # (in case of multiple errors, the same error will show up first everytime)
         for child_name, child_plan in sorted(parsing_plan_for_children.items()):
-            results[child_name] = child_plan.execute(logger, *args, **kwargs)
+            results[child_name] = child_plan.execute(logger, options)
 
         # 2) finally build the resulting object
         logger.info('Assembling a ' + get_pretty_type_str(desired_type) + ' from all parsed children of ' + str(obj)
                     + ' by passing them as attributes of the constructor')
-        return dict_to_object(desired_type, results, logger, conversion_finder=self.conversion_finder, *args, **kwargs)
+
+        return dict_to_object(desired_type, results, logger, options, conversion_finder=self.conversion_finder)
 
 

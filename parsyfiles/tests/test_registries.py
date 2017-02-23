@@ -3,9 +3,10 @@ from random import shuffle
 from typing import Generic, TypeVar, Dict, Type, Any
 from unittest import TestCase
 
-from parsyfiles import PersistedObject, get_pretty_type_str, MULTIFILE_EXT
+from parsyfiles.filesystem_mapping import MULTIFILE_EXT, PersistedObject
 from parsyfiles.parsing_core import SingleFileParserFunction, MultiFileParser, AnyParser, T, _BaseParsingPlan
 from parsyfiles.parsing_registries import ParserCache
+from parsyfiles.type_inspection_tools import get_pretty_type_str
 
 
 class TestParserRegistry(TestCase):
@@ -129,8 +130,8 @@ class TestParserRegistry(TestCase):
                 pass
 
             def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
-                                 parsing_plan_for_children: Dict[str, AnyParser._RecursiveParsingPlan], logger: Logger, *args,
-                                 **kwargs) -> T:
+                                 parsing_plan_for_children: Dict[str, AnyParser._RecursiveParsingPlan], logger: Logger,
+                                 options: Dict[str, Dict[str, Any]]) -> T:
                 pass
 
         # -- one type
@@ -165,12 +166,12 @@ class TestParserRegistry(TestCase):
                 pass
 
             def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
-                                 parsing_plan_for_children: Dict[str, AnyParser._RecursiveParsingPlan], logger: Logger, *args,
-                                 **kwargs) -> T:
+                                 parsing_plan_for_children: Dict[str, AnyParser._RecursiveParsingPlan], logger: Logger,
+                                 options: Dict[str, Dict[str, Any]]) -> T:
                 pass
 
-            def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger, *args,
-                                  **kwargs) -> T:
+            def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger,
+                                  options: Dict[str, Dict[str, Any]]) -> T:
                 pass
 
         # -- one type

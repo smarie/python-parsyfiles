@@ -4,6 +4,7 @@ from io import TextIOBase
 from logging import Logger
 from typing import Union, Type, Callable, Dict, Any, Set
 
+from parsyfiles.converting_core import get_options_for_id
 from parsyfiles.filesystem_mapping import MULTIFILE_EXT, PersistedObject
 from parsyfiles.parsing_core_api import Parser, T, ParsingPlan, get_parsing_plan_log_str
 from parsyfiles.type_inspection_tools import get_pretty_type_str
@@ -52,7 +53,7 @@ class _BaseParser(Parser):
 
     @abstractmethod
     def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger,
-                          *args, **kwargs) -> T:
+                          options: Dict[str, Dict[str, Any]]) -> T:
         """
         Method that should be overriden by your implementing class. It will be called by
         (_BaseParsingPlan).execute
@@ -60,16 +61,15 @@ class _BaseParser(Parser):
         :param desired_type:
         :param file_path:
         :param encoding:
-        :param args:
-        :param kwargs:
+        :param options:
         :return:
         """
         pass
 
     @abstractmethod
     def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
-                         parsing_plan_for_children: Dict[str, ParsingPlan],
-                         logger: Logger, *args, **kwargs) -> T:
+                         parsing_plan_for_children: Dict[str, ParsingPlan], logger: Logger,
+                         options: Dict[str, Dict[str, Any]]) -> T:
         """
         First parse all children from the parsing plan, then calls _build_object_from_parsed_children
 
@@ -77,8 +77,7 @@ class _BaseParser(Parser):
         :param obj:
         :param parsing_plan_for_children:
         :param logger:
-        :param args:
-        :param kwargs:
+        :param options:
         :return:
         """
         pass
@@ -111,13 +110,12 @@ class _BaseParsingPlan(ParsingPlan[T]):
     # flag used for create_parsing_plan logs (to prevent recursive print messages)
     thrd_locals = threading.local()
 
-    def execute(self, logger: Logger, *args, **kwargs) -> T:
+    def execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
         Overrides the parent method to add log messages.
 
         :param logger: the logger to use during parsing (optional: None is supported)
-        :param args:
-        :param kwargs:
+        :param options:
         :return:
         """
         in_root_call = False
@@ -134,7 +132,7 @@ class _BaseParsingPlan(ParsingPlan[T]):
         logger.info('Parsing ' + str(self))
 
         try:
-            res = super(_BaseParsingPlan, self).execute(logger, *args, **kwargs)
+            res = super(_BaseParsingPlan, self).execute(logger, options)
             logger.info('--> Successfully parsed a ' + get_pretty_type_str(self.obj_type) + ' from ' + self.location)
             if in_root_call:
                 # print('Completed parsing successfully')
@@ -146,24 +144,23 @@ class _BaseParsingPlan(ParsingPlan[T]):
             if in_root_call:
                 _BaseParsingPlan.thrd_locals.flag_exec = 0
 
-    def _execute(self, logger: Logger, *args, **kwargs) -> T:
+    def _execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
         Implementation of the parent class method.
-        Checks that self.parser is a _BaseParser, and calls the appropriate parsing method
+        Checks that self.parser is a _BaseParser, and calls the appropriate parsing method.
 
         :param logger:
-        :param args:
-        :param kwargs:
+        :param options:
         :return:
         """
         if isinstance(self.parser, _BaseParser):
             if (not self.is_singlefile) and self.parser.supports_multifile():
                 return self.parser._parse_multifile(self.obj_type, self.obj_on_fs_to_parse,
-                                                    self._get_children_parsing_plan(), logger, *args, **kwargs)
+                                                    self._get_children_parsing_plan(), logger, options)
 
             elif self.is_singlefile and self.parser.supports_singlefile():
                 return self.parser._parse_singlefile(self.obj_type, self.get_singlefile_path(),
-                                                     self.get_singlefile_encoding(), logger, *args, **kwargs)
+                                                     self.get_singlefile_encoding(), logger, options)
             else:
                 raise _InvalidParserException.create(self.parser, self.obj_on_fs_to_parse)
         else:
@@ -371,7 +368,7 @@ class SingleFileParser(AnyParser):
 
     def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
                          parsing_plan_for_children: Dict[str, AnyParser._RecursiveParsingPlan],
-                         logger: Logger, *args, **kwargs) -> T:
+                         logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
         Implementation of the parent method : since this is a singlefile parser, this is not implemented.
 
@@ -379,8 +376,7 @@ class SingleFileParser(AnyParser):
         :param obj:
         :param parsing_plan_for_children:
         :param logger:
-        :param args:
-        :param kwargs:
+        :param options:
         :return:
         """
         raise Exception('Not implemented since this is a SingleFileParser')
@@ -413,7 +409,7 @@ class MultiFileParser(AnyParser):
                                               can_chain=can_chain, is_able_to_parse_func=is_able_to_parse_func)
 
     def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger,
-                          *args, **kwargs) -> T:
+                          options: Dict[str, Dict[str, Any]]) -> T:
         """
         Implementation of the parent method : since this is a multifile parser, this is not implemented.
 
@@ -421,8 +417,7 @@ class MultiFileParser(AnyParser):
         :param file_path:
         :param encoding:
         :param logger:
-        :param args:
-        :param kwargs:
+        :param options:
         :return:
         """
         raise Exception('Not implemented since this is a MultiFileParser')
@@ -431,6 +426,10 @@ class MultiFileParser(AnyParser):
 # aliases used in SingleFileParserFunction
 ParsingMethodForStream = Callable[[Type[T], TextIOBase, Logger], T]
 ParsingMethodForFile = Callable[[Type[T], str, str, Logger], T]
+parsing_method_stream_example_signature_str = 'def my_parse_fun(desired_type: Type[T], stream: TextIOBase, ' \
+                                              'logger: Logger, **kwargs) -> T'
+parsing_method_file_example_signature_str = 'def my_parse_fun(desired_type: Type[T], path: str, encoding: str, ' \
+                                            'logger: Logger, **kwargs) -> T'
 
 
 class CaughtTypeError(Exception):
@@ -459,7 +458,8 @@ class CaughtTypeError(Exception):
         :return:
         """
         msg = 'Caught TypeError while calling parsing function \'' + str(parser_func.__name__) + '\'. ' \
-              'Note that the parsing function signature should be my_parse_func(type, stream, logger, *args, **kwargs).' \
+              'Note that the parsing function signature should be ' + parsing_method_stream_example_signature_str \
+              + ' (streaming=True) or ' + parsing_method_file_example_signature_str + ' (streaming=False).' \
               'Caught error message is : ' + caught.__class__.__name__ + ' : ' + str(caught)
         return CaughtTypeError(msg).with_traceback(caught.__traceback__)
 
@@ -477,9 +477,9 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
 
     Two kind of parser_function may be provided as implementations:
     * if streaming_mode=True (default), this class handles opening and closing the file, and parser_function should
-    have a signature such as my_func(desired_type: Type[T], opened_file: TextIOBase, logger: Logger, *args, **kwargs) -> T
+    have a signature such as my_func(desired_type: Type[T], opened_file: TextIOBase, logger: Logger, **kwargs) -> T
     * if streaming_mode=False, this class does not handle opening and closing the file. parser_function should be a
-    my_func(desired_type: Type[T], file_path: str, encoding: str, logger: Logger, *args, **kwargs) -> T
+    my_func(desired_type: Type[T], file_path: str, encoding: str, logger: Logger, **kwargs) -> T
     """
 
     def __init__(self, parser_function: Union[ParsingMethodForStream, ParsingMethodForFile],
@@ -491,9 +491,9 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
 
         Two kind of parser_function may be provided as implementations:
         * if streaming_mode=True (default), this class handles opening and closing the file, and parser_function should
-        have a signature such as my_func(desired_type: Type[T], opened_file: TextIOBase, *args, **kwargs) -> T
+        have a signature such as my_func(desired_type: Type[T], opened_file: TextIOBase, **kwargs) -> T
         * if streaming_mode=False, this class does not handle opening and closing the file. parser_function should be a
-        my_func(desired_type: Type[T], file_path: str, encoding: str, *args, **kwargs) -> T
+        my_func(desired_type: Type[T], file_path: str, encoding: str, **kwargs) -> T
 
         :param parser_function:
         :param streaming_mode: an optional boolean (default True) indicating if the function should be called with an
@@ -535,7 +535,11 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
         # but pprint uses __repr__ so we'd like users to see the small and readable version
         return self.__str__()
 
-    def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger, **kwargs) -> T:
+    def get_id_for_options(self):
+        return self._custom_name or self._parser_func.__name__
+
+    def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger,
+                          options: Dict[str, Dict[str, Any]]) -> T:
         """
         Relies on the inner parsing function to parse the file.
         If _streaming_mode is True, the file will be opened and closed by this method. Otherwise the parsing function
@@ -544,9 +548,11 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
         :param desired_type:
         :param file_path:
         :param encoding:
-        :param kwargs:
+        :param options:
         :return:
         """
+        opts = get_options_for_id(options, self.get_id_for_options())
+
         if self._streaming_mode:
 
             # We open the stream, and let the function parse from it
@@ -557,9 +563,9 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
 
                 # Apply the parsing function
                 if self.function_args is None:
-                    return self._parser_func(desired_type, file_stream, logger, **kwargs)
+                    return self._parser_func(desired_type, file_stream, logger, **opts)
                 else:
-                    return self._parser_func(desired_type, file_stream, logger, **self.function_args, **kwargs)
+                    return self._parser_func(desired_type, file_stream, logger, **self.function_args, **opts)
 
             except TypeError as e:
                 raise CaughtTypeError.create(self._parser_func, e)
@@ -572,6 +578,6 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
         else:
             # the parsing function will open the file itself
             if self.function_args is None:
-                return self._parser_func(desired_type, file_path, encoding, logger, **kwargs)
+                return self._parser_func(desired_type, file_path, encoding, logger, **opts)
             else:
-                return self._parser_func(desired_type, file_path, encoding, logger, **self.function_args, **kwargs)
+                return self._parser_func(desired_type, file_path, encoding, logger, **self.function_args, **opts)

@@ -132,153 +132,6 @@ class NoParserFoundForObjectType(Exception):
         return e
 
 
-# class MultipleParsersFoundForObjectType(Exception):
-#     """
-#     Raised whenever several parsers are found that say they can specifically parse a given object type. (= non-generic
-#     parsers). In that case there is no criterion to decide.. better throw an exception.
-#     """
-#     def __init__(self, contents):
-#         """
-#         We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
-#         https://github.com/nose-devs/nose/issues/725
-#         That's why we have a helper static method create()
-#
-#         :param contents:
-#         """
-#         super(MultipleParsersFoundForObjectType, self).__init__(contents)
-#
-#     @staticmethod
-#     def create(obj_type: Type[T], specific_parsers: List[Parser]):
-#         """
-#         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
-#         https://github.com/nose-devs/nose/issues/725
-#
-#         :param obj_type:
-#         :param specific_parsers:
-#         :return:
-#         """
-#         msg = 'Multiple parsers are explicitly registered for type \'' + get_pretty_type_str(obj_type) + '\'. ' \
-#               'Impossible to decide which one to choose. This is probably a mistake in parser registration. Found' \
-#               ' parsers : ' + str(specific_parsers)
-#
-#         return MultipleParsersFoundForObjectType(msg)
-
-
-
-# def find_parser_to_use_from_parser_list(obj_on_filesystem: PersistedObject, object_type: Type[T],
-#                                         parsers: List[Parser],
-#                                         logger: Logger = None) -> Parser[T]:
-#     """
-#     Checks in the provided parsers for the one to use to parse obj_on_filesystem as an object of type object_type
-#
-#     :param obj_on_filesystem:
-#     :param object_type:
-#     :param parsers:
-#     :param logger:
-#     :return:
-#     """
-#     # specific_parsers = []
-#     # generic_parsers = []
-#     #
-#     # # First let's search for parsers able to parse this type of object.
-#     # # Make the distinction between specific and generic.
-#     # for parser in parsers:
-#     #     if parser.supported_types:
-#     #         if object_type in parser.supported_types:
-#     #             # This means that the parser is dedicated for this type
-#     #             specific_parsers.append(parser)
-#     #     else:
-#     #         # This means that the parser is generic for any type
-#     #         generic_parsers.append(parser)
-#     #
-#     # if (len(specific_parsers) + len(generic_parsers)) == 0:
-#     #     # no parser found
-#     #     raise NoParserFoundForObjectType.create(object_type)
-#     # else:
-#     #     # if len(specific_parsers) > 1:
-#     #     #     # several specific parsers found
-#     #     #     raise MultipleParsersFoundForObjectType.create(object_type, specific_parsers)
-#     #     # else:
-#     #     # # one specific parser found. Check the file type (single/multi) to decide
-#     #     # specific_found = specific_parsers[0]
-#     #
-#     #     if obj_on_filesystem.is_singlefile and isinstance(specific_found, SingleFileParser):
-#     #         if specific_found.supports_file_extension(obj_on_filesystem.ext):
-#     #             return specific_found
-#     #         else:
-#     #             # this is a singlefile parser for that type of object, but it does not support that extension
-#     #             pass
-#     #     elif (not obj_on_filesystem.is_singlefile) and isinstance(specific_found, MultiFileParser):
-#     #         # ok for multifile
-#     #         return specific_found
-#     #
-#     #     # if we're here, either
-#     #     # - there is a signelfile parser and object is a singlefile with a different extension
-#     #     # - there is a multifile parser and a singlefile found, or vice-versa
-#     #     logger.info('There is a registered parsing chain for this type \'' + self.get_pretty_type_str()
-#     #                 + '\' but not for extension ' + self.get_pretty_ext() + ', only for extensions '
-#     #                 + str(e.extensions_supported) + '. Falling back on generic parsers.')
-
-
-
-
-# # 2. Try to find and use registered parsing chains
-    # try:
-    #     return self.parse_object(obj, lazy_parsing=lazy_parsing, logger=logger)
-    # except NoParserFoundForObjectType:
-    #     logger.info(
-    #         'There was no explicitly registered parsing chain for this type \'' + obj.get_pretty_type()
-    #         + '\'. Falling back on default parsers.')
-    # except NoParserFoundForObjectExt as e:
-    #     logger.info('There is a registered parsing chain for this type \'' + obj.get_pretty_type()
-    #                 + '\' but not for extension ' + obj.get_pretty_ext() + ', only for extensions '
-    #                 + str(e.extensions_supported) + '. Falling back on default parsers.')
-    #
-    # # 3. Redirects on the appropriate parsing method : collection or single object
-    # if obj.is_collection:
-    #     return self._parse_collection_object(obj, lazy_parsing=lazy_parsing, logger=logger)
-    # else:
-    #     return self._parse_object(obj, logger)
-
-
-
-
-
-
-
-
-# def _find_parsing_chain_to_use(obj: PersistedObject, obj_type: Type[T],
-#                                parsing_chains_for_exts: Dict[str, TypedParsingChain[T]]) -> TypedParsingChain[T]:
-#     """
-#     Utility method to find a parsing chain among the ones provided, to parse object obj of type obj_type.
-#     The choice is simply based on the object extension if the object is a singlefile. If the object is a multifile,
-#     the dictionary is looked for an entry with the special key MULTIFILE_EXT
-#
-#     :param obj:
-#     :param obj_type:
-#     :param parsing_chains_for_exts:
-#     :return:
-#     """
-#
-#     # checks
-#     check_var(obj, var_types=PersistedObject, var_name='obj')
-#     check_var(obj_type, var_types=type, var_name='obj_type')
-#     check_var(parsing_chains_for_exts, var_types=dict, var_name='parsing_chains', min_len=1)
-#
-#     # Check what kind of object is present on the filesystem with this prefix, and check if it cab be read with
-#     # the parsing chains provided.
-#     if obj.is_singlefile and obj.ext in parsing_chains_for_exts.keys():
-#         return parsing_chains_for_exts[obj.ext]
-#
-#     elif MULTIFILE_EXT in parsing_chains_for_exts.keys():
-#         return parsing_chains_for_exts[MULTIFILE_EXT]
-#
-#     else:
-#         # there is a singlefile but not with the appropriate extension
-#         # or
-#         # there is a multifile, but there is no parsing chain for multifile
-#         raise NoParserFoundForObjectExt.create(obj, obj_type, parsing_chains_for_exts.keys())
-
 def insert_element_to_dict_of_list(dict_of_list, key, parser):
     """
     Utility method
@@ -886,7 +739,7 @@ class ConversionFinder(metaclass=ABCMeta):
         pass
 
     def find_and_convert(self, attr_name: str, attr_value: S, desired_attr_type: Type[T], logger: Logger,
-                         *args, **kwargs) -> T:
+                         options: Dict[str, Dict[str, Any]]) -> T:
         """
         Utility method to convert some value into the desired type. It relies on get_all_conversion_chains to find the
         converters, and apply them in correct order
@@ -908,7 +761,7 @@ class ConversionFinder(metaclass=ABCMeta):
                 all_errors = dict()
                 for chain in reversed(all_chains):
                     try:
-                        return chain.convert(desired_attr_type, attr_value, logger, *args, **kwargs)
+                        return chain.convert(desired_attr_type, attr_value, logger, options)
                     except Exception as e:
                         all_errors[chain] = e
                 raise ConversionException.create(attr_name, attr_value, desired_attr_type, all_errors)
@@ -919,7 +772,7 @@ class ConversionFinder(metaclass=ABCMeta):
 
     @staticmethod
     def try_convert_value(conversion_finder, attr_name: str, attr_value: S, desired_attr_type: Type[T], logger: Logger,
-                         *args, **kwargs) -> T:
+                          options: Dict[str, Dict[str, Any]]) -> T:
         """
         Utility method to try to use provided conversion_finder to convert attr_value into desired_attr_type.
         If no conversion is required, the conversion finder is not even used (it can be None)
@@ -929,8 +782,7 @@ class ConversionFinder(metaclass=ABCMeta):
         :param attr_value:
         :param desired_attr_type:
         :param logger:
-        :param args:
-        :param kwargs:
+        :param options:
         :return:
         """
 
@@ -942,7 +794,7 @@ class ConversionFinder(metaclass=ABCMeta):
                 return conversion_finder.find_and_convert(attr_name,
                                                           attr_value,
                                                           desired_attr_type,
-                                                          logger, *args, **kwargs)
+                                                          logger, options)
             else:
                 raise NoConverterAvailableForAttributeException.create(conversion_finder,
                                                                        attr_value,

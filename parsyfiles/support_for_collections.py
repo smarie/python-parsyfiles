@@ -26,8 +26,10 @@ from parsyfiles.var_checker import check_var
 #     return [line_str for line_str in file_object]
 
 
-def convert_collection_values_according_to_pep(coll_to_convert: dict, desired_type: Type[T],
-                                               conversion_finder: ConversionFinder, logger: Logger, **kwargs) -> T:
+def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List, Set, Tuple],
+                                               desired_type: Union[Type[Dict], Type[List], Type[Set], Type[Tuple]],
+                                               conversion_finder: ConversionFinder, logger: Logger, **kwargs) \
+        -> Union[Dict, List, Set, Tuple]:
     """
     Helper method to convert the values of a collection into the required (pep-declared) value type in desired_type.
     If desired_type does not explicitly mention a type for its values, the collection will be returned as is, otherwise
@@ -384,22 +386,37 @@ class MultifileCollectionParser(MultiFileParser):
 
         return children_plan
 
-    def _parse_multifile(self, desired_type: Type[Union[Dict, List]], obj: PersistedObject,
+    def _parse_multifile(self, desired_type: Type[Union[Dict, List, Set, Tuple]], obj: PersistedObject,
                          parsing_plan_for_children: Dict[str, ParsingPlan], logger: Logger,
-                         lazy_parsing: bool = False, background_parsing: bool = False, *args, **kwargs) \
-            -> Union[Dict, List]:
+                         options: Dict[str, Dict[str, Any]]) \
+            -> Union[Dict, List, Set, Tuple]:
         """
+        Options may contain a section with id 'MultifileCollectionParser' containing the following options:
+        * lazy_parsing: if True, the method will return immediately without parsing all the contents. Instead, the
+        returned collection will perform the parsing the first time an item is required.
+        * background_parsing: if True, the method will return immediately while a thread parses all the contents in
+        the background. Note that users cannot set both lazy_parsing and background_parsing to True at the same time
 
         :param desired_type:
         :param obj:
-        :param parsed_children:
+        :param parsing_plan_for_children:
         :param logger:
-        :param lazy_parsing: if True, the method will return immediately without parsing all the contents. Instead, the
-        returned collection will perform the parsing the first time an item is required.
-        :param background_parsing: if True, the method will return immediately while a thread parses all the contents in
-        the background. Note that users cannot set both lazy_parsing and background_parsing to True at the same time
+        :param options:
         :return:
         """
+
+        # first get the options and check them
+        lazy_parsing = False
+        background_parsing = False
+
+        opts = self.get_applicable_options(options)
+        for opt_key, opt_val in opts.items():
+            if opt_key is 'lazy_parsing':
+                lazy_parsing = opt_val
+            elif opt_key is 'background_parsing':
+                background_parsing = opt_val
+            else:
+                raise Exception('Invalid option in MultiFileCollectionParser : ' + opt_key)
 
         check_var(lazy_parsing, var_types=bool, var_name='lazy_parsing')
         check_var(background_parsing, var_types=bool, var_name='background_parsing')
@@ -409,8 +426,8 @@ class MultifileCollectionParser(MultiFileParser):
 
         if lazy_parsing:
             # build a lazy dictionary
-            results = LazyDictionary(list(parsing_plan_for_children.keys()),
-                                 loading_method=lambda x: parsing_plan_for_children[x].execute(logger, *args, **kwargs))
+            results = LazyDictionary(sorted(list(parsing_plan_for_children.keys())),
+                                 loading_method=lambda x: parsing_plan_for_children[x].execute(logger, options))
             logger.info('Assembling a ' + get_pretty_type_str(desired_type) + ' from all children of ' + str(obj)
                         + ' (lazy parsing: children will be parsed when used) ')
 
@@ -426,7 +443,7 @@ class MultifileCollectionParser(MultiFileParser):
             # -- use key-based sorting on children to lead to reproducible results
             # (in case of multiple errors, the same error will show up first everytime)
             for child_name, child_plan in sorted(parsing_plan_for_children.items()):
-                results[child_name] = child_plan.execute(logger, *args, **kwargs)
+                results[child_name] = child_plan.execute(logger, options)
             logger.info('Assembling a ' + get_pretty_type_str(desired_type) + ' from all parsed children of '
                         + str(obj))
 
