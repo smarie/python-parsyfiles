@@ -25,7 +25,7 @@ This library provides a *framework*, not a specific parser for a specific file f
           * [Solved Difficulty 2 - Generic parsers](#solved-difficulty-2---generic-parsers)
           * [Understanding the inference logic - in which order are the parsers tried ?](#understanding-the-inference-logic---in-which-order-are-the-parsers-tried-)
     * [3- Multifile objects: combining several parsers](#3--multifile-objects-combining-several-parsers)
-    * [5- Advanced topics](#5--advanced-topics)
+    * [4- Advanced topics](#4--advanced-topics)
        * [(a) Lazy parsing](#a-lazy-parsing)
        * [(b) Parsing wrappers of existing types - writing proxy classes](#b-parsing-wrappers-of-existing-types---writing-proxy-classes)
        * [(c) Contract validation for parsed objects : combo with classtools-autocode](#c-contract-validation-for-parsed-objects--combo-with-classtools-autocode)
@@ -598,7 +598,7 @@ Completed parsing successfully
 Note that multifile objects and singlefile objects may coexist in the same folder, and that parsing is recursive - meaning that multifile objects or collections may contain multifile children as well.
 
 
-### 5- Advanced topics
+### 4- Advanced topics
 
 #### (a) Lazy parsing
 
@@ -810,7 +810,7 @@ TODO
 
 * Check [here](https://github.com/webmaven/python-parsing-tools) for other parsers in Python, that you might wish to register as unitary parsers to perform specific file format parsing (binary, json, custom...) for some of your objects.
 
-* Do you like this library ? You might also like [these](https://github.com/smarie?utf8=%E2%9C%93&tab=repositories&q=&type=&language=python)* 
+* Do you like this library ? You might also like [these](https://github.com/smarie?utf8=%E2%9C%93&tab=repositories&q=&type=&language=python) 
 
 * This [cattrs](https://cattrs.readthedocs.io/en/latest/readme.html) project seems to have related interests, to check. 
 
