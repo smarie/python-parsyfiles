@@ -123,6 +123,32 @@ class DemoTests(TestCase):
 
         RootParser().print_capabilities_for_type(typ=DataFrame)
 
+    def test_simple_collection_set_list_tuple(self):
+        dfl = parse_item('./test_data/demo/simple_collection', List[DataFrame], logger=getLogger())
+        pprint(dfl)
+        # dataframe objects are not mutable > can't be hashed and therefore no set can be built
+        #dfs = parse_item('./test_data/demo/simple_collection', Set[DataFrame], logger=getLogger())
+        #pprint(dfs)
+        dft = parse_item('./test_data/demo/simple_collection', Tuple[DataFrame, DataFrame, DataFrame, DataFrame, DataFrame],
+                         logger=getLogger())
+        pprint(dft)
+
+
+    def test_simple_collection_nologs(self):
+        dfs = parse_collection('./test_data/demo/simple_collection', DataFrame, logger=getLogger())
+        pprint(dfs)
+
+        df = parse_item('./test_data/demo/simple_collection/c', DataFrame, logger=getLogger())
+        pprint(df)
+
+        # this defaults to the default logger
+        # dfs = parse_collection('./test_data/demo/simple_collection', DataFrame, logger=None)
+        # pprint(dfs)
+        #
+        # df = parse_item('./test_data/demo/simple_collection/c', DataFrame, logger=None)
+        # pprint(df)
+
+
     def test_simple_collection_lazy(self):
         dfs = parse_collection('./test_data/demo/simple_collection', DataFrame, lazy_mfcollection_parsing=True)
         # check len
@@ -174,7 +200,7 @@ class DemoTests(TestCase):
         # pprint(e)
 
         # parse all of them
-        sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest, logger=getLogger())
+        sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
         pprint(sf_tests)
 
         #

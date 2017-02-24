@@ -27,7 +27,7 @@ from parsyfiles.var_checker import check_var
 
 
 def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List, Set, Tuple],
-                                               desired_type: Union[Type[Dict], Type[List], Type[Set], Type[Tuple]],
+                                               desired_type: Type[Union[Dict, List, Set, Tuple]],
                                                conversion_finder: ConversionFinder, logger: Logger, **kwargs) \
         -> Union[Dict, List, Set, Tuple]:
     """
@@ -331,8 +331,8 @@ class MultifileCollectionParser(MultiFileParser):
         self.parser_finder = parser_finder
 
     def __str__(self):
-        return 'Multifile Collection parser (based on \'' + str(self.parser_finder) + '\' to find the parser for each ' \
-                                                                                      'item)'
+        return 'Multifile Collection parser (' + str(self.parser_finder) + ')'
+        #(based on \'' + str(self.parser_finder) + '\' to find the parser for each item)'
 
     # def is_able_to_parse(self, desired_type: Type[Any], desired_ext: str, strict: bool):
     #     if desired_type is None:
@@ -495,12 +495,12 @@ def get_default_collection_parsers(parser_finder: ParserFinder, conversion_finde
     :return:
     """
     return [SingleFileParserFunction(parser_function=read_dict_or_list_from_json,
-                                     streaming_mode=True,
+                                     streaming_mode=True, custom_name='read_dict_or_list_from_json',
                                      supported_exts={'.json'},
                                      supported_types={dict, list},
                                      function_args={'conversion_finder': conversion_finder}),
             SingleFileParserFunction(parser_function=read_dict_from_properties,
-                                     streaming_mode=True,
+                                     streaming_mode=True, custom_name='read_dict_from_properties',
                                      supported_exts={'.properties', '.txt'},
                                      supported_types={dict},
                                      function_args={'conversion_finder': conversion_finder}),
@@ -518,7 +518,7 @@ def get_default_collection_converters(conversion_finder: ConversionFinder) -> Li
     and from other type to dict)
     :return:
     """
-    return [ConverterFunction(from_type=List, to_type=Set, conversion_method=list_to_set,
+    return [ConverterFunction(from_type=List, to_type=Set, conversion_method=list_to_set, custom_name='list_to_set',
                               function_args={'conversion_finder': conversion_finder}),
             ConverterFunction(from_type=List, to_type=Tuple, conversion_method=list_to_tuple,
-                              function_args={'conversion_finder': conversion_finder})]
+                              custom_name='list_to_tuple', function_args={'conversion_finder': conversion_finder})]

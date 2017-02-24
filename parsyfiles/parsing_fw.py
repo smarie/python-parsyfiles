@@ -14,43 +14,6 @@ from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
 
 
-def parse_item(location: str, item_type: Type[T], item_name_for_log: str = None,
-               file_mapping_conf: FileMappingConfiguration = None,
-               logger: Logger = None, lazy_mfcollection_parsing: bool = False) -> T:
-    """
-    Creates a RootParser() and calls its parse_item() method
-
-    :param location:
-    :param item_type:
-    :param item_name_for_log:
-    :param file_mapping_conf:
-    :param lazy_mfcollection_parsing:
-    :return:
-    """
-    rp = RootParser('parsyfiles defaults', logger=logger)
-    return rp.parse_item(location, item_type, item_name_for_log=item_name_for_log, file_mapping_conf=file_mapping_conf,
-                         lazy_mfcollection_parsing=lazy_mfcollection_parsing)
-
-
-def parse_collection(location: str, base_item_type: Type[T], item_name_for_log: str = None,
-                     file_mapping_conf: FileMappingConfiguration = None, logger: Logger = None,
-                     lazy_mfcollection_parsing: bool = False)\
-        -> Dict[str, T]:
-    """
-    Utility method to create a RootParser() with default configuration and call its parse_collection() method
-
-    :param location:
-    :param base_item_type:
-    :param item_name_for_log:
-    :param file_mapping_conf:
-    :param lazy_mfcollection_parsing:
-    :return:
-    """
-    rp = RootParser('parsyfiles defaults', logger=logger)
-    return rp.parse_collection(location, base_item_type, item_name_for_log=item_name_for_log,
-                               file_mapping_conf=file_mapping_conf, lazy_mfcollection_parsing=lazy_mfcollection_parsing)
-
-
 def warn_import_error(type_of_obj_support: str, caught: ImportError):
     """
     Utility method to print a warning message about failed import of some modules
@@ -73,12 +36,12 @@ class RootParser(ParserRegistryWithConverters):
     """
 
     # default logger that prints on stdout
-    _default_logger = getLogger()
+    _default_logger = getLogger('parsyfiles')
     ch = StreamHandler(sys.stdout)
     _default_logger.addHandler(ch)
 
     def __init__(self, pretty_name: str = None, strict_matching: bool = False,
-                 register_default_parsers: bool = True, logger: Logger = None):
+                 register_default_parsers: bool = True, logger: Logger = _default_logger):
         """
         Constructor. Initializes the dictionary of parsers with the optionally provided initial_parsers, and
         inits the lock that will be used for access in multithreading context.
@@ -142,10 +105,8 @@ class RootParser(ParserRegistryWithConverters):
             except ImportError as e:
                 warn_import_error('DataFrame', e)
 
-        if logger is None:
-            # Configure with default logger that also print logs to std out
-            logger = RootParser._default_logger
-
+        logger = logger or RootParser._default_logger
+        check_var(logger, var_types=Logger, var_name='logger')
         self._logger = logger
 
     def install_basic_multifile_support(self):
@@ -203,8 +164,8 @@ class RootParser(ParserRegistryWithConverters):
         item_name_for_log = item_name_for_log or ''
         check_var(item_name_for_log, var_types=str, var_name='item_name_for_log')
 
-        print('**** Starting to parse single object ' + item_name_for_log + ' of type <'
-              + get_pretty_type_str(item_type) + '> at location ' + location + ' ****')
+        self._logger.info('**** Starting to parse single object ' + item_name_for_log + ' of type <'
+                          + get_pretty_type_str(item_type) + '> at location ' + location + ' ****')
 
         # common steps
         return self._parse__item(item_type, location, file_mapping_conf, lazy_mfcollection_parsing)
@@ -243,3 +204,41 @@ class RootParser(ParserRegistryWithConverters):
 
         return res
 
+
+def parse_item(location: str, item_type: Type[T], item_name_for_log: str = None,
+               file_mapping_conf: FileMappingConfiguration = None,
+               logger: Logger = RootParser._default_logger, lazy_mfcollection_parsing: bool = False) -> T:
+    """
+    Creates a RootParser() and calls its parse_item() method
+
+    :param location:
+    :param item_type:
+    :param item_name_for_log:
+    :param file_mapping_conf:
+    :param logger:
+    :param lazy_mfcollection_parsing:
+    :return:
+    """
+    rp = RootParser('parsyfiles defaults', logger=logger)
+    return rp.parse_item(location, item_type, item_name_for_log=item_name_for_log, file_mapping_conf=file_mapping_conf,
+                         lazy_mfcollection_parsing=lazy_mfcollection_parsing)
+
+
+def parse_collection(location: str, base_item_type: Type[T], item_name_for_log: str = None,
+                     file_mapping_conf: FileMappingConfiguration = None, logger: Logger = RootParser._default_logger,
+                     lazy_mfcollection_parsing: bool = False)\
+        -> Dict[str, T]:
+    """
+    Utility method to create a RootParser() with default configuration and call its parse_collection() method
+
+    :param location:
+    :param base_item_type:
+    :param item_name_for_log:
+    :param file_mapping_conf:
+    :param logger:
+    :param lazy_mfcollection_parsing:
+    :return:
+    """
+    rp = RootParser('parsyfiles defaults', logger=logger)
+    return rp.parse_collection(location, base_item_type, item_name_for_log=item_name_for_log,
+                               file_mapping_conf=file_mapping_conf, lazy_mfcollection_parsing=lazy_mfcollection_parsing)

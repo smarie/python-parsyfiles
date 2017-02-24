@@ -142,7 +142,8 @@ def get_default_config_converters(conv_finder: ConversionFinder) -> List[Union[C
     and from other type to ConfigParser)
     :return:
     """
-    return [ConverterFunction(ConfigParser, DictOfDict, config_to_dict_of_dict,
+    return [ConverterFunction(ConfigParser, DictOfDict, config_to_dict_of_dict, custom_name='config_to_dict_of_dict',
                               function_args={'conversion_finder': conv_finder}),
             ConverterFunction(ConfigParser, dict, merge_all_config_sections_into_a_single_dict,
+                              custom_name='merge_all_config_sections_into_a_single_dict',
                               function_args={'conversion_finder': conv_finder})]

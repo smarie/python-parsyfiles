@@ -402,8 +402,9 @@ class MultifileObjectParser(MultiFileParser):
             return super(MultifileObjectParser, self).is_able_to_parse(desired_type, desired_ext, strict)
 
     def __str__(self):
-        return 'Generic MF Object parser (based on \'' + str(self.parser_finder) + '\' to find the parser for each ' \
-                                                                                   'attribute)'
+        return 'Multifile Object parser (' + str(self.parser_finder) + ')'
+        #'(based on \'' + str(self.parser_finder) + '\' to find the parser for each ' \
+        #                                                                           'attribute)'
 
     # def __repr__(self):
     #     # should we rather use the full canonical names ? yes, but pprint uses __repr__ so we'd like users to see
