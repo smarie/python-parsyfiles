@@ -7,6 +7,7 @@ from unittest import TestCase
 from pandas import DataFrame, Series
 
 from parsyfiles import parse_collection, RootParser, parse_item
+from parsyfiles.parsing_core_api import ParsingException
 
 
 class Timer(object):
@@ -81,32 +82,6 @@ class AllTests(TestCase):
         e = parse_collection('./test_data/objects', ExecOpTest)
         pprint(e)
 
-    def test_simple_object_with_contract(self):
-
-        from classtools_autocode import autoprops, autoargs
-        from contracts import contract, new_contract
-
-        # custom contract needed in the class
-        new_contract('allowed_op', lambda x: x in {'+', '-'})
-
-        @autoprops
-        class ExecOpTest(object):
-            @autoargs
-            @contract(x='int|float', y='int|float', op='str,allowed_op', expected_result='int|float')
-            def __init__(self, x: float, y: float, op: str, expected_result: float):
-                pass
-
-        # Test
-        # create the parser and parse a single file
-        e = parse_item('./test_data/objects/test_diff_1', ExecOpTest)
-        print(e.x)
-        print(e.y)
-        print(e.op)
-        print(e.expected_result)
-
-        l = parse_collection('./test_data/objects', ExecOpTest)
-        pprint(l)
-
     def test_collections(self):
         l = parse_item('./test_data/collections', Tuple[Dict[str, int], List[int], Set[int], Tuple[str, int, str]])
         print(l)
@@ -153,14 +128,18 @@ class DemoTests(TestCase):
         dfs = parse_collection('./test_data/demo/simple_collection', DataFrame, lazy_mfcollection_parsing=True)
         # check len
         self.assertEquals(len(dfs), 5)
+        print('dfs length : ' + str(len(dfs)))
         # check keys
         self.assertEquals(dfs.keys(), {'a','b','c','d','e'})
+        print('dfs keys : ' + str(dfs.keys()))
         # check contains
-        self.assertTrue(dfs.__contains__('b'))
+        self.assertTrue('b' in dfs)
+        print('Is b in dfs : ' + str('b' in dfs))
         # check iter
         self.assertEquals({key for key in dfs}, {'a', 'b', 'c', 'd', 'e'})
         # check get
         self.assertIsNotNone(dfs.get('b'))
+        pprint(dfs.get('b'))
         # check values
         for value in dfs.values():
             print(value)
@@ -206,6 +185,30 @@ class DemoTests(TestCase):
         #
         RootParser().print_capabilities_for_type(typ=ExecOpTest)
 
+    def test_simple_object_with_contract(self):
+
+        from classtools_autocode import autoprops, autoargs
+        from contracts import contract, new_contract
+
+        # custom contract used in the class
+        new_contract('allowed_op', lambda x: x in {'+','*'})
+
+        @autoprops
+        class ExecOpTest(object):
+            @autoargs
+            @contract(x='int|float', y='int|float', op='str,allowed_op', expected_result='int|float')
+            def __init__(self, x: float, y: float, op: str, expected_result: float):
+                pass
+
+            def __str__(self):
+                return self.__repr__()
+
+            def __repr__(self):
+                return str(self.x) + ' ' + self.op + ' ' + str(self.y) + ' =? ' + str(self.expected_result)
+
+        with self.assertRaises(ParsingException):
+            sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
+
     def test_multifile_objects(self):
 
         class AlgoConf(object):
@@ -232,6 +235,11 @@ class DemoTests(TestCase):
         pprint(mf_tests)
 
         RootParser().print_capabilities_for_type(typ=ExecOpSeriesTest)
+
+        from parsyfiles import FlatFileMappingConfiguration
+        dfs = parse_collection('./test_data/demo/complex_objects_flat', DataFrame,
+                               file_mapping_conf=FlatFileMappingConfiguration())
+        pprint(dfs)
 
     def test_simple_collection_dataframe_all(self):
         dfs = parse_collection('./test_data/demo/simple_collection_dataframe_inference', DataFrame)

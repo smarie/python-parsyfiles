@@ -4,42 +4,50 @@ A declarative framework that combines many popular python parsers (json, jprops,
 This library provides a *framework*, not a specific parser for a specific file format. By default several classic parsers from the python world are already registered, but it is also extremely easy to add more if your favourite parser is missing. Even better: if you just need to parse a derived type of a type that can already be parsed, you may simply need to register a *type converter*, the framework will link it to any compliant parser for you. 
 
 ## Contents
-  * [Overview](#overview)
-     * [Intended audience](#intended-audience)
-     * [Typical use cases](#typical-use-cases)
-     * [Main features](#main-features)
-  * [Installation](#installation)
-     * [Recommended : create a clean virtual environment](#recommended--create-a-clean-virtual-environment)
-     * [Installation steps](#installation-steps)
-     * [Uninstalling](#uninstalling)
-  * [Usage](#usage)
-     * [1- Collections of known types : a list of DataFrame](#1--collections-of-known-types--a-list-of-dataframe)
-        * [Note: parsing a single file](#note-parsing-a-single-file)
-     * [2- Simple user-defined types](#2--simple-user-defined-types)
-     * [4- Dataframes - revisited](#4--dataframes---revisited)
-     * [5- Complex and multifile types](#5--complex-and-multifile-types)
+ * [Overview](#overview)
+    * [Intended audience](#intended-audience)
+    * [Typical use cases](#typical-use-cases)
+    * [Main features](#main-features)
+ * [Installation](#installation)
+    * [Recommended : create a clean virtual environment](#recommended--create-a-clean-virtual-environment)
+    * [Installation steps](#installation-steps)
+    * [Uninstalling](#uninstalling)
+ * [Usage](#usage)
+    * [1- Collections of known types : a list of DataFrame](#1--collections-of-known-types--a-list-of-dataframe)
+        * [Understanding the log output](#understanding-the-log-output)
+        * [Parsing a single file only](#parsing-a-single-file-only)
+        * [Default collection type and other supported types](#default-collection-type-and-other-supported-types)
+    * [2- Simple user-defined types](#2--simple-user-defined-types)
+        * [Under the hood : why does it work, even on ambiguous files?](#under-the-hood--why-does-it-work-even-on-ambiguous-files)
+           * [a- Several formats/parsers for the same file extension](#a--several-formatsparsers-for-the-same-file-extension)
+           * [b- Generic parsers](#b--generic-parsers)
+           * [c- Understanding the inference logic](#c--understanding-the-inference-logic)
+    * [3- Multifile objects: combining several parsers](#3--multifile-objects-combining-several-parsers)
+        * [Lazy parsing](#lazy-parsing)
+    * [4- Dataframes - revisited](#4--dataframes---revisited)
+    * [5- Complex and multifile types](#5--complex-and-multifile-types)
         * [d - main complex type and final parsing execution](#d---main-complex-type-and-final-parsing-execution)
-     * [Advanced topics](#advanced-topics)
-        * [Flat mode](#flat-mode)
-        * [Item collections](#item-collections)
-  * [See Also](#see-also)
-  * [Combining parsyfiles and classtools_autocode (combo!)](#combining-parsyfiles-and-classtools_autocode-combo)
-  * [Developers](#developers)
-     * [Packaging](#packaging)
-     * [Releasing memo](#releasing-memo)
+ * [Advanced topics](#advanced-topics)
+    * [Flat mode](#flat-mode)
+    * [Item collections](#item-collections)
+ * [See Also](#see-also)
+ * [Combining parsyfiles and classtools_autocode (combo!)](#combining-parsyfiles-and-classtools_autocode-combo)
+* [Developers](#developers)
+ * [Packaging](#packaging)
+ * [Releasing memo](#releasing-memo)
 
 *ToC created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)*
 
 ## Overview
 
-### Intended audience
+### 1- Intended audience
 
 * developers looking for an easy way to parse dictionaries and simple objects from various formats (json, properties, cfg, csv...) using standard python libraries. They can combine this library with [classtools_autocode](https://github.com/smarie/python-classtools-autocode) to preserve compact, readable and content-validated classes.
 
 * developers who already know how to parse their various files independently, but looking for a higher-level tool to read complex objects made of several files/folders and potentially requiring to combine several parsers.
 
 
-### Typical use cases
+### 2- Typical use cases
 
 * **read collections of test cases** on the file system - each test case being composed of several files (for example 2 'test inputs' .csv files, 1 'test configuration' .cfg file, and one 'reference test results' json or yaml file)
 * more generally, **read complex objects that for some reason are not represented by a single file representation**, for example objects made of several csv files (timeseries + descriptive data), combinations of csv and xml/json files, configuration files, pickle files, etc.
@@ -49,7 +57,7 @@ This library provides a *framework*, not a specific parser for a specific file f
 This framework contains a bit of nontrivial logic in order to transparently infer which parser and conversion chain to use, and even in some cases to try several alternatives in order to guess what was your intent. This makes it quite powerful but will certainly be slower and more memory-consuming than writing a dedicated parser tailored for your specific case. However if you are looking for a tool to speedup your development so that you may focus on what's important (your business logic, algorithm implementation, test logic, etc) then have a try, it might do the job.
 
 
-### Main features
+### 3- Main features
 
 * **Declarative (class-based)**: you *first* define the objects to parse - by creating or importing their class -, *then* you use `parse_item` or `parse_collection` on the appropriate folder or file path. 
 * **Simple objects out-of-the-box**: if you're interested in parsing singlefile objects only requiring simple types in their constructor, then the framework is *already* able to parse them, for many singlefile formats (json, properties, txt, csv, yaml and more.).
@@ -72,7 +80,7 @@ In addition the library is
 
 ## Installation
 
-### Recommended : create a clean virtual environment
+### 1- Recommended : create a clean virtual environment
 
 We strongly recommend that you use conda *environment* or pip *virtualenv*/*venv* in order to better manage packages. Once you are in your virtual environment, open a terminal and check that the python interpreter is correct:
 
@@ -84,7 +92,7 @@ We strongly recommend that you use conda *environment* or pip *virtualenv*/*venv
 The first executable that should show up should be the one from the virtual environment.
 
 
-### Installation steps
+### 2- Installation steps
 
 This package is available on `PyPI`. You may therefore use `pip` to install from a release
 
@@ -92,7 +100,7 @@ This package is available on `PyPI`. You may therefore use `pip` to install from
 > pip install parsyfiles
 ```
 
-### Uninstalling
+### 3- Uninstalling
 
 As usual : 
 
@@ -103,6 +111,8 @@ As usual :
 ## Usage
 
 ### 1- Collections of known types : a list of DataFrame
+
+#### (a) Example
 
 The most simple case of all: you wish to parse a collection of files that all have the same type, and for which a parser is already registered. For example your wish to parse a list of `DataFrame` for a data folder that looks like this:
 
@@ -129,30 +139,30 @@ pprint(dfs)
 
 Here is the result
 ```
-**** Starting to parse  collection of <DataFrame> at location ./test_data/demo/simple_collection ****
-Checking all files under ./test_data/demo/simple_collection
-./test_data/demo/simple_collection (multifile)
-./test_data/demo/simple_collection\a (singlefile, .csv)
+**** Starting to parse  collection of <DataFrame> at location ./demo/simple_collection ****
+Checking all files under ./demo/simple_collection
+./demo/simple_collection (multifile)
+./demo/simple_collection\a (singlefile, .csv)
 (...)
-./test_data/demo/simple_collection\e (singlefile, .xlsm)
+./demo/simple_collection\e (singlefile, .xlsm)
 File checks done
 
-Building a parsing plan to parse ./test_data/demo/simple_collection (multifile) into a Dict[str, DataFrame]
-./test_data/demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
-./test_data/demo/simple_collection\a (singlefile, .csv) > DataFrame ------- using <read_df_or_series_from_csv(stream mode)>
+Building a parsing plan to parse ./demo/simple_collection (multifile) into a Dict[str, DataFrame]
+./demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
+./demo/simple_collection\a (singlefile, .csv) > DataFrame ------- using <read_df_or_series_from_csv(stream mode)>
 (...)
-./test_data/demo/simple_collection\e (singlefile, .xlsm) > DataFrame ------- using <read_dataframe_from_xls(file mode)>
+./demo/simple_collection\e (singlefile, .xlsm) > DataFrame ------- using <read_dataframe_from_xls(file mode)>
 Parsing Plan created successfully
 
-Executing Parsing Plan for ./test_data/demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
-Parsing ./test_data/demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
-Parsing ./test_data/demo/simple_collection\a (singlefile, .csv) > DataFrame ------- using <read_df_or_series_from_csv(stream mode)>
---> Successfully parsed a DataFrame from ./test_data/demo/simple_collection\a
+Executing Parsing Plan for ./demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
+Parsing ./demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
+Parsing ./demo/simple_collection\a (singlefile, .csv) > DataFrame ------- using <read_df_or_series_from_csv(stream mode)>
+--> Successfully parsed a DataFrame from ./demo/simple_collection\a
 (...)
-Parsing ./test_data/demo/simple_collection\e (singlefile, .xlsm) > DataFrame ------- using <read_dataframe_from_xls(file mode)>
---> Successfully parsed a DataFrame from ./test_data/demo/simple_collection\e
-Assembling all parsed child items into a Dict[str, DataFrame] to build ./test_data/demo/simple_collection (multifile)
---> Successfully parsed a Dict[str, DataFrame] from ./test_data/demo/simple_collection
+Parsing ./demo/simple_collection\e (singlefile, .xlsm) > DataFrame ------- using <read_dataframe_from_xls(file mode)>
+--> Successfully parsed a DataFrame from ./demo/simple_collection\e
+Assembling all parsed child items into a Dict[str, DataFrame] to build ./demo/simple_collection (multifile)
+--> Successfully parsed a Dict[str, DataFrame] from ./demo/simple_collection
 Completed parsing successfully
 
 {'a':    a  b  c  d
@@ -176,7 +186,7 @@ Completed parsing successfully
 *Note: the above capture was slightly 'improved' for readability, because unfortunately pprint does not display dictionaries of dataframes as nicely as this.*
 
 
-#### Understanding the log output
+#### (b) Understanding the log output
 
 By default the library uses a `Logger` that has an additional handler to print to `stdout`. If you do not want to see all these messages printed to the console, or if you want to use a different logging configuration, you may provide a custom logger to the function:
 
@@ -187,16 +197,16 @@ dfs = parse_collection('./demo/simple_collection', DataFrame, logger=getLogger('
 
 In the log output you see a couple hints on how the parsing framework works:
 
-* first it recursively **checks your folder** to check that it is entirely compliant with the file mapping format. That is the log section beginning with "`Checking all files under ./test_data/demo/simple_collection`". If the same item appears twice (e.g. `a.csv` and `a.txt`)  it will throw an error at this stage (an `ObjectPresentMultipleTimesOnFileSystemError`).
+* first it recursively **checks your folder** to check that it is entirely compliant with the file mapping format. That is the log section beginning with "`Checking all files under ./demo/simple_collection`". If the same item appears twice (e.g. `a.csv` and `a.txt`)  it will throw an error at this stage (an `ObjectPresentMultipleTimesOnFileSystemError`).
 
-* then it recursively **creates a parsing plan** that is able to produce an object the required type. That's the section beginning with "`Building a parsing plan to parse ./test_data/demo/simple_collection (multifile) into a Dict[str, DataFrame]`". Here you may note that by default, a collection of items is actually parsed as an object of type dictionary, where the key is the name of the file without extension, and the value is the object that is parsed from the file. If at this stage it does not find a way to parse a given file into the required object type, it will fail. For example if you add a file in the folder, named `unknown_ext_for_dataframe.ukn`, you will get an error (a `NoParserFoundForObjectExt`).
+* then it recursively **creates a parsing plan** that is able to produce an object the required type. That's the section beginning with "`Building a parsing plan to parse ./demo/simple_collection (multifile) into a Dict[str, DataFrame]`". Here you may note that by default, a collection of items is actually parsed as an object of type dictionary, where the key is the name of the file without extension, and the value is the object that is parsed from the file. If at this stage it does not find a way to parse a given file into the required object type, it will fail. For example if you add a file in the folder, named `unknown_ext_for_dataframe.ukn`, you will get an error (a `NoParserFoundForObjectExt`).
 
-* finally it **executes the parsing plan**. That's the section beginning with "`Executing Parsing Plan for ./test_data/demo/simple_collection (multifile) > Dict[str, DataFrame] (...)`".
+* finally it **executes the parsing plan**. That's the section beginning with "`Executing Parsing Plan for ./demo/simple_collection (multifile) > Dict[str, DataFrame] (...)`".
 
 It is important to understand these 3 log sections, since the main issue with complex frameworks is debugging when something unexpected happens :-).
 
 
-#### Parsing a single file only
+#### (c) Parsing a single file only
 
 The following code may be used to parse a single file explicitly:
 
@@ -212,7 +222,7 @@ pprint(df)
 Important : note that the file extension does not appear in the argument of the `parse_item` function. 
 
 
-#### Default collection type and other supported types 
+#### (d) Default collection type and other supported types 
 
 You might have noticed that the demonstrated collection example returned a `dict` of dataframes, not a `list`. This is the default behaviour of the `parse_collection` method - it has the advantage of not making any assumption on the sorting order. 
 
@@ -226,9 +236,9 @@ from typing import Dict
 df = parse_item('./demo/simple_collection/c', Dict[str, DataFrame])
 ```
 
-You may notice that the `typing` module is used here to entirely specify the type of item to parse. This item is a dictionary with string keys (the file names) and DataFrame values (the parsed file contents).
+The `typing` module is used here to entirely specify the type of item that you want to parse (`Dict[str, DataFrame]`). The parsed item will  be a dictionary with string keys (the file names) and DataFrame values (the parsed file contents).
 
-You may parse a `list`, a `set`, or a `tuple` exactly the same way:
+You may parse a `list`, a `set`, or a `tuple` exactly the same way, using the corresponding `typing` class: 
 
 ```python
 from parsyfiles import parse_item
@@ -240,10 +250,16 @@ dfl = parse_item('./demo/simple_collection', List[DataFrame])
 dft = parse_item('./demo/simple_collection', Tuple[DataFrame, DataFrame, DataFrame, DataFrame, DataFrame])
 ```
 
-Note that `DataFrame` objects are not mutable, so in this particular case the collection cannot be parsed as a `set`.
+For `List` and `Tuple` the implied order is alphabetical on the file names (similar to using `sorted()` on the items of the dictionary).
+Note that `DataFrame` objects are not mutable, so in this particular case the collection cannot be parsed as a `Set`.
+
+
+Finally, note that it is not possible to mix collection and non-collection items together (for example, `Union[int, List[int]]` is not supported).
 
 
 ### 2- Simple user-defined types
+
+#### (a) Example
 
 Suppose that you want to test the following `exec_op` function, and you want to read your test datasets from a bunch of files.
 
@@ -308,25 +324,25 @@ As usual, we tell the framework that we want to parse a collection of objects of
 from pprint import pprint
 from parsyfiles import parse_collection
 
-sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
+sf_tests = parse_collection('./demo/simple_objects', ExecOpTest)
 pprint(sf_tests)
 ```
 
 Here is the result:
 
 ```
-**** Starting to parse  collection of <ExecOpTest> at location ./test_data/demo/simple_objects ****
-Checking all files under ./test_data/demo/simple_objects
+**** Starting to parse  collection of <ExecOpTest> at location ./demo/simple_objects ****
+Checking all files under ./demo/simple_objects
 (...)
 File checks done
 
-Building a parsing plan to parse ./test_data/demo/simple_objects (multifile) into a Dict[str, ExecOpTest]
+Building a parsing plan to parse ./demo/simple_objects (multifile) into a Dict[str, ExecOpTest]
 (...)
 Parsing Plan created successfully
 
-Executing Parsing Plan for ./test_data/demo/simple_objects (multifile) > Dict[str, ExecOpTest] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
+Executing Parsing Plan for ./demo/simple_objects (multifile) > Dict[str, ExecOpTest] ------- using Multifile Dict parser (based on 'parsyfiles defaults' to find the parser for each item)
 (...)
---> Successfully parsed a Dict[str, ExecOpTest] from ./test_data/demo/simple_objects
+--> Successfully parsed a Dict[str, ExecOpTest] from ./demo/simple_objects
 Completed parsing successfully
 
 {'test_diff_1': 1.0 - 1.0 =? 0.0,
@@ -343,89 +359,89 @@ Completed parsing successfully
 ```
 
 
-#### Under the hood : why does it work, even on ambiguous files? 
+#### (b) Under the hood : why does it work, even on ambiguous files? 
 
 In the example above, three files were actually quite difficult to parse into a `dict` before being converted to an `ExecOpTest`: `test_diff_3_csv_format.txt`, `test_diff_4_csv_format2.txt` and `test_sum_4.yaml`. Let's look at both cases in details.
 
-##### a- Several formats/parsers for the same file extension
+##### Solved Difficulty 1 - Several formats/parsers for the same file extension
 
 `test_diff_3_csv_format.txt` and `test_diff_4_csv_format2.txt` are both  .txt file that contains csv-format data. But 
 
-* there are several way to write a dictionary in a csv format (one row of header + one row of values, or one column of names and one column of values).
-* .txt files may also contain many other formats such as properties, etc. 
+* there are several way to write a dictionary in a csv format (one row of header + one row of values, or one column of names + one column of values).
+* .txt files may also contain many other formats such as for example, the 'properties' format. 
 
 How does the framework manage to parse these files ? Lets look at the log output for `test_diff_3_csv_format.txt`:
 
 ```
-Parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_dict_from_properties> => <dict_to_object>$
+Parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_dict_from_properties> => <dict_to_object>$
   !! Caught error during execution !!
   File "C:\W_dev\_pycharm_workspace\python-parsyfiles\parsyfiles\support_for_objects.py", line 273, in dict_to_object
     attr_name)
-  ParsingException : Error while parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) as a ExecOpTest with parser '$<read_dict_from_properties> => <dict_to_object>$' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : caught 
+  ParsingException : Error while parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) as a ExecOpTest with parser '$<read_dict_from_properties> => <dict_to_object>$' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : caught 
   InvalidAttributeNameForConstructorError : Cannot parse object of type <ExecOpTest> using the provided configuration file: configuration contains a property name ('5,4,-,1')that is not an attribute of the object constructor. <ExecOpTest> constructor attributes are : ['y', 'x', 'expected_result', 'op']
 
 Rebuilding local parsing plan with next candidate parser: $<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$
-./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$
-Parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$
+./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$
+Parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$
   !! Caught error during execution !!
   File "C:\Anaconda3\envs\azuremlbricks\lib\base64.py", line 88, in b64decode
     return binascii.a2b_base64(s)
-  ParsingException : Error while parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) as a ExecOpTest with parser '$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : caught 
+  ParsingException : Error while parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) as a ExecOpTest with parser '$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : caught 
   Error : Incorrect padding
 
 Rebuilding local parsing plan with next candidate parser: $<read_str_from_txt> => <constructor_with_str_arg>$
-./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_str_from_txt> => <constructor_with_str_arg>$
-Parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_str_from_txt> => <constructor_with_str_arg>$
+./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_str_from_txt> => <constructor_with_str_arg>$
+Parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_str_from_txt> => <constructor_with_str_arg>$
   !! Caught error during execution !!
   File "C:\W_dev\_pycharm_workspace\python-parsyfiles\parsyfiles\support_for_primitive_types.py", line 98, in constructor_with_str_arg
     return desired_type(source)
-  ParsingException : Error while parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) as a ExecOpTest with parser '$<read_str_from_txt> => <constructor_with_str_arg>$' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : caught 
+  ParsingException : Error while parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) as a ExecOpTest with parser '$<read_str_from_txt> => <constructor_with_str_arg>$' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : caught 
   CaughtTypeError : Caught TypeError while calling conversion function 'constructor_with_str_arg'. Note that the conversion function signature should be 'def my_convert_fun(desired_type: Type[T], source: S, logger: Logger, **kwargs) -> T' (unpacked options mode - default) or def my_convert_fun(desired_type: Type[T], source: S, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T (unpack_options = False).Caught error message is : TypeError : __init__() missing 3 required positional arguments: 'y', 'op', and 'expected_result'
 
 Rebuilding local parsing plan with next candidate parser: $<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict> -> <dict_to_object>$
-./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict> -> <dict_to_object>$
-Parsing ./test_data/demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict> -> <dict_to_object>$
---> Successfully parsed a ExecOpTest from ./test_data/demo/simple_objects\test_diff_3_csv_format
+./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict> -> <dict_to_object>$
+Parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) > ExecOpTest ------- using $<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict> -> <dict_to_object>$
+--> Successfully parsed a ExecOpTest from ./demo/simple_objects\test_diff_3_csv_format
 ```
 
 You can see from the logs that the framework successively tries several ways to parse this file :
 
- * `$<read_dict_from_properties> => <dict_to_object>$`: the txt file is read in the 'properties' format (using `jprops`) into a dictionary, and then the dictionary is converted to a `ExecOpTest` object. This fails.
- * `$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$` : the txt file is read as a string, and then the string is interpreted as a base64-encoded pickle `ExecOpTest` object (!). This fails.
- * `$<read_str_from_txt> => <constructor_with_str_arg>$`: the txt file is read as a string, and then the constructor of `ExecOpTest` is called with that string as unique argument. This fails again.
- * `$<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict> -> <dict_to_object>$`: the txt file is read as a csv into a DataFrame, then the DataFrame is converted to a dictionary, and finally the dictionary is converted into a `ExecOpTest` object. **This finally succeeds**.
+ * `$<read_dict_from_properties> => <dict_to_object>$`: the txt file is read in the 'properties' format (using `jprops`) into a dictionary, and then the dictionary is converted to a `ExecOpTest` object. *This fails.*
+ * `$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$` : the txt file is read as a string, and then the string is interpreted as a base64-encoded pickle `ExecOpTest` object (!). *This fails.*
+ * `$<read_str_from_txt> => <constructor_with_str_arg>$`: the txt file is read as a string, and then the constructor of `ExecOpTest` is called with that string as unique argument. *This fails again.*
+ * `$<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict> -> <dict_to_object>$`: the txt file is read as a csv into a DataFrame, then the DataFrame is converted to a dictionary, and finally the dictionary is converted into a `ExecOpTest` object. *This finally succeeds*.
 
 The same goes for the other file `test_diff_4_csv_format2.txt`. 
     
     
-##### b- Generic parsers
+##### Solved Difficulty 2 - Generic parsers
 
-For `test_sum_4.yaml`, the difficulty is that yaml format may contain a dictionary or a collection directly, but is also able to contain any object thanks to the YAML `object` directive. 
+For `test_sum_4.yaml`, the difficulty is that yaml format may contain a dictionary directly, but is also able to contain any typed object thanks to the YAML `object` directive. Therefore it could contain a `ExecOpTest`.
 
 The parsing logs are the following:
 
 ```
-Parsing ./test_data/demo/simple_objects\test_sum_4 (singlefile, .yaml) > ExecOpTest ------- using <read_object_from_yaml>
+Parsing ./demo/simple_objects\test_sum_4 (singlefile, .yaml) > ExecOpTest ------- using <read_object_from_yaml>
   !! Caught error during execution !!
   File "C:\W_dev\_pycharm_workspace\python-parsyfiles\parsyfiles\parsing_core_api.py", line 403, in execute
     res, options)
-  ParsingException : Error while parsing ./test_data/demo/simple_objects\test_sum_4 (singlefile, .yaml) as a <class 'test_parsyfiles.DemoTests.test_simple_objects.<locals>.ExecOpTest'> with parser '<read_object_from_yaml>' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : 
+  ParsingException : Error while parsing ./demo/simple_objects\test_sum_4 (singlefile, .yaml) as a <class 'test_parsyfiles.DemoTests.test_simple_objects.<locals>.ExecOpTest'> with parser '<read_object_from_yaml>' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : 
       parser returned {'y': 5, 'x': 2, 'op': '+', 'expected_result': 7} of type <class 'dict'> which is not an instance of <class 'test_parsyfiles.DemoTests.test_simple_objects.<locals>.ExecOpTest'>
 
 Rebuilding local parsing plan with next candidate parser: $<read_collection_from_yaml> => <dict_to_object>$
-./test_data/demo/simple_objects\test_sum_4 (singlefile, .yaml) > ExecOpTest ------- using $<read_collection_from_yaml> => <dict_to_object>$
-Parsing ./test_data/demo/simple_objects\test_sum_4 (singlefile, .yaml) > ExecOpTest ------- using $<read_collection_from_yaml> => <dict_to_object>$
---> Successfully parsed a ExecOpTest from ./test_data/demo/simple_objects\test_sum_4
+./demo/simple_objects\test_sum_4 (singlefile, .yaml) > ExecOpTest ------- using $<read_collection_from_yaml> => <dict_to_object>$
+Parsing ./demo/simple_objects\test_sum_4 (singlefile, .yaml) > ExecOpTest ------- using $<read_collection_from_yaml> => <dict_to_object>$
+--> Successfully parsed a ExecOpTest from ./demo/simple_objects\test_sum_4
 ```
 
 You can see from the logs that the framework successively tries several ways to parse this file :
 
- * `<read_object_from_yaml>`: the file is read according to the yaml format, as a `ExecOpTest` object directly. This fails.
+ * `<read_object_from_yaml>`: the file is read according to the yaml format, as an `ExecOpTest` object directly. This fails.
     
  * `$<read_collection_from_yaml> => <dict_to_object>$`: the file is read according to the yaml format, as a dictionary. Then this dictionary is converted into a `ExecOpTest` object. **This succeeds**
 
 
-##### c- Understanding the inference logic
+##### Understanding the inference logic - in which order are the parsers tried ?
 
 These example show how `parsyfiles` intelligently combines all registered parsers and converters to create parsing chains that make sense. These parsing chains are tried **in order** until a solution is found. Note that the order is deterministic:
 
@@ -499,7 +515,7 @@ Looking at the entries for `.txt` and `.yaml`, we can find back the ordered list
 
 ### 3- Multifile objects: combining several parsers
 
-This is 'the' typical use case for this library. Suppose that you want to test the following `exec_op_series` function:
+This **'the'** typical use case for this library. Suppose that you want to test the following `exec_op_series` function, that uses complex types `Series` and `AlgoConf` as inputs and `AlgoResults` as output:
 
 ```python
 class AlgoConf(object):
@@ -529,71 +545,225 @@ class ExecOpSeriesTest(object):
         self.expected_results = expected_results
 ```
 
-The code for parsing remains the same - we tell the framework that we want to parse a collection of objects of type `ExecOpSeriesTest`:
+Our test data folder look like this : 
+```
+./demo/complex_objects
+├── case1
+│   ├── expected_results.txt
+│   ├── x.csv
+│   └── y.txt
+└── case2
+    ├── expected_results.txt
+    ├── x.csv
+    └── y.txt
+```
+
+You may notice that in this case, we chose to represent each instance of `ExecOpSeriesTest` as a folder. This makes them 'multifile'. The default multifile object parser in the framework will try to parse each attribute of the constructor as an independent file in the folder. 
+
+The code for parsing remains the same - we tell the framework that we want to parse a collection of objects of type `ExecOpSeriesTest`. The rest is handled automatically by the framework:
 
 ```python
 from pprint import pprint
 from parsyfiles import parse_collection
 
-mf_tests = parse_collection('./test_data/demo/complex_objects', ExecOpSeriesTest)
+mf_tests = parse_collection('./demo/complex_objects', ExecOpSeriesTest)
 pprint(mf_tests)
 ```
 
 Here are the results :
 
 ```
-**** Starting to parse  collection of <ExecOpSeriesTest> at location ./test_data/demo/complex_objects ****
-Checking all files under ./test_data/demo/complex_objects
-./test_data/demo/complex_objects (multifile)
+**** Starting to parse  collection of <ExecOpSeriesTest> at location ./demo/complex_objects ****
+Checking all files under ./demo/complex_objects
+./demo/complex_objects (multifile)
 (...)
-./test_data/demo/complex_objects\case2 (multifile)
-./test_data/demo/complex_objects\case2\expected_results (singlefile, .txt)
-./test_data/demo/complex_objects\case2\x (singlefile, .csv)
-./test_data/demo/complex_objects\case2\y (singlefile, .txt)
 File checks done
 
-Building a parsing plan to parse ./test_data/demo/complex_objects (multifile) into a Dict[str, ExecOpSeriesTest]
-./test_data/demo/complex_objects (multifile) > Dict[str, ExecOpSeriesTest] ------- using Multifile Collection parser (parsyfiles defaults)
+Building a parsing plan to parse ./demo/complex_objects (multifile) into a Dict[str, ExecOpSeriesTest]
 (...)
 Parsing Plan created successfully
 
-Executing Parsing Plan for ./test_data/demo/complex_objects (multifile) > Dict[str, ExecOpSeriesTest] ------- using Multifile Collection parser (parsyfiles defaults)
-Parsing ./test_data/demo/complex_objects (multifile) > Dict[str, ExecOpSeriesTest] ------- using Multifile Collection parser (parsyfiles defaults)
-Parsing ./test_data/demo/complex_objects\case1 (multifile) > ExecOpSeriesTest ------- using Multifile Object parser (parsyfiles defaults)
+Executing Parsing Plan for ./demo/complex_objects (multifile) > Dict[str, ExecOpSeriesTest] ------- using Multifile Collection parser (parsyfiles defaults)
 (...)
-Parsing ./test_data/demo/complex_objects\case2 (multifile) > ExecOpSeriesTest ------- using Multifile Object parser (parsyfiles defaults)
-Parsing ./test_data/demo/complex_objects\case2\expected_results (singlefile, .txt) > AlgoResults ------- using $<read_dict_from_properties> => <dict_to_object>$
---> Successfully parsed a AlgoResults from ./test_data/demo/complex_objects\case2\expected_results
-Parsing ./test_data/demo/complex_objects\case2\x (singlefile, .csv) > Series ------- using <read_df_or_series_from_csv>
---> Successfully parsed a Series from ./test_data/demo/complex_objects\case2\x
-Parsing ./test_data/demo/complex_objects\case2\y (singlefile, .txt) > AlgoConf ------- using $<read_dict_from_properties> => <dict_to_object>$
---> Successfully parsed a AlgoConf from ./test_data/demo/complex_objects\case2\y
-Assembling a ExecOpSeriesTest from all parsed children of ./test_data/demo/complex_objects\case2 (multifile) by passing them as attributes of the constructor
---> Successfully parsed a ExecOpSeriesTest from ./test_data/demo/complex_objects\case2
-Assembling a Dict[str, ExecOpSeriesTest] from all parsed children of ./test_data/demo/complex_objects (multifile)
---> Successfully parsed a Dict[str, ExecOpSeriesTest] from ./test_data/demo/complex_objects
+--> Successfully parsed a Dict[str, ExecOpSeriesTest] from ./demo/complex_objects
 Completed parsing successfully
 
 {'case1': <ExecOpSeriesTest object at 0x00000000087DDF98>,
  'case2': <ExecOpSeriesTest object at 0x000000000737FBE0>}
 ```
 
+Note that multifile objects and singlefile objects may coexist in the same folder, and that parsing is recursive - meaning that multifile objects or collections may contain multifile children as well.
 
 
-#### Lazy parsing
+### 5- Advanced topics
 
-The multifile collection parser included in the library provides an option to return a lazy collection instead of a standard `set`, `list` or `dict`. This collection will trigger parsing of each element only when that element is required. In addition to better controlling the parsing time, this feature is especially useful if you want perform the most tasks possible, even if an item fails parsing. 
+#### (a) Lazy parsing
+
+The multifile collection parser included in the library provides an option to return a lazy collection instead of a standard `set`, `list`, `dict` or `tuple`. This collection will trigger parsing of each element only when that element is required. In addition to better controlling the parsing time, this feature is especially useful if you want to parse the most items possible, even if one item in the list fails parsing. 
 
 ```python
 from pprint import pprint
 from parsyfiles import parse_collection
 from pandas import DataFrame
 
-dfs = parse_collection('./demo/simple_collection', DataFrame)
-pprint(dfs)
+dfs = parse_collection('./demo/simple_collection', DataFrame, lazy_mfcollection_parsing=True)
+print('dfs length : ' + str(len(dfs)))
+print('dfs keys : ' + str(dfs.keys()))
+print('Is b in dfs : ' + str('b' in dfs))
+pprint(dfs.get('b'))
 ```
 
-### 4- Dataframes - revisited
+The result log shows that `parse_collection` returned without parsing, and that parsing is executed when item `'b'` is read from the dictionary:
+ 
+ ```
+Executing Parsing Plan for ./demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Collection parser (parsyfiles defaults)
+Parsing ./demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Collection parser (parsyfiles defaults)
+Assembling a Dict[str, DataFrame] from all children of ./demo/simple_collection (multifile) (lazy parsing: children will be parsed when used) 
+--> Successfully parsed a Dict[str, DataFrame] from ./demo/simple_collection
+Completed parsing successfully
+
+dfs length : 5
+dfs keys : {'a', 'e', 'd', 'c', 'b'}
+Is b in dfs : True
+Executing Parsing Plan for ./demo/simple_collection\b (singlefile, .txt) > DataFrame ------- using <read_df_or_series_from_csv>
+Parsing ./demo/simple_collection\b (singlefile, .txt) > DataFrame ------- using <read_df_or_series_from_csv>
+--> Successfully parsed a DataFrame from ./demo/simple_collection\b
+Completed parsing successfully
+   a  b  c  d
+0  1  2  3  4
+```
+
+#### (b) Parsing wrappers of existing types - writing proxy classes
+
+**TODO** : show how to parse a `TimeSeries` class that extends `DataFrame`, by registering a custom converter between the two types
+
+**TODO** old comments to reuse in the explanation : 
+
+This is named a dynamic proxy. The `OpConfig` class extends the `dict` class, but delegates everything to the underlying `dict` implementation provided in the constructor.
+
+*Note: this pattern is very useful to use this library, even if the underlying class is not an 'item collection' type. Indeed, this is a good way to create specialized versions of generic objects created by your favourite parsers. For example two `pandas.DataFrame` might represent a training set, and a prediction table. Both objects, although similar (both are tables with rows and columns), might have very different contents (column names, column types, number of rows, etc.). We can make this fundamental difference appear at the parsing level, by creating two classes.*
+
+
+#### (c) Contract validation for parsed objects : combo with classtools-autocode
+
+Users may wish to use [classtools_autocode](https://github.com/smarie/python-classtools-autocode) in order to create very compact classes representing their objects while at the same time ensuring that parsed data is valid according to some contract. Parsyfiles is totally compliant with such classes:
+
+```python
+from classtools_autocode import autoprops, autoargs
+from contracts import contract, new_contract
+
+# custom contract used in the class
+new_contract('allowed_op', lambda x: x in {'+','*'})
+
+@autoprops
+class ExecOpTest(object):
+    @autoargs
+    @contract(x='int|float', y='int|float', op='str,allowed_op', expected_result='int|float')
+    def __init__(self, x: float, y: float, op: str, expected_result: float):
+        pass
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        return str(self.x) + ' ' + self.op + ' ' + str(self.y) + ' =? ' + str(self.expected_result)
+
+sf_tests = parse_collection('./demo/simple_objects', ExecOpTest)
+```
+
+The above code has a contract associated to `allowed_op` that checks that it must be in `{'+','*'}`. When `'-'` is found in a test file, it fails:
+
+```
+  ParsingException : Error while parsing ./demo/simple_objects\test_diff_1 (singlefile, .cfg) as a ExecOpTest with parser '$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : caught 
+  ObjectInstantiationException : Error while building object of type <ExecOpTest> using its constructor and parsed contents : {'y': 1.0, 'x': 1.0, 'expected_result': 0.0, 'op': '-'} : 
+<class 'contracts.interface.ContractNotRespected'> Breach for argument 'op' to ExecOpTest:generated_setter_fun().
+Value does not pass criteria of <lambda>()() (module: test_parsyfiles).
+checking: callable()       for value: Instance of <class 'str'>: '-'   
+checking: allowed_op       for value: Instance of <class 'str'>: '-'   
+checking: str,allowed_op   for value: Instance of <class 'str'>: '-'   
+```
+
+#### (d) File mappings: Wrapped/Flat and encoding
+
+In [3- Multifile objects: combining several parsers](#3--multifile-objects-combining-several-parsers) we used folders to encapsulate objects. In previous examples we also used the root folder to encapsulate the main item collection. This default setting is known as 'Wrapped' mode and correspond behind the scenes to a `WrappedFileMappingConfiguration` being used, with default python encoding. 
+
+Alternatively you may wish to use flat mode. In this case the folder structure should be flat, as shown below. Item names and field names are separated by a configurable character string. For example to parse the same example as in [3- Multifile objects: combining several parsers](#3--multifile-objects-combining-several-parsers) but with the following flat tree structure:
+
+```bash
+.
+├── case1--expected_results.txt
+├── case1--x.csv
+├── case1--y.txt
+├── case2--expected_results.txt
+├── case2--x.csv
+└── case2--y.txt
+```
+
+you'll need to call
+
+```python
+from parsyfiles import FlatFileMappingConfiguration
+dfs = parse_collection('./demo/complex_objects_flat', DataFrame, file_mapping_conf=FlatFileMappingConfiguration())
+```
+
+Note that `FlatFileMappingConfiguration` may be configured to use another separator sequence than `'--'` by passing it to the constructor: e.g. `FlatFileMappingConfiguration(separator='_')`. A dot `'.'` may be safely used as a separator too.
+
+Finally you may change the file encoding used by both file mapping configurations : `WrappedFileMappingConfiguration(encoding='utf-16')` `FlatFileMappingConfiguration(encoding='utf-16')`.
+
+
+#### (e) Recursivity: Multifile children of Multifile objects
+
+As said earlier in this tutorial, parsyfiles is able to parse multifile recursively, for example multifile collections of multifile objects, multifile objects containing attributes, etc.
+
+
+##### Example recursivity in flat mode
+ 
+```
+./custom_old_demo_flat_coll
+├── case1--input_a.txt
+├── case1--input_b.txt
+├── case1--output.txt
+├── case2--input_a.txt
+├── case2--input_b.txt
+├── case2--options.txt
+├── case2--output.txt
+├── case3--input_a.txt
+├── case3--input_b.txt
+├── case3--input_c--keyA--item1.txt
+├── case3--input_c--keyA--item2.txt
+├── case3--input_c--keyB--item1.txt
+├── case3--options.cfg
+└── case3--output.txt
+```
+
+##### Example recursivity in wrapped mode
+
+```
+./custom_old_demo_coll
+├── case1
+│   ├── input_a.txt
+│   ├── input_b.txt
+│   └── output.txt
+├── case2
+│   ├── input_a.txt
+│   ├── input_b.txt
+│   ├── options.txt
+│   └── output.txt
+└── case3
+    ├── input_a.txt
+    ├── input_b.txt
+    ├── input_c
+    │   ├── keyA
+    │   │   ├── item1.txt
+    │   │   └── item2.txt
+    │   └── keyB
+    │       └── item1.txt
+    ├── options.cfg
+    └── output.txt
+```
+
+
+#### (f) Diversity of formats supported: DataFrames - revisited
 
 Now that we've seen that parsyfiles is able to combine parsers and converters, we can try to parse `DataFrame` objects from many more sources:
 
@@ -629,288 +799,17 @@ pprint(dfs)
 And here is the result
 
 ```
-{'a':    a  b  c  d
-      0  1  2  3  4,
- 'b':    a  b  c  d
-      0  1  2  3  4,
- 'c': Empty DataFrame
-Columns: []
-Index: [],
- 'd': Empty DataFrame
-Columns: []
-Index: [],
- 's_b64_pickle': Empty DataFrame
-Columns: [gANjcGFuZGFzLmNvcmUuZnJhbWUKRGF0YUZyYW1lCnEAKYFxAX1xAihYCQAAAF9tZXRhZGF0YXEDXXEEWAQAAABfdHlwcQVYCQAAAGRhdGFmcmFtZXEGWAUAAABfZGF0YXEHY3BhbmRhcy5jb3JlLmludGVybmFscwpCbG9ja01hbmFnZXIKcQgpgXEJKF1xCihjcGFuZGFzLmluZGV4ZXMuYmFzZQpfbmV3X0luZGV4CnELY3BhbmRhcy5pbmRleGVzLmJhc2UKSW5kZXgKcQx9cQ0oWAQAAABkYXRhcQ5jbnVtcHkuY29yZS5tdWx0aWFycmF5Cl9yZWNvbnN0cnVjdApxD2NudW1weQpuZGFycmF5CnEQSwCFcRFDAWJxEodxE1JxFChLAUsChXEVY251bXB5CmR0eXBlCnEWWAIAAABPOHEXSwBLAYdxGFJxGShLA1gBAAAAfHEaTk5OSv////9K/////0s/dHEbYoldcRwoWAEAAABjcR1LBWV0cR5iWAQAAABuYW1lcR9OdYZxIFJxIWgLY3BhbmRhcy5pbmRleGVzLnJhbmdlClJhbmdlSW5kZXgKcSJ9cSMoWAUAAABzdGFydHEkSwBYBAAAAHN0ZXBxJUsBWAQAAABzdG9wcSZLA2gfTnWGcSdScShlXXEpKGgPaBBLAIVxKmgSh3ErUnEsKEsBSwFLA4ZxLWgWWAIAAABpOHEuSwBLAYdxL1JxMChLA1gBAAAAPHExTk5OSv////9K/////0sAdHEyYolDGAgAAAAAAAAADAAAAAAAAAADAAAAAAAAAHEzdHE0YmgPaBBLAIVxNWgSh3E2UnE3KEsBSwFLA4ZxOGgZiV1xOShYAQAAAGRxOlgBAAAAZXE7WAEAAABmcTxldHE9YmVdcT4oaAtoDH1xPyhoDmgPaBBLAIVxQGgSh3FBUnFCKEsBSwGFcUNoGYldcURLBWF0cUViaB9OdYZxRlJxR2gLaAx9cUgoaA5oD2gQSwCFcUloEodxSlJxSyhLAUsBhXFMaBmJXXFNaB1hdHFOYmgfTnWGcU9ScVBlfXFRWAYAAAAwLjE0LjFxUn1xUyhYBAAAAGF4ZXNxVGgKWAYAAABibG9ja3NxVV1xVih9cVcoWAYAAAB2YWx1ZXNxWGgsWAgAAABtZ3JfbG9jc3FZY2J1aWx0aW5zCnNsaWNlCnFaSwFLAksBh3FbUnFcdX1xXShoWGg3aFloWksASwFLAYdxXlJxX3VldXN0cWBidWIu]
-Index: [],
- 't_pickle':    c   5
-             0  d   8
-             1  e  12
-             2  f   3,
- 'u':    a  b  c  d
-      0  1  2  +  3,
- 'v_properties':    a = 1
-                 0  b = 1
-                 1  c = +
-                 2  d = 2,
- 'w':    a  b  c  d
-      0  0  1  +  1,
- 'x':    r  t  u  x
-      0  7  +  5  2,
- 'y':    d  r  s  t
-      0  0  1  1  -,
- 'z':     d  r  s  t
-      0  -1  0  1  -
-}
+TODO
 ```
-
-
-### 5- Complex and multifile types
-
-We have seen in both examples above that the framework is able to read multifile collection types: an object of type `Dict`, `List`, `Set`, and `Tuple` may be read from a folder.
-
-```python
-from pprint import pprint
-from parsyfiles import parse_collection
-from pandas import DataFrame
-
-dfs = parse_collection('./demo/simple_collection', DataFrame)
-pprint(dfs)
-```
-
-
-
-```python
-class OpConfig(dict):
-"""
-An OpConfig object is a Dict[str, str] object
-"""
-def __init__(self, config: Dict[str, str]):
-    super(OpConfig, self).__init__()
-    self.__wrapped_impl = config
-
-    # here you may wish to perform additional checks on the wrapped object
-    unrecognized = set(config.keys()) - set('operation')
-    if len(unrecognized) > 0:
-        raise ValueError('Unrecognized options : ' + unrecognized)
-
-# Delegate all calls to the implementation:
-def __getattr__(self, name):
-    return getattr(self.__wrapped_impl, name)
-```
-
-This is named a dynamic proxy. The `OpConfig` class extends the `dict` class, but delegates everything to the underlying `dict` implementation provided in the constructor.
-
-*Note: this pattern is very useful to use this library, even if the underlying class is not an 'item collection' type. Indeed, this is a good way to create specialized versions of generic objects created by your favourite parsers. For example two `pandas.DataFrame` might represent a training set, and a prediction table. Both objects, although similar (both are tables with rows and columns), might have very different contents (column names, column types, number of rows, etc.). We can make this fundamental difference appear at the parsing level, by creating two classes.*
- 
-Back to our example, we propose two formats for the `OpConfig`: 
-* one `.txt` format where the first row will directly contain the value for the `operation`
-* one `.cfg` format where the configuration will be available in a `configparser` format, and for which we want to reuse the existing parser.
-    
-```python
-from typing import Dict
-def parse_configuration_txt_file(file_object: TextIOBase) -> OpConfig:
-    return {'operation': file_object.readline()}
-
-def parse_configuration_cfg_file(file_object: TextIOBase) -> OpConfig:
-    import configparser
-    config = configparser.ConfigParser()
-    config.read_file(file_object)
-    return dict(config['main'].items())
-```
-
-Once again, we finally register the parsers:
-
-```python
-root_parser.register_extension_parser(OpConfig, '.txt', parse_configuration_txt_file)
-root_parser.register_extension_parser(OpConfig, '.cfg', parse_configuration_cfg_file)
-```
-
-#### d - main complex type and final parsing execution
-
-Finally, we define the `OpTestCase` object. Its constructor should reflect the way we want to dispatch the various 
-pieces of information in separate files, as well as indicate the files the are optional: 
-
-```python
-class OpTestCase(object):
-    def __init__(self, input_a: int, input_b: int, output: int, options: OpConfig = None):
-        self.input_a, self.input_b, self.output = input_a, input_b, output
-        if options is None:
-            self.op = '+'
-        else:
-            self.op = options['operation']
-
-        def __str__(self):
-            return self.__repr__()
-
-        def __repr__(self):
-            return str(self.input_a) + ' ' + self.op + ' ' + str(self.input_b) + ' =? ' + str(self.output)
-``` 
-
-Parsing is then straightforward: simply provide the root folder, the object type, and the file mapping flavour.
-
-```python
-results = root_parser.parse_collection('./test_data/demo', OpTestCase)
-```
-
-The output shows the created test case objects:
-
-```python
-pprint(results)
-
-{'case1': 1 + 2 =? 3, 'case2': 1 + 3 =? 4, 'case3': 1 - 2 =? -1}
-```
-
-### Advanced topics
-
-#### Flat mode
-
-In our example we used folders to encapsulate object fields and item collections. This is `flat_mode=False`. Alternatively you may wish to set `flat_mode=True`. In this case the folder structure should be flat, as shown below. Item names and field names are separated by a configurable character string. For example to parse the following tree structure:
-
-```bash
-.
-├── case1--input_a.txt
-├── case1--input_b.txt
-├── case1--output.txt
-├── case2--input_a.txt
-├── case2--input_b.txt
-├── case2--options.txt
-├── case2--output.txt
-├── case3--input_a.txt
-├── case3--input_b.txt
-├── case3--options.cfg
-└── case3--output.txt
-```
-
-you'll need to call
-```python
-results = root_parser.parse_collection('./test_data/demo_flat', OpTestCase, flat_mode=True, sep_for_flat='--')
-        pprint(results)
-```
-Note that the dot may be safely used as a separator too.
-
-
-#### Item collections
-
-The parsing framework automatically detects any object that is of a 'item collection' type (`dict`, `list`, `set`, and currently `tuple` is not supported). These types should be well  defined according to the `typing` module: for example let's imagine that we have an additional `input_c` in our example, with type `typing.Dict[str, typing.List[int]]`.
-
-```python
-class OpTestCaseColl(object):
-    def __init__(self, input_a: int, input_b: int, output: int,
-                 input_c: Dict[str, List[int]] = None, options: OpConfig = None):
-        self.input_a, self.input_b, self.output = input_a, input_b, output
-        if options is None:
-            self.op = '+'
-        else:
-            self.op = options['operation']
-        self.input_c = input_c or None
-
-        def __str__(self):
-            return self.__repr__()
-
-        def __repr__(self):
-            return str(self.input_a) + ' ' + self.op + ' ' + str(self.input_b) + ' =? ' + str(
-                self.output) + ' ' + str(self.input_c)
-``` 
-
-For `flat_mode=True` :
- * dictionary keys are read from the text behind the separator after `input_c` (so below, `keyA` and `keyB` are the key names)
- * list items are indicated by any character sequence, but that sequence is not kept when creating the list object (below, `item1` and `item2` will not be kept in the output list) 
- 
-```bash
-.
-├── case1--input_a.txt
-├── case1--input_b.txt
-├── case1--output.txt
-├── case2--input_a.txt
-├── case2--input_b.txt
-├── case2--options.txt
-├── case2--output.txt
-├── case3--input_a.txt
-├── case3--input_b.txt
-├── case3--input_c--keyA--item1.txt
-├── case3--input_c--keyA--item2.txt
-├── case3--input_c--keyB--item1.txt
-├── case3--options.cfg
-└── case3--output.txt
-```
-
-```python
-results = root_parser.parse_collection('./test_data/demo_flat_coll', OpTestCaseColl, flat_mode=True, sep_for_flat='--')
-pprint(results['case3'].input_c)
-```
-Results:
-```python
-{'keyA': [-1, -1], 'keyB': [-1]}
-```
-
-For `flat_mode=False` :
- * we already saw that complex objects are represented by folders (for example `case1`, `case2` and `case3`)
- * item collections are, too : `input_c` is a folder
-    * dictionary keys are read from the files or folder names (so below, `keyA` and `keyB` are the key names, and since their content is a complex or collection object they are folders themselves)
-    * list items are indicated by files or folders with any name, but that name is not kept when creating the list object (below, `item1` and `item2` are not kept in the output list, only their contents is) 
- 
-```bash
-.
-├── case1
-│   ├── input_a.txt
-│   ├── input_b.txt
-│   └── output.txt
-├── case2
-│   ├── input_a.txt
-│   ├── input_b.txt
-│   ├── options.txt
-│   └── output.txt
-└── case3
-    ├── input_a.txt
-    ├── input_b.txt
-    ├── input_c
-    │   ├── keyA
-    │   │   ├── item1.txt
-    │   │   └── item2.txt
-    │   └── keyB
-    │       └── item1.txt
-    ├── options.cfg
-    └── output.txt
-```
-
-```python
-results = root_parser.parse_collection('./test_data/demo_coll', OpTestCaseColl, flat_mode=False)
-pprint(results['case3'].input_c)
-```
-Results:
-```python
-{'keyA': [-1, -1], 'keyB': [-1]}
-```
-
-
-Finally, note that it is not possible to mix collection and non-collection items together (for example, `Union[int, List[int]]` is not supported)
 
 
 ## See Also
 
-Check [here](https://github.com/webmaven/python-parsing-tools) for other parsers in Python, that you might wish to register as unitary parsers to perform specific file format parsing (binary, json, custom...) for some of your objects.
+* Check [here](https://github.com/webmaven/python-parsing-tools) for other parsers in Python, that you might wish to register as unitary parsers to perform specific file format parsing (binary, json, custom...) for some of your objects.
 
-*Do you like this library ? You might also like [these](https://github.com/smarie?utf8=%E2%9C%93&tab=repositories&q=&type=&language=python)* 
+* Do you like this library ? You might also like [these](https://github.com/smarie?utf8=%E2%9C%93&tab=repositories&q=&type=&language=python)* 
 
-* https://cattrs.readthedocs.io/en/latest/readme.html
-
-## Combining parsyfiles and classtools_autocode (combo!)
-
-Users may wish to use [classtools_autocode](https://github.com/smarie/python-classtools-autocode) in order to create very compact classes representing their objects *and* ensuring that parsed data is valid.
-
-```python
-from classtools_autocode import autoprops, autoargs
-from contracts import contract, new_contract
-
-new_contract('allowed_op', lambda x: x in {'+', '-'})
-
-@autoprops
-class ExecOpTest(object):
-    @autoargs
-    @contract
-    def __init__(self, x: float, y: float, op: str, expected_result: float):
-        pass
-```
+* This [cattrs](https://cattrs.readthedocs.io/en/latest/readme.html) project seems to have related interests, to check. 
 
 
 ## Developers

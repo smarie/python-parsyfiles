@@ -1,15 +1,20 @@
-# from parsyfiles.dict_parsers import *
-# from parsyfiles.parsing_chains import *
-# from parsyfiles.parsing_filemapping import *
-# from parsyfiles.parsing_types import *
-# from parsyfiles.var_checker import *
-# from parsyfiles.logging_utils import *
+# only these two are the 'first-level' api.
+# allow users to do
+#     from parsyfiles import xxx
+# from these.
+from parsyfiles.filesystem_mapping import *
 from parsyfiles.parsing_fw import *
 
-__all__ = ['var_checker',
-           'logging_utils'
-           'dict_parsers',
-           'parsing_chains',
-           'parsing_types',
-           'parsing_filemapping',
-           'parsing_fw']
+# For the rest, allow user to do
+#    import parsyfiles as pf
+# and then pf.xxx
+__all__ = ['converting_core',
+           'filesystem_mapping'
+           'parsing_combining_parsers',
+           'parsing_core',
+           'parsing_core_api',
+           'parsing_fw',
+           'parsing_registries',
+           'type_inspection_tools',
+           # dont insert the various support_xxx files here
+           'var_checker']
