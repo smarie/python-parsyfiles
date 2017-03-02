@@ -45,7 +45,7 @@ This library provides a *framework*, not a specific parser for a specific file f
 
 ### 1- Intended audience
 
-* developers looking for an easy way to parse dictionaries and simple objects from various formats (json, properties, cfg, csv...) using standard python libraries. They can combine this library with [classtools_autocode](https://github.com/smarie/python-classtools-autocode) to preserve compact, readable and content-validated classes.
+* developers looking for an easy way to parse dictionaries and simple objects from various formats (json, properties, cfg, csv...) using standard python libraries. They can combine this library with [classtools_autocode](https://github.com/smarie/python-classtools-autocode) or [attrs](https://attrs.readthedocs.io/en/stable/) to preserve compact, readable and content-validated classes.
 
 * developers who already know how to parse their various files independently, but looking for a higher-level tool to read complex objects made of several files/folders and potentially requiring to combine several parsers.
 
@@ -647,15 +647,17 @@ This is named a dynamic proxy. The `OpConfig` class extends the `dict` class, bu
 *Note: this pattern is very useful to use this library, even if the underlying class is not an 'item collection' type. Indeed, this is a good way to create specialized versions of generic objects created by your favourite parsers. For example two `pandas.DataFrame` might represent a training set, and a prediction table. Both objects, although similar (both are tables with rows and columns), might have very different contents (column names, column types, number of rows, etc.). We can make this fundamental difference appear at the parsing level, by creating two classes.*
 
 
-#### (c) Contract validation for parsed objects : combo with classtools-autocode
+#### (c) Contract validation for parsed objects : combo with classtools-autocode and attrs
 
-Users may wish to use [classtools_autocode](https://github.com/smarie/python-classtools-autocode) in order to create very compact classes representing their objects while at the same time ensuring that parsed data is valid according to some contract. Parsyfiles is totally compliant with such classes:
+Users may wish to use [classtools_autocode](https://github.com/smarie/python-classtools-autocode) or [attrs](https://attrs.readthedocs.io/en/stable/) in order to create very compact classes representing their objects while at the same time ensuring that parsed data is valid according to some contract. Parsyfiles is totally compliant with such classes, as shown in the examples below
+
+##### classtools-autocode example
 
 ```python
 from classtools_autocode import autoprops, autoargs
 from contracts import contract, new_contract
 
-# custom contract used in the class
+# custom PyContract used in the class
 new_contract('allowed_op', lambda x: x in {'+','*'})
 
 @autoprops
@@ -685,6 +687,44 @@ checking: callable()       for value: Instance of <class 'str'>: '-'
 checking: allowed_op       for value: Instance of <class 'str'>: '-'   
 checking: str,allowed_op   for value: Instance of <class 'str'>: '-'   
 ```
+
+##### attrs example
+
+In order for parsyfiles to find the required type for each attribute declared using `attrs`, you will have to use `attr.validators.instance_of`. However, since you may wish to also implement some custom validation logic, we provide (until it is offically added in `attrs`) a chaining operator. The code below shows how to create a similar example than the previous one:
+
+```python
+import attr
+from attr.validators import instance_of
+from parsyfiles.support_for_attrs import chain
+
+# custom contract used in the class
+def validate_op(instance, attribute, value):
+    allowed = {'+','*'}
+    if value not in allowed:
+        raise ValueError('\'op\' has to be a string, in ' + str(allowed) + '!')
+
+@attr.s
+class ExecOpTest(object):
+    x = attr.ib(convert=float, validator=instance_of(float))
+    y = attr.ib(convert=float, validator=instance_of(float))
+    # we use the 'chain' validator here to keep using instance_of
+    op = attr.ib(convert=str, validator=chain(instance_of(str), validate_op))
+    expected_result = attr.ib(convert=float, validator=instance_of(float))
+
+# with self.assertRaises(ParsingException):
+sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
+```
+
+When `'-'` is found in a test file, it also fails with a nice error message:
+
+```
+  ParsingException : Error while parsing ./test_data/demo/simple_objects\test_diff_1 (singlefile, .cfg) as a ExecOpTest with parser '$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : caught 
+  ObjectInstantiationException : Error while building object of type <ExecOpTest> using its constructor and parsed contents : {'y': 1.0, 'x': 1.0, 'expected_result': 0.0, 'op': '-'} : 
+<class 'ValueError'> 'op' has to be a string, in {'*', '+'}!
+```
+
+Note: unfortunately, as of today (version 16.3), `attrs` does not validate attribute contents when fields are later modified on the object directly. A pull request is ongoing.
+
 
 #### (d) File mappings: Wrapped/Flat and encoding
 

@@ -1,4 +1,4 @@
-from inspect import getmembers, signature
+from inspect import getmembers, signature, _empty, Parameter
 from pydoc import locate
 from typing import Type, Any, Tuple, List, Set, Dict, Generic
 from warnings import warn
@@ -172,7 +172,7 @@ def _extract_collection_base_type(collection_object_type: Type[Any], exception_i
                              + ' is not a collection')
 
     # Finally return if something was found, otherwise tell it
-    if contents_item_type is None and exception_if_none:
+    if (contents_item_type is None or contents_item_type is _empty) and exception_if_none:
         raise TypeInformationRequiredError.create_for_collection_items(collection_object_type)
     else:
         return contents_item_type, contents_key_type
@@ -194,14 +194,51 @@ def _get_constructor_signature(item_type):
     return s
 
 
-def get_constructor_attributes_types(item_type):
+def get_constructor_attributes_types(item_type) -> Dict[str, Tuple[Type[Any], bool]]:
     """
     Utility method to return a dictionary of attribute name > attribute type from the constructor of a given type
+    It supports PEP484 and 'attrs' declaration.
+
     :param item_type:
-    :return:
+    :return: a dictionary containing for each attr name, a tuple (type, is_mandatory)
     """
-    s = _get_constructor_signature(item_type)
-    return {attr_name: s.parameters[attr_name].annotation for attr_name in s.parameters.keys()}
+
+    try:
+        # -- Try to read an attr declaration and to extract types and optionality
+        from parsyfiles.support_for_attrs import get_attrs_declarations
+        res = get_attrs_declarations(item_type)
+
+        # check that types are correct
+        for attr_name, v in res.items():
+            typ = v[0]
+            if typ is None or typ is Parameter.empty or not isinstance(typ, type):
+                raise TypeInformationRequiredError.create_for_object_attributes(item_type, attr_name)
+
+    except:
+        # -- Fallback to PEP484
+        res = dict()
+
+        # first get the signature of the class constructor
+        s = _get_constructor_signature(item_type)
+
+        # then extract the type and optionality of each attribute and raise errors if needed
+        for attr_name in s.parameters.keys():
+            # skip the 'self' attribute
+            if attr_name != 'self':
+
+                # -- get and check the attribute type
+                typ = s.parameters[attr_name].annotation
+                if typ is None or typ is Parameter.empty or not isinstance(typ, type):
+                    raise TypeInformationRequiredError.create_for_object_attributes(item_type, attr_name)
+
+                # -- is the attribute mandatory ?
+                is_mandatory = s.parameters[attr_name].default is Parameter.empty
+
+                # -- store both info in result dict
+                res[attr_name] = (typ, is_mandatory)
+
+    return res
+
 
 class TypeInformationRequiredError(Exception):
     """
@@ -249,7 +286,7 @@ class TypeInformationRequiredError(Exception):
         #     prt_type = get_pretty_type_str(item_type)
         # except:
         #     prt_type = str(item_type)
-        return TypeInformationRequiredError('Cannot parse object of type <' + str(item_type) + '> using a '
+        return TypeInformationRequiredError('Cannot parse object of type ' + str(item_type) + ' using a '
                                             'configuration file as a \'dictionary of dictionaries\': '
                                             'attribute \'' + faulty_attribute_name + '\' has no valid '
                                             'PEP484 type hint.')

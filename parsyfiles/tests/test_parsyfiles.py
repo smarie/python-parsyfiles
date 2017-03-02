@@ -185,7 +185,7 @@ class DemoTests(TestCase):
         #
         RootParser().print_capabilities_for_type(typ=ExecOpTest)
 
-    def test_simple_object_with_contract(self):
+    def test_simple_object_with_contract_classtools(self):
 
         from classtools_autocode import autoprops, autoargs
         from contracts import contract, new_contract
@@ -206,8 +206,41 @@ class DemoTests(TestCase):
             def __repr__(self):
                 return str(self.x) + ' ' + self.op + ' ' + str(self.y) + ' =? ' + str(self.expected_result)
 
-        with self.assertRaises(ParsingException):
+        try:
             sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
+        except ParsingException as e:
+            self.assertIn('<class \'contracts.interface.ContractNotRespected\'> '
+                          'Breach for argument \'op\' to ExecOpTest:generated_setter_fun().\n'
+                          'Value does not pass criteria of <lambda>()() (module: test_parsyfiles).\n'
+                          'checking: callable()       for value: Instance of <class \'str\'>: \'-\'   \n'
+                          'checking: allowed_op       for value: Instance of <class \'str\'>: \'-\'   \n'
+                          'checking: str,allowed_op   for value: Instance of <class \'str\'>: \'-\'   \n'
+                          'Variables bound in inner context:\n! cannot write context\n'
+                          , e.args[0])
+
+    def test_simple_object_with_contract_attrs(self):
+
+        import attr
+        from attr.validators import instance_of
+        from parsyfiles.support_for_attrs import chain
+
+        # custom contract used in the class
+        def validate_op(instance, attribute, value):
+            allowed = {'+', '*'}
+            if value not in allowed:
+                raise ValueError('\'op\' has to be a string, in ' + str(allowed) + '!')
+
+        @attr.s
+        class ExecOpTest(object):
+            x = attr.ib(convert=float, validator=instance_of(float))
+            y = attr.ib(convert=float, validator=instance_of(float))
+            op = attr.ib(convert=str, validator=chain(instance_of(str), validate_op))
+            expected_result = attr.ib(convert=float, validator=instance_of(float))
+
+        try:
+            sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
+        except ParsingException as e:
+            self.assertIn('<class \'ValueError\'> \'op\' has to be a string, in ', e.args[0])
 
     def test_multifile_objects(self):
 

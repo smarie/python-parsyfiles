@@ -9,7 +9,7 @@ from parsyfiles.parsing_core import MultiFileParser, AnyParser, SingleFileParser
 from parsyfiles.parsing_registries import ParserFinder, ConversionFinder
 from parsyfiles.support_for_collections import DictOfDict
 from parsyfiles.type_inspection_tools import get_pretty_type_str, get_constructor_attributes_types, \
-    TypeInformationRequiredError, _get_constructor_signature, is_collection
+    TypeInformationRequiredError, is_collection
 from parsyfiles.var_checker import check_var
 
 
@@ -214,7 +214,7 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
         raise TypeError('Desired object type \'' + get_pretty_type_str(desired_type) + '\' is a collection, '
                         'so it cannot be created using this generic object creator')
 
-    constructor_args_types = get_constructor_attributes_types(desired_type)
+    constructor_args_types_and_opt = get_constructor_attributes_types(desired_type)
 
     try:
         # for each attribute, convert the types of its parsed values if required
@@ -222,10 +222,10 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
         for attr_name, provided_attr_value in contents_dict.items():
 
             # check if this attribute name is required by the constructor
-            if attr_name in constructor_args_types.keys():
+            if attr_name in constructor_args_types_and_opt.keys():
 
                 # check the theoretical type wanted by the constructor
-                attr_type_required = constructor_args_types[attr_name]
+                attr_type_required = constructor_args_types_and_opt[attr_name][0]
 
                 if not is_dict_of_dicts:
                     if isinstance(attr_type_required, type):
@@ -269,7 +269,7 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
                 else:
                     # the dictionary entry does not correspond to a valid attribute of the object
                     raise InvalidAttributeNameForConstructorError.create(desired_type,
-                                                                         list(set(constructor_args_types.keys()) - {'self'}),
+                                                                         list(set(constructor_args_types_and_opt.keys()) - {'self'}),
                                                                          attr_name)
 
         # create the object using its constructor
@@ -430,51 +430,41 @@ class MultifileObjectParser(MultiFileParser):
         # First get the file children
         children_on_fs = obj_on_fs.get_multifile_children()
 
-        # the child items are the attributes of the class constructor
-
         # -- (a) extract the schema from the class constructor
-        s = _get_constructor_signature(desired_type)
+        constructor_args_types_and_opt = get_constructor_attributes_types(desired_type)
 
         # -- (b) plan to parse each attribute required by the constructor
         children_plan = dict()  # results will be put in this object
 
         # --use sorting in order to lead to reproducible results in case of multiple errors
-        for attribute_name, param in sorted(s.parameters.items()):
-            attribute_is_mandatory = param.default is Parameter.empty  # - is it a mandatory attribute ?
-            attribute_type = param.annotation  # - get the object class
+        for attribute_name, att_desc in sorted(constructor_args_types_and_opt.items()):
+            attribute_is_mandatory = att_desc[1]
+            attribute_type = att_desc[0]
 
-            if attribute_name is 'self':
-                # nothing to do, this is not an attribute
-                pass
+            # get the child
+            if attribute_name in children_on_fs.keys():
+                child_on_fs = children_on_fs[attribute_name]
+
+                # find a parser
+                parser_found = self.parser_finder.build_parser_for_fileobject_and_desiredtype(child_on_fs,
+                                                                                              attribute_type,
+                                                                                              logger=logger)
+                # create a parsing plan
+                children_plan[attribute_name] = parser_found.create_parsing_plan(attribute_type, child_on_fs,
+                                                                                logger=logger)
             else:
-                if attribute_type is Parameter.empty or not isinstance(attribute_type, type):
-                    raise TypeInformationRequiredError.create_for_object_attributes(desired_type,
-                                                                                    attribute_name)
-
-                # get the child
-                if attribute_name in children_on_fs.keys():
-                    child_on_fs = children_on_fs[attribute_name]
-
-                    # find a parser
-                    parser_found = self.parser_finder.build_parser_for_fileobject_and_desiredtype(child_on_fs,
-                                                                                                  attribute_type,
-                                                                                                  logger=logger)
-                    # create a parsing plan
-                    children_plan[attribute_name] = parser_found.create_parsing_plan(attribute_type, child_on_fs,
-                                                                                    logger=logger)
+                if attribute_is_mandatory:
+                    raise MissingMandatoryAttributeFiles.create(obj_on_fs, desired_type, attribute_name)
                 else:
-                    if attribute_is_mandatory:
-                        raise MissingMandatoryAttributeFiles.create(obj_on_fs, desired_type, attribute_name)
-                    else:
-                        # we don't care : optional attribute
-                        # dont use warning since it does not show up nicely
-                        #print('----- WARNING: Attribute ' + attribute_name + ' was not found on file system. However '
-                        #      'it is not mandatory for the constructor of type ' + get_pretty_type_str(desired_type)
-                        #      + ', so we\'ll build the object without it...')
-                        logger.warning('----- Attribute ' + attribute_name + ' was not found on file system. However '
-                                       'it is not mandatory for the constructor of type ' + get_pretty_type_str(desired_type)
-                                       + ', so we\'ll build the object without it...')
-                        pass
+                    # we don't care : optional attribute
+                    # dont use warning since it does not show up nicely
+                    #print('----- WARNING: Attribute ' + attribute_name + ' was not found on file system. However '
+                    #      'it is not mandatory for the constructor of type ' + get_pretty_type_str(desired_type)
+                    #      + ', so we\'ll build the object without it...')
+                    logger.warning('----- Attribute ' + attribute_name + ' was not found on file system. However '
+                                   'it is not mandatory for the constructor of type ' + get_pretty_type_str(desired_type)
+                                   + ', so we\'ll build the object without it...')
+                    pass
         return children_plan
 
     def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
