@@ -8,13 +8,13 @@ def _guess_type_from_validator(validator):
     Utility method to return the declared type of an attribute or None. It handles _OptionalValidator and _AndValidator
     in order to unpack the validators.
 
-    :param attr:
+    :param validator:
     :return: the type of attribute declared in an inner 'instance_of' validator (if any is found, the first one is used)
     or None if no inner 'instance_of' validator is found
     """
     if isinstance(validator, _OptionalValidator):
         # Optional : look inside
-        return _guess_type_from_validator(validator)
+        return _guess_type_from_validator(validator.validator)
 
     elif isinstance(validator, _AndValidator):
         # Sequence : try each of them
