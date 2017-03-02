@@ -3,15 +3,23 @@ from attr import fields
 from attr.validators import _OptionalValidator, _InstanceOfValidator
 
 
-def guess_type_from_validators(validator):
+def _guess_type_from_validator(validator):
+    """
+    Utility method to return the declared type of an attribute or None. It handles _OptionalValidator and _AndValidator
+    in order to unpack the validators.
+
+    :param attr:
+    :return: the type of attribute declared in an inner 'instance_of' validator (if any is found, the first one is used)
+    or None if no inner 'instance_of' validator is found
+    """
     if isinstance(validator, _OptionalValidator):
         # Optional : look inside
-        return guess_type_from_validators(validator.validator)
+        return _guess_type_from_validator(validator)
 
     elif isinstance(validator, _AndValidator):
         # Sequence : try each of them
         for v in validator.validators:
-            typ = guess_type_from_validators(v)
+            typ = _guess_type_from_validator(v)
             if typ is not None:
                 return typ
         return None
@@ -23,6 +31,28 @@ def guess_type_from_validators(validator):
     else:
         # we could not find the type
         return None
+
+
+def guess_type_from_validators(attr):
+    """
+    Utility method to return the declared type of an attribute or None. It handles _OptionalValidator and _AndValidator
+    in order to unpack the validators.
+
+    :param attr:
+    :return: the type of attribute declared in an inner 'instance_of' validator (if any is found, the first one is used)
+    or None if no inner 'instance_of' validator is found
+    """
+    return _guess_type_from_validator(attr.validator)
+
+
+def is_mandatory(attr):
+    """
+    Helper method to find if an attribute is mandatory
+
+    :param attr:
+    :return:
+    """
+    return not isinstance(attr.validator, _OptionalValidator)
 
 
 def get_attrs_declarations(item_type):
@@ -41,13 +71,13 @@ def get_attrs_declarations(item_type):
         attr_name = attr.name
 
         # -- is the attribute mandatory ?
-        is_mandatory = not isinstance(attr.validator, _OptionalValidator)
+        mandatory = is_mandatory(attr)
 
         # -- get and check the attribute type
-        typ = guess_type_from_validators(attr.validator)
+        typ = guess_type_from_validators(attr)
 
         # -- store both info in result dict
-        res[attr_name] = (typ, is_mandatory)
+        res[attr_name] = (typ, mandatory)
 
     return res
 
