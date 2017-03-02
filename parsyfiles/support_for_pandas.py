@@ -18,6 +18,10 @@ from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser
 #     return pd.read_excel(file_object, **kwargs)
 
 
+def pandas_parsers_option_hints_xls():
+    return 'all options from read_excel are supported, see http://pandas.pydata.org/pandas-docs/stable/generated/pandas.read_excel.html'
+
+
 def read_dataframe_from_xls(desired_type: Type[T], file_path: str, encoding: str,
                             logger: Logger, **kwargs) -> pd.DataFrame:
     """
@@ -56,7 +60,11 @@ def read_df_or_series_from_csv(desired_type: Type[pd.DataFrame], file_path: str,
         # TODO there should be a way to decide between row-oriented (squeeze=True) and col-oriented (index_col=0)
         # note : squeeze=true only works for row-oriented, so we dont use it. We rather expect that a row-oriented
         # dataframe would be convertible to a series using the df to series converter below
-        one_col_df = pd.read_csv(file_path, encoding=encoding, index_col=0, **kwargs)
+        if 'index_col' not in kwargs.keys():
+            one_col_df = pd.read_csv(file_path, encoding=encoding, index_col=0, **kwargs)
+        else:
+            one_col_df = pd.read_csv(file_path, encoding=encoding, **kwargs)
+
         if one_col_df.shape[1] == 1:
             return one_col_df[one_col_df.columns[0]]
         else:
@@ -67,6 +75,10 @@ def read_df_or_series_from_csv(desired_type: Type[pd.DataFrame], file_path: str,
         return pd.read_csv(file_path, encoding=encoding, **kwargs)
 
 
+def pandas_parsers_option_hints_csv():
+    return 'all options from read_csv are supported, see http://pandas.pydata.org/pandas-docs/stable/generated/pandas.read_csv.html'
+
+
 def get_default_dataframe_parsers() -> List[AnyParser]:
     """
     Utility method to return the default parsers able to parse a dictionary from a file.
@@ -75,11 +87,13 @@ def get_default_dataframe_parsers() -> List[AnyParser]:
     return [SingleFileParserFunction(parser_function=read_dataframe_from_xls,
                                      streaming_mode=False,
                                      supported_exts={'.xls', '.xlsx', '.xlsm'},
-                                     supported_types={pd.DataFrame}),
+                                     supported_types={pd.DataFrame},
+                                     option_hints=pandas_parsers_option_hints_xls),
             SingleFileParserFunction(parser_function=read_df_or_series_from_csv,
                                      streaming_mode=False,
                                      supported_exts={'.csv', '.txt'},
-                                     supported_types={pd.DataFrame, pd.Series}),
+                                     supported_types={pd.DataFrame, pd.Series},
+                                     option_hints=pandas_parsers_option_hints_csv),
             ]
 
 
@@ -99,9 +113,14 @@ def dict_to_single_row_or_col_df(desired_type: Type[T], dict_obj: Dict, logger: 
     if orient is 'columns':
         return pd.DataFrame(dict_obj, index=[0])
     else:
-        res = pd.DataFrame.from_dict(dict_obj, orient='index')
+        res = pd.DataFrame.from_dict(dict_obj, orient=orient)
         res.index.name = 'key'
         return res.rename(columns={0:'value'})
+
+
+def dict_to_single_row_or_col_df_opts():
+    return 'orient: either \'columns\'(default) or \'index\'. Determines if the resulting dataframe will contain the ' \
+           'keys of the dictionary as column names (default) or row index names.'
 
 
 def single_row_or_col_df_to_series(desired_type: Type[T], single_rowcol_df: pd.DataFrame, logger: Logger, **kwargs)\
@@ -165,7 +184,9 @@ def get_default_dataframe_converters() -> List[Union[Converter[Any, pd.DataFrame
     and from other type to dataframe)
     :return:
     """
-    return [ConverterFunction(pd.DataFrame, dict, single_row_or_col_df_to_dict),
-            ConverterFunction(dict, pd.DataFrame, dict_to_single_row_or_col_df),
-            ConverterFunction(pd.DataFrame, pd.Series, single_row_or_col_df_to_series)]
+    return [ConverterFunction(from_type=pd.DataFrame, to_type=dict, conversion_method=single_row_or_col_df_to_dict),
+            ConverterFunction(from_type=dict, to_type=pd.DataFrame, conversion_method=dict_to_single_row_or_col_df,
+                              option_hints=dict_to_single_row_or_col_df_opts),
+            ConverterFunction(from_type=pd.DataFrame, to_type=pd.Series,
+                              conversion_method=single_row_or_col_df_to_series)]
 

@@ -365,6 +365,9 @@ class AbstractParserCache(metaclass=ABCMeta):
         - the list of parsers matching the extension but not the type,
         - the list of remaining parsers (no match at all)
 
+        WARNING: the order of parsers in lists is the opposite of the order in get_capabilities_for_type and
+        get_capabilities_for_ext methods
+
         :param strict:
         :param desired_type: a type of object to parse, or None for 'wildcard'(*) . WARNING: "object_type=Any" means "all
         parsers able to parse anything", which is different from "object_type=None" which means "all parsers".

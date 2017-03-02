@@ -600,6 +600,9 @@ Note that multifile objects and singlefile objects may coexist in the same folde
 
 ### 4- Advanced topics
 
+The `parse_collection` and `parse_item` that we have used in most examples are actually just helper methods to build a parser registry (`RootParser()`) and use it. Most of the advanced topics below use this object directly.
+
+
 #### (a) Lazy parsing
 
 The multifile collection parser included in the library provides an option to return a lazy collection instead of a standard `set`, `list`, `dict` or `tuple`. This collection will trigger parsing of each element only when that element is required. In addition to better controlling the parsing time, this feature is especially useful if you want to parse the most items possible, even if one item in the list fails parsing. 
@@ -636,7 +639,70 @@ Completed parsing successfully
 0  1  2  3  4
 ```
 
-#### (b) Parsing subclasses of existing types - registering converters - passing options to existing parsers
+#### (b) Passing options to existing parsers
+
+Parsers and converters support options. In order to know which options are available for a specific parser, the best is to identify it and ask it. For example if you want to know what are the options available for the parsers reading `DataFrame` objects :
+
+```python
+from pandas import DataFrame
+from parsyfiles import RootParser
+
+# create a root parser
+parser = RootParser()
+
+# retrieve the parsers of interest
+parsers = parser.get_capabilities_for_type(DataFrame, strict_type_matching=False)
+df_csv_parser = parsers['.csv']['1_exact_match'][0]
+p_id_csv = df_csv_parser.get_id_for_options()
+print('Parser id for csv is : ' + p_id_csv + ', implementing function is ' + repr(df_csv_parser._parser_func))
+print(' * ' + df_csv_parser.options_hints())
+df_xls_parser = parsers['.xls']['1_exact_match'][0]
+p_id_xls = df_xls_parser.get_id_for_options()
+print('Parser id for csv is : ' + p_id_xls + ', implementing function is ' + repr(df_xls_parser._parser_func))
+print(' * ' + df_xls_parser.options_hints())
+```
+
+The result is:
+
+```
+Parser id for csv is : read_df_or_series_from_csv, implementing function is <function read_df_or_series_from_csv at 0x0000000007391378>
+ * read_df_or_series_from_csv: all options from read_csv are supported, see http://pandas.pydata.org/pandas-docs/stable/generated/pandas.read_csv.html
+Parser id for csv is : read_dataframe_from_xls, implementing function is <function read_dataframe_from_xls at 0x0000000007391158>
+ * read_dataframe_from_xls: all options from read_excel are supported, see http://pandas.pydata.org/pandas-docs/stable/generated/pandas.read_excel.html
+```
+
+Then you may set the options accordingly on the root parser before calling it
+
+```python
+from parsyfiles import create_parser_options, add_parser_options
+
+# configure the DataFrame parsers to automatically parse dates and use the first column as index
+opts = create_parser_options()
+opts = add_parser_options(opts, 'read_df_or_series_from_csv', {'parse_dates': True, 'index_col': 0})
+opts = add_parser_options(opts, 'read_dataframe_from_xls', {'index_col': 0})
+
+dfs = parser.parse_collection('./test_data/demo/ts_collection', DataFrame, options=opts)
+print(dfs)
+```
+
+Results:
+
+```
+{'a':                    a  b  c  d
+	time                           
+	2015-08-28 23:30:00  1  2  3  4
+	2015-08-29 00:00:00  1  2  3  5, 
+ 'c':           a  b
+	date            
+	2015-01-01  1  2
+	2015-01-02  4  3, 
+ 'b':                    a  b  c  d
+	time                           
+	2015-08-28 23:30:00  1  2  3  4
+	2015-08-29 00:00:00  1  2  3  5}
+```
+
+#### (c) Parsing subclasses of existing types - registering converters
 
 Imagine that you want to parse a subtype of something the framework already knows to parse. For example a `TimeSeries` class of your own, that extends `DataFrame`:
 
@@ -654,10 +720,12 @@ class TimeSeries(DataFrame):
         :param df:
         """
         if isinstance(df, DataFrame) and isinstance(df.index, DatetimeIndex):
-            self._df = df
-        else:
-            raise ValueError('Error creating TimeSeries from DataFrame: provided DataFrame does not have a '
-                             'valid DatetimeIndex')
+    if df.index.tz is None:
+        df.index = df.index.tz_localize(tz='UTC')# use the UTC hypothesis in absence of other hints
+    self._df = df
+else:
+    raise ValueError('Error creating TimeSeries from DataFrame: provided DataFrame does not have a '
+                     'valid DatetimeIndex')
 
     def __getattr__(self, item):
         # Redirects anything that is not implemented here to the base dataframe.
@@ -719,23 +787,16 @@ dfs = parser.parse_collection('./test_data/demo/ts_collection', TimeSeries, opti
 *Note: you might have noticed that `TimeSeries` is a dynamic proxy. The `TimeSeries` class extends the `DataFrame` class, but delegates everything to the underlying `DataFrame` implementation provided in the constructor. This pattern is a good way to create specialized versions of generic objects created by your favourite parsers. For example two `DataFrame` might represent a training set, and a prediction table. Both objects, although similar (both are tables with rows and columns), might have very different contents (column names, column types, number of rows, etc.). We can make this fundamental difference appear at parsing level, by creating two classes.*
 
 
-#### (c) Registering a new parser
+#### (d) Registering a new parser
 
-The `parse_collection` and `parse_item` that we have used in most examples are actually just helper methods to build a parser registry and use it. If you wish to customize that parser registry, you'll have to 
+Let's register an XML parser for a specific class
+TODO
 
 ```python
-from pprint import pprint
-from parsyfiles import parse_collection
-from pandas import DataFrame
 
-dfs = parse_collection('./demo/simple_collection', DataFrame, lazy_mfcollection_parsing=True)
-print('dfs length : ' + str(len(dfs)))
-print('dfs keys : ' + str(dfs.keys()))
-print('Is b in dfs : ' + str('b' in dfs))
-pprint(dfs.get('b'))
 ```
 
-#### (d) Contract validation for parsed objects : combo with classtools-autocode and attrs
+#### (e) Contract validation for parsed objects : combo with classtools-autocode and attrs
 
 Users may wish to use [classtools_autocode](https://github.com/smarie/python-classtools-autocode) or [attrs](https://attrs.readthedocs.io/en/stable/) in order to create very compact classes representing their objects while at the same time ensuring that parsed data is valid according to some contract. Parsyfiles is totally compliant with such classes, as shown in the examples below
 

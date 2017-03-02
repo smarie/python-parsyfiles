@@ -39,6 +39,10 @@ class AllTests(TestCase):
         p = self.root_parser.get_all_parsers(strict_type_matching=False)
         print('\n' + str(len(p)) + ' Root parser parsers:')
         pprint(p)
+
+        print('Testing option hints for parsing chain')
+        print(p[0].options_hints())
+
         c = self.root_parser.get_all_conversion_chains()
         print('\n' + str(len(c[0]) + len(c[2])) + ' Root parser converters:')
         pprint(c)
@@ -343,6 +347,39 @@ class DemoTests(TestCase):
         dfs = parse_collection('./test_data/demo/simple_collection_dataframe_inference', DataFrame)
         pprint(dfs)
 
+    def test_pass_parser_options(self):
+        """
+        Passes options to the pandas parser
+        :return:
+        """
+        from pandas import DataFrame
+        from parsyfiles import RootParser
+
+        # create a root parser
+        parser = RootParser()
+
+        # retrieve the parsers of interest
+        parsers = parser.get_capabilities_for_type(DataFrame, strict_type_matching=False)
+        df_csv_parser = parsers['.csv']['1_exact_match'][0]
+        p_id_csv = df_csv_parser.get_id_for_options()
+        print('Parser id for csv is : ' + p_id_csv + ', implementing function is ' + repr(df_csv_parser._parser_func))
+        print('option hints : ' + df_csv_parser.options_hints())
+        df_xls_parser = parsers['.xls']['1_exact_match'][0]
+        p_id_xls = df_xls_parser.get_id_for_options()
+        print('Parser id for csv is : ' + p_id_xls + ', implementing function is ' + repr(df_xls_parser._parser_func))
+        print('option hints : ' + df_xls_parser.options_hints())
+
+        from parsyfiles import create_parser_options, add_parser_options
+
+        # configure the DataFrame parsers to automatically parse dates and use the first column as index
+        opts = create_parser_options()
+        opts = add_parser_options(opts, 'read_df_or_series_from_csv', {'parse_dates': True, 'index_col': 0})
+        opts = add_parser_options(opts, 'read_dataframe_from_xls', {'index_col': 0})
+
+        dfs = parser.parse_collection('./test_data/demo/ts_collection', DataFrame, options=opts)
+        print(dfs)
+
+
     def test_parse_subclass_of_known_with_custom_converter(self):
         """
         Parses a subclass of DataFrame with a custom converter.
@@ -354,7 +391,7 @@ class DemoTests(TestCase):
 
         class TimeSeries(DataFrame):
             """
-            A dummy timeseries class that extends DataFrame
+            A basic timeseries class that extends DataFrame
             """
 
             def __init__(self, df: DataFrame):
@@ -363,6 +400,8 @@ class DemoTests(TestCase):
                 :param df:
                 """
                 if isinstance(df, DataFrame) and isinstance(df.index, DatetimeIndex):
+                    if df.index.tz is None:
+                        df.index = df.index.tz_localize(tz='UTC')# use the UTC hypothesis in absence of other hints
                     self._df = df
                 else:
                     raise ValueError('Error creating TimeSeries from DataFrame: provided DataFrame does not have a '
@@ -386,7 +425,6 @@ class DemoTests(TestCase):
                                        raise_conflict=raise_conflict)
 
         # -- create your converter
-
         from typing import Type
         from logging import Logger
         from parsyfiles.converting_core import ConverterFunction
@@ -397,14 +435,13 @@ class DemoTests(TestCase):
 
         my_converter = ConverterFunction(from_type=DataFrame, to_type=TimeSeries, conversion_method=df_to_ts)
 
-
+        # -- create a parser and register your converter
         from parsyfiles import RootParser, create_parser_options, add_parser_options
 
-        # create a parser
         parser = RootParser('parsyfiles with timeseries')
         parser.register_converter(my_converter)
 
-        # you might wish to configure the DataFrame parser, though:
+        # -- you might wish to configure the DataFrame parser, though:
         opts = create_parser_options()
         opts = add_parser_options(opts, 'read_df_or_series_from_csv', {'parse_dates': True, 'index_col': 0})
         opts = add_parser_options(opts, 'read_dataframe_from_xls', {'index_col': 0})

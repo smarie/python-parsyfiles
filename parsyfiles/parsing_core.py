@@ -484,7 +484,7 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
 
     def __init__(self, parser_function: Union[ParsingMethodForStream, ParsingMethodForFile],
                  supported_types: Set[Type[T]], supported_exts: Set[str], streaming_mode: bool = True,
-                 custom_name: str = None, function_args: dict = None):
+                 custom_name: str = None, function_args: dict = None, option_hints: Callable[[], str] = None):
         """
         Constructor from a parser function , a mandatory set of supported types, and a mandatory set of supported
         extensions.
@@ -501,6 +501,7 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
         :param supported_types: mandatory set of supported types, or {
         :param supported_exts: mandatory set of supported singlefile extensions ('.txt', '.json' ...)
         :param function_args: kwargs that will be passed to the function at every call
+        :param option_hints: an optional method returning a string containing the options descriptions
         """
         super(SingleFileParserFunction, self).__init__(supported_types=supported_types, supported_exts=supported_exts)
 
@@ -521,6 +522,10 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
         check_var(function_args, var_types=dict, var_name='function_args', enforce_not_none=False)
         self.function_args = function_args
 
+        # -- option hints
+        check_var(option_hints, var_types=Callable, var_name='option_hints', enforce_not_none=False)
+        self._option_hints_func = option_hints
+
     def __str__(self):
         if self._custom_name:
             return '<' + self._custom_name + '>'
@@ -537,6 +542,14 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
 
     def get_id_for_options(self):
         return self._custom_name or self._parser_func.__name__
+
+    def options_hints(self):
+        """
+        Returns a string representing the options available for this converter
+        :return:
+        """
+        return self.get_id_for_options() + ': ' \
+               + ('No declared option' if self._option_hints_func is None else self._option_hints_func())
 
     def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger,
                           options: Dict[str, Dict[str, Any]]) -> T:

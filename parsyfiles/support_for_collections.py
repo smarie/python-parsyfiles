@@ -386,6 +386,12 @@ class MultifileCollectionParser(MultiFileParser):
 
         return children_plan
 
+    def options_hints(self):
+        return self.get_id_for_options() + ': \n' \
+               ' -- \'lazy_parsing\': a boolean indicating if parsing should be done later, when the item is actually ' \
+               'used. \n' + \
+               ' -- \'background_parsing\': not implemented yet'
+
     def _parse_multifile(self, desired_type: Type[Union[Dict, List, Set, Tuple]], obj: PersistedObject,
                          parsing_plan_for_children: Dict[str, ParsingPlan], logger: Logger,
                          options: Dict[str, Dict[str, Any]]) \
@@ -409,7 +415,7 @@ class MultifileCollectionParser(MultiFileParser):
         lazy_parsing = False
         background_parsing = False
 
-        opts = self.get_applicable_options(options)
+        opts = self._get_applicable_options(options)
         for opt_key, opt_val in opts.items():
             if opt_key is 'lazy_parsing':
                 lazy_parsing = opt_val

@@ -467,6 +467,14 @@ class ParsingChain(AnyParser):
         # but pprint uses __repr__ so we'd like users to see the small and readable version
         return self.__str__()
 
+    def options_hints(self):
+        """
+        Returns a string representing the options available for this parsing chain : it concatenates all options
+        :return:
+        """
+        return self._base_parser.options_hints() + '\n' \
+               + self._converter.options_hints()
+
     def _parse_singlefile(self, desired_type: Type[T], file_path: str, encoding: str, logger: Logger,
                           options: Dict[str, Dict[str, Any]]) -> T:
         """

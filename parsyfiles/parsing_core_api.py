@@ -445,7 +445,14 @@ class Parser(_BaseParserDeclarationForRegistries):
         """
         return self.__class__.__name__
 
-    def get_applicable_options(self, options: Dict[str, Dict[str, Any]]):
+    def options_hints(self):
+        """
+        Returns a string representing the options available for this parser
+        :return:
+        """
+        return self.get_id_for_options() + ': No declared option'
+
+    def _get_applicable_options(self, options: Dict[str, Dict[str, Any]]):
         """
         Returns the options that are applicable to this particular parser, from the full map of options.
         It first uses 'get_id_for_options()' to know the id of this parser, and then simply extracts the contents of
@@ -467,7 +474,7 @@ class Parser(_BaseParserDeclarationForRegistries):
         :param filesystem_object: the persisted object that should be parsed
         :param logger: an optional logger to log all parsing plan creation and execution information
         :param options: a dictionary additional implementation-specific parameters (one dict per parser id).
-        Implementing classes may use 'self.get_applicable_options()' to get the options that are of interest for this
+        Implementing classes may use 'self._get_applicable_options()' to get the options that are of interest for this
         parser.
         :return:
         """

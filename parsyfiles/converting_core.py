@@ -111,6 +111,13 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         # but pprint uses __repr__ so we'd like users to see the small and readable version
         return self.__str__()
 
+    def options_hints(self):
+        """
+        Returns a string representing the options available for this converter
+        :return:
+        """
+        return self.get_id_for_options() + ': No declared option'
+
     def is_able_to_convert(self, strict: bool, from_type: Type[Any], to_type: Type[Any]) \
             -> Tuple[bool, bool, bool]:
         """
@@ -300,7 +307,8 @@ class ConverterFunction(Converter[S, T]):
     """
     def __init__(self, from_type: Type[S], to_type: Type[T], conversion_method: ConversionMethod,
                  custom_name: str = None, is_able_to_convert_func: Callable[[bool, Type[S], Type[T]], bool] = None,
-                 can_chain: bool = True, function_args: dict = None, unpack_options: bool = True):
+                 can_chain: bool = True, function_args: dict = None, unpack_options: bool = True,
+                 option_hints: Callable[[], str] = None):
         """
         Constructor with a conversion method. All calls to self.convert() will be delegated to this method. An optional
         name may be provided to override the provided conversion method's name. this might be useful for example if the
@@ -321,6 +329,7 @@ class ConverterFunction(Converter[S, T]):
         :param function_args: kwargs that will be passed to the function at every call
         :param unpack_options: if False, the full options dictionary will be passed to the conversion method, instead of
         the unpacked options for this conversion function id only.
+        :param option_hints: an optional method returning a string containing the options descriptions
         """
         super(ConverterFunction, self).__init__(from_type, to_type, is_able_to_convert_func, can_chain)
 
@@ -336,9 +345,13 @@ class ConverterFunction(Converter[S, T]):
         check_var(function_args, var_types=dict, var_name='function_args', enforce_not_none=False)
         self.function_args = function_args
 
-        #
+        # -- unpack_options
         check_var(unpack_options, var_types=bool, var_name='unpack_options')
         self.unpack_options = unpack_options
+
+        # -- option hints
+        check_var(option_hints, var_types=Callable, var_name='option_hints', enforce_not_none=False)
+        self._option_hints_func = option_hints
 
     def __str__(self):
         if self.custom_name is None:
@@ -356,6 +369,14 @@ class ConverterFunction(Converter[S, T]):
 
     def get_id_for_options(self):
         return self.custom_name or self.conversion_method.__name__
+
+    def options_hints(self):
+        """
+        Returns a string representing the options available for this converter
+        :return:
+        """
+        return self.get_id_for_options() + ': ' \
+               + 'No declared option' if self._option_hints_func is None else self._option_hints_func()
 
     def convert(self, desired_type: Type[T], source_obj: S, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
@@ -598,6 +619,13 @@ class ConversionChain(Converter[S, T]):
                             + '\' is not compliant with current destination type of the chain : \'' +
                             get_pretty_type_str(self.to_type) + ' (this chain performs '
                             + ('' if self.strict else 'non-') + 'strict mode matching)')
+
+    def options_hints(self):
+        """
+        Returns a string representing the options available for this converter chain : it concatenates all options
+        :return:
+        """
+        return '\n'.join([converter.options_hints() for converter in self._converters_list]) + '\n'
 
     def convert(self, desired_type: Type[T], obj: S, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
