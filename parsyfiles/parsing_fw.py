@@ -2,7 +2,7 @@ import sys
 import traceback
 from io import StringIO
 from logging import getLogger, StreamHandler, Logger
-from typing import Type, Dict
+from typing import Type, Dict, Any
 from warnings import warn
 
 from parsyfiles.filesystem_mapping import FileMappingConfiguration, WrappedFileMappingConfiguration
@@ -28,6 +28,32 @@ def warn_import_error(type_of_obj_support: str, caught: ImportError):
     traceback.print_tb(caught.__traceback__, file=msg)
     msg.writelines(str(caught.__class__.__name__) + ' : ' + str(caught) + '\n')
     warn(msg.getvalue())
+
+
+def create_parser_options(lazy_mfcollection_parsing: bool = False) -> Dict[str, Dict[str, Any]]:
+    """
+    Utility method to create a default options structure with the lazy parsing inside
+
+    :param lazy_mfcollection_parsing:
+    :return: the options structure filled with lazyparsing option (for the MultifileCollectionParser)
+    """
+    return {MultifileCollectionParser.__name__: {'lazy_parsing': lazy_mfcollection_parsing}}
+
+
+def add_parser_options(options: Dict[str, Dict[str, Any]], parser_id: str, parser_options: Dict[str, Dict[str, Any]],
+                       overwrite: bool = False):
+    """
+    Utility method to add options for a given parser, to the provided options structure
+    :param options:
+    :param parser_id:
+    :param parser_options:
+    :param overwrite: True to silently overwrite. Otherwise an error will be thrown
+    :return:
+    """
+    if parser_id in options.keys() and not overwrite:
+        raise ValueError('There are already options in this dictionary for parser id ' + parser_id)
+    options[parser_id] = parser_options
+    return options
 
 
 class RootParser(ParserRegistryWithConverters):
@@ -124,7 +150,7 @@ class RootParser(ParserRegistryWithConverters):
 
     def parse_collection(self, item_file_prefix: str, base_item_type: Type[T], item_name_for_log: str = None,
                          file_mapping_conf: FileMappingConfiguration = None,
-                         lazy_mfcollection_parsing: bool = False) -> Dict[str, T]:
+                         options: Dict[str, Dict[str, Any]] = None) -> Dict[str, T]:
         """
         Main method to parse a collection of items of type 'base_item_type'.
 
@@ -132,7 +158,7 @@ class RootParser(ParserRegistryWithConverters):
         :param base_item_type:
         :param item_name_for_log:
         :param file_mapping_conf:
-        :param lazy_mfcollection_parsing:
+        :param options:
         :return:
         """
         # -- item_name_for_log
@@ -145,10 +171,10 @@ class RootParser(ParserRegistryWithConverters):
                           + get_pretty_type_str(base_item_type) + '> at location ' + item_file_prefix +' ****')
 
         # common steps
-        return self._parse__item(collection_type, item_file_prefix, file_mapping_conf, lazy_mfcollection_parsing)
+        return self._parse__item(collection_type, item_file_prefix, file_mapping_conf, options=options)
 
     def parse_item(self, location: str, item_type: Type[T], item_name_for_log: str = None,
-                   file_mapping_conf: FileMappingConfiguration = None, lazy_mfcollection_parsing: bool = False) -> T:
+                   file_mapping_conf: FileMappingConfiguration = None, options: Dict[str, Dict[str, Any]] = None) -> T:
         """
         Main method to parse an item of type item_type
 
@@ -156,7 +182,7 @@ class RootParser(ParserRegistryWithConverters):
         :param item_type:
         :param item_name_for_log:
         :param file_mapping_conf:
-        :param lazy_mfcollection_parsing:
+        :param options:
         :return:
         """
 
@@ -168,20 +194,23 @@ class RootParser(ParserRegistryWithConverters):
                           + get_pretty_type_str(item_type) + '> at location ' + location + ' ****')
 
         # common steps
-        return self._parse__item(item_type, location, file_mapping_conf, lazy_mfcollection_parsing)
+        return self._parse__item(item_type, location, file_mapping_conf, options=options)
 
     def _parse__item(self, item_type: Type[T], item_file_prefix: str,
                      file_mapping_conf: FileMappingConfiguration = None,
-                     lazy_mfcollection_parsing: bool = False) -> T:
+                     options: Dict[str, Dict[str, Any]] = None) -> T:
         """
         Common parsing steps to parse an item
 
         :param item_type:
         :param item_file_prefix:
         :param file_mapping_conf:
-        :param lazy_mfcollection_parsing:
+        :param options:
         :return:
         """
+
+        # for consistency : if options is None, default to the default values of create_parser_options
+        options = options or create_parser_options()
 
         # creating the persisted object (this performs required checks)
         file_mapping_conf = file_mapping_conf or WrappedFileMappingConfiguration()
@@ -195,10 +224,7 @@ class RootParser(ParserRegistryWithConverters):
         self._logger.info('')
 
         # parse
-        res = pp.execute(logger=self._logger, options={MultifileCollectionParser.__name__:
-                                                           {'lazy_parsing': lazy_mfcollection_parsing}
-                                                       }
-                         )
+        res = pp.execute(logger=self._logger, options=options)
         # print('')
         self._logger.info('')
 
@@ -220,8 +246,9 @@ def parse_item(location: str, item_type: Type[T], item_name_for_log: str = None,
     :return:
     """
     rp = RootParser('parsyfiles defaults', logger=logger)
+    opts = create_parser_options(lazy_mfcollection_parsing=lazy_mfcollection_parsing)
     return rp.parse_item(location, item_type, item_name_for_log=item_name_for_log, file_mapping_conf=file_mapping_conf,
-                         lazy_mfcollection_parsing=lazy_mfcollection_parsing)
+                         options=opts)
 
 
 def parse_collection(location: str, base_item_type: Type[T], item_name_for_log: str = None,
@@ -240,5 +267,6 @@ def parse_collection(location: str, base_item_type: Type[T], item_name_for_log: 
     :return:
     """
     rp = RootParser('parsyfiles defaults', logger=logger)
+    opts = create_parser_options(lazy_mfcollection_parsing=lazy_mfcollection_parsing)
     return rp.parse_collection(location, base_item_type, item_name_for_log=item_name_for_log,
-                               file_mapping_conf=file_mapping_conf, lazy_mfcollection_parsing=lazy_mfcollection_parsing)
+                               file_mapping_conf=file_mapping_conf, options=opts)

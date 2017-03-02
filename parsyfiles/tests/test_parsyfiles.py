@@ -4,8 +4,6 @@ from pprint import pprint
 from typing import List, Any, Tuple, Dict, Set
 from unittest import TestCase
 
-from pandas import DataFrame, Series
-
 from parsyfiles import parse_collection, RootParser, parse_item
 from parsyfiles.parsing_core_api import ParsingException
 
@@ -26,9 +24,18 @@ class Timer(object):
 class AllTests(TestCase):
 
     def setUp(self):
+        """
+        Creates the root parser to be used in most tests
+        :return:
+        """
         self.root_parser = RootParser()
 
     def test_a_root_parser_capabilities(self):
+        """
+        Tests that we can print the capabilities of the root parser: registered parsers and converters, supported
+        extensions and types, etc.
+        :return:
+        """
         p = self.root_parser.get_all_parsers(strict_type_matching=False)
         print('\n' + str(len(p)) + ' Root parser parsers:')
         pprint(p)
@@ -48,6 +55,10 @@ class AllTests(TestCase):
         return
 
     def test_b_root_parser_any(self):
+        """
+        Tests that we can ask the rootparser for its capabilities to parse a given type
+        :return:
+        """
         # print
         self.root_parser.print_capabilities_for_type(typ=Any)
 
@@ -58,6 +69,10 @@ class AllTests(TestCase):
         self.assertEquals(len(match_approx), 0)
 
     def test_objects_support(self):
+        """
+        Tests all the supported ways to parse a simple object
+        :return:
+        """
 
         # Then define the simple class representing your test case
         class ExecOpTest(object):
@@ -83,13 +98,25 @@ class AllTests(TestCase):
         pprint(e)
 
     def test_collections(self):
+        """
+        Tests all the supported ways to parse collections
+        :return:
+        """
         l = parse_item('./test_data/collections', Tuple[Dict[str, int], List[int], Set[int], Tuple[str, int, str]])
         print(l)
 
 
 class DemoTests(TestCase):
+    """
+    The tests used in the README.md examples
+    """
 
     def test_simple_collection(self):
+        """
+        Parsing a collection of dataframes as a dictionary
+        :return:
+        """
+        from pandas import DataFrame
         dfs = parse_collection('./test_data/demo/simple_collection', DataFrame)
         pprint(dfs)
 
@@ -99,6 +126,11 @@ class DemoTests(TestCase):
         RootParser().print_capabilities_for_type(typ=DataFrame)
 
     def test_simple_collection_set_list_tuple(self):
+        """
+        Parsing a collection of dataframes as a list or a tuple
+        :return:
+        """
+        from pandas import DataFrame
         dfl = parse_item('./test_data/demo/simple_collection', List[DataFrame], logger=getLogger())
         pprint(dfl)
         # dataframe objects are not mutable > can't be hashed and therefore no set can be built
@@ -110,13 +142,18 @@ class DemoTests(TestCase):
 
 
     def test_simple_collection_nologs(self):
+        """
+        parsing a collection of dataframe with a different logger
+        :return:
+        """
+        from pandas import DataFrame
         dfs = parse_collection('./test_data/demo/simple_collection', DataFrame, logger=getLogger())
         pprint(dfs)
 
         df = parse_item('./test_data/demo/simple_collection/c', DataFrame, logger=getLogger())
         pprint(df)
 
-        # this defaults to the default logger
+        # -- this defaults to the default logger, so not interesting to test
         # dfs = parse_collection('./test_data/demo/simple_collection', DataFrame, logger=None)
         # pprint(dfs)
         #
@@ -125,6 +162,11 @@ class DemoTests(TestCase):
 
 
     def test_simple_collection_lazy(self):
+        """
+        Parsing a collection of dataframes in lazy mode
+        :return:
+        """
+        from pandas import DataFrame
         dfs = parse_collection('./test_data/demo/simple_collection', DataFrame, lazy_mfcollection_parsing=True)
         # check len
         self.assertEquals(len(dfs), 5)
@@ -150,6 +192,11 @@ class DemoTests(TestCase):
         pprint(dfs)
 
     def test_simple_objects(self):
+        """
+        Parsing a collection of simple objects
+        :return:
+        """
+
         # First define the function that we want to test
         # (not useful, but just to show a complete story in the readme...)
         def exec_op(x: float, y: float, op: str) -> float:
@@ -186,6 +233,10 @@ class DemoTests(TestCase):
         RootParser().print_capabilities_for_type(typ=ExecOpTest)
 
     def test_simple_object_with_contract_classtools(self):
+        """
+        Parsing a collection of simple objects where the class is defined with `autocode-classtools`
+        :return:
+        """
 
         from classtools_autocode import autoprops, autoargs
         from contracts import contract, new_contract
@@ -219,6 +270,10 @@ class DemoTests(TestCase):
                           , e.args[0])
 
     def test_simple_object_with_contract_attrs(self):
+        """
+        Parsing a collection of simple objects where the class is defined with `attrs`
+        :return:
+        """
 
         import attr
         from attr.validators import instance_of
@@ -243,6 +298,11 @@ class DemoTests(TestCase):
             self.assertIn('<class \'ValueError\'> \'op\' has to be a string, in ', e.args[0])
 
     def test_multifile_objects(self):
+        """
+        Parsing a list of multifile objects
+        :return:
+        """
+        from pandas import Series, DataFrame
 
         class AlgoConf(object):
             def __init__(self, foo_param: str, bar_param: int):
@@ -275,5 +335,78 @@ class DemoTests(TestCase):
         pprint(dfs)
 
     def test_simple_collection_dataframe_all(self):
+        """
+        All the possible ways to parse a dataframe
+        :return:
+        """
+        from pandas import DataFrame
         dfs = parse_collection('./test_data/demo/simple_collection_dataframe_inference', DataFrame)
         pprint(dfs)
+
+    def test_parse_subclass_of_known_with_custom_converter(self):
+        """
+        Parses a subclass of DataFrame with a custom converter.
+        :return:
+        """
+
+        # define your class
+        from pandas import DataFrame, DatetimeIndex
+
+        class TimeSeries(DataFrame):
+            """
+            A dummy timeseries class that extends DataFrame
+            """
+
+            def __init__(self, df: DataFrame):
+                """
+                Constructor from a DataFrame. The DataFrame index should be an instance of DatetimeIndex
+                :param df:
+                """
+                if isinstance(df, DataFrame) and isinstance(df.index, DatetimeIndex):
+                    self._df = df
+                else:
+                    raise ValueError('Error creating TimeSeries from DataFrame: provided DataFrame does not have a '
+                                     'valid DatetimeIndex')
+
+            def __getattr__(self, item):
+                # Redirects anything that is not implemented here to the base dataframe.
+                # this is called only if the attribute was not found the usual way
+
+                # easy version of the dynamic proxy just to save time :)
+                # see http://code.activestate.com/recipes/496741-object-proxying/ for "the answer"
+                df = object.__getattribute__(self, '_df')
+                if hasattr(df, item):
+                    return getattr(df, item)
+                else:
+                    raise AttributeError('\'' + self.__class__.__name__ + '\' object has no attribute \'' + item + '\'')
+
+            def update(self, other, join='left', overwrite=True, filter_func=None, raise_conflict=False):
+                """ For some reason this method was abstract in DataFrame so we have to implement it """
+                return self._df.update(other, join=join, overwrite=overwrite, filter_func=filter_func,
+                                       raise_conflict=raise_conflict)
+
+        # -- create your converter
+
+        from typing import Type
+        from logging import Logger
+        from parsyfiles.converting_core import ConverterFunction
+
+        def df_to_ts(desired_type: Type[TimeSeries], df: DataFrame, logger: Logger) -> TimeSeries:
+            """ Converter from DataFrame to TimeSeries """
+            return TimeSeries(df)
+
+        my_converter = ConverterFunction(from_type=DataFrame, to_type=TimeSeries, conversion_method=df_to_ts)
+
+
+        from parsyfiles import RootParser, create_parser_options, add_parser_options
+
+        # create a parser
+        parser = RootParser('parsyfiles with timeseries')
+        parser.register_converter(my_converter)
+
+        # you might wish to configure the DataFrame parser, though:
+        opts = create_parser_options()
+        opts = add_parser_options(opts, 'read_df_or_series_from_csv', {'parse_dates': True, 'index_col': 0})
+        opts = add_parser_options(opts, 'read_dataframe_from_xls', {'index_col': 0})
+
+        dfs = parser.parse_collection('./test_data/demo/ts_collection', TimeSeries, options=opts)

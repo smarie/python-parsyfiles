@@ -636,18 +636,106 @@ Completed parsing successfully
 0  1  2  3  4
 ```
 
-#### (b) Parsing wrappers of existing types - writing proxy classes
+#### (b) Parsing subclasses of existing types - registering converters - passing options to existing parsers
 
-**TODO** : show how to parse a `TimeSeries` class that extends `DataFrame`, by registering a custom converter between the two types
+Imagine that you want to parse a subtype of something the framework already knows to parse. For example a `TimeSeries` class of your own, that extends `DataFrame`:
 
-**TODO** old comments to reuse in the explanation : 
+```python
+from pandas import DataFrame, DatetimeIndex
 
-This is named a dynamic proxy. The `OpConfig` class extends the `dict` class, but delegates everything to the underlying `dict` implementation provided in the constructor.
+class TimeSeries(DataFrame):
+    """
+    A dummy timeseries class that extends DataFrame
+    """
 
-*Note: this pattern is very useful to use this library, even if the underlying class is not an 'item collection' type. Indeed, this is a good way to create specialized versions of generic objects created by your favourite parsers. For example two `pandas.DataFrame` might represent a training set, and a prediction table. Both objects, although similar (both are tables with rows and columns), might have very different contents (column names, column types, number of rows, etc.). We can make this fundamental difference appear at the parsing level, by creating two classes.*
+    def __init__(self, df: DataFrame):
+        """
+        Constructor from a DataFrame. The DataFrame index should be an instance of DatetimeIndex
+        :param df:
+        """
+        if isinstance(df, DataFrame) and isinstance(df.index, DatetimeIndex):
+            self._df = df
+        else:
+            raise ValueError('Error creating TimeSeries from DataFrame: provided DataFrame does not have a '
+                             'valid DatetimeIndex')
+
+    def __getattr__(self, item):
+        # Redirects anything that is not implemented here to the base dataframe.
+        # this is called only if the attribute was not found the usual way
+
+        # easy version of the dynamic proxy just to save time :)
+        # see http://code.activestate.com/recipes/496741-object-proxying/ for "the answer"
+        df = object.__getattribute__(self, '_df')
+        if hasattr(df, item):
+            return getattr(df, item)
+        else:
+            raise AttributeError('\'' + self.__class__.__name__ + '\' object has no attribute \'' + item + '\'')
+
+    def update(self, other, join='left', overwrite=True, filter_func=None, raise_conflict=False):
+        """ For some reason this method was abstract in DataFrame so we have to implement it """
+        return self._df.update(other, join=join, overwrite=overwrite, filter_func=filter_func,
+                               raise_conflict=raise_conflict)
+```
+
+It is relatively easy to write a converter between a `DataFrame` and a `TimeSeries`. `parsyfiles` provides classes that you should use to define your converters, for example here `ConverterFunction`, that takes as argument a conversion method with a specific signature - hence the extra unused arguments in `df_to_ts`:
+
+```python
+from typing import Type
+from logging import Logger
+from parsyfiles.converting_core import ConverterFunction
+
+def df_to_ts(desired_type: Type[TimeSeries], df: DataFrame, logger: Logger) -> TimeSeries:
+    """ Converter from DataFrame to TimeSeries """
+    return TimeSeries(df)
+
+my_converter = ConverterFunction(from_type=DataFrame, to_type=TimeSeries, conversion_method=df_to_ts)
+```
+
+You have to create the parser manually in order to register your converter:
+
+```python
+from parsyfiles import RootParser, create_parser_options, add_parser_options
+
+# create a parser
+parser = RootParser('parsyfiles with timeseries')
+parser.register_converter(my_converter)
+```
+
+In some cases you may wish to change the underlying parsers options. This is possible provided that you know the identifier of the parser you wish to configure (typically it is the one appearing in the logs):
+
+```python
+# configure the DataFrame parsers to read the first column as an datetime index
+opts = create_parser_options()
+opts = add_parser_options(opts, 'read_df_or_series_from_csv', {'parse_dates': True, 'index_col': 0})
+opts = add_parser_options(opts, 'read_dataframe_from_xls', {'index_col': 0})
+```
+
+Finally, parsing is done the same way than before:
+
+```python
+dfs = parser.parse_collection('./test_data/demo/ts_collection', TimeSeries, options=opts)
+```
+
+*Note: you might have noticed that `TimeSeries` is a dynamic proxy. The `TimeSeries` class extends the `DataFrame` class, but delegates everything to the underlying `DataFrame` implementation provided in the constructor. This pattern is a good way to create specialized versions of generic objects created by your favourite parsers. For example two `DataFrame` might represent a training set, and a prediction table. Both objects, although similar (both are tables with rows and columns), might have very different contents (column names, column types, number of rows, etc.). We can make this fundamental difference appear at parsing level, by creating two classes.*
 
 
-#### (c) Contract validation for parsed objects : combo with classtools-autocode and attrs
+#### (c) Registering a new parser
+
+The `parse_collection` and `parse_item` that we have used in most examples are actually just helper methods to build a parser registry and use it. If you wish to customize that parser registry, you'll have to 
+
+```python
+from pprint import pprint
+from parsyfiles import parse_collection
+from pandas import DataFrame
+
+dfs = parse_collection('./demo/simple_collection', DataFrame, lazy_mfcollection_parsing=True)
+print('dfs length : ' + str(len(dfs)))
+print('dfs keys : ' + str(dfs.keys()))
+print('Is b in dfs : ' + str('b' in dfs))
+pprint(dfs.get('b'))
+```
+
+#### (d) Contract validation for parsed objects : combo with classtools-autocode and attrs
 
 Users may wish to use [classtools_autocode](https://github.com/smarie/python-classtools-autocode) or [attrs](https://attrs.readthedocs.io/en/stable/) in order to create very compact classes representing their objects while at the same time ensuring that parsed data is valid according to some contract. Parsyfiles is totally compliant with such classes, as shown in the examples below
 
@@ -726,7 +814,7 @@ When `'-'` is found in a test file, it also fails with a nice error message:
 Note: unfortunately, as of today (version 16.3), `attrs` does not validate attribute contents when fields are later modified on the object directly. A pull request is ongoing.
 
 
-#### (d) File mappings: Wrapped/Flat and encoding
+#### (e) File mappings: Wrapped/Flat and encoding
 
 In [3- Multifile objects: combining several parsers](#3--multifile-objects-combining-several-parsers) we used folders to encapsulate objects. In previous examples we also used the root folder to encapsulate the main item collection. This default setting is known as 'Wrapped' mode and correspond behind the scenes to a `WrappedFileMappingConfiguration` being used, with default python encoding. 
 
@@ -754,7 +842,7 @@ Note that `FlatFileMappingConfiguration` may be configured to use another separa
 Finally you may change the file encoding used by both file mapping configurations : `WrappedFileMappingConfiguration(encoding='utf-16')` `FlatFileMappingConfiguration(encoding='utf-16')`.
 
 
-#### (e) Recursivity: Multifile children of Multifile objects
+#### (f) Recursivity: Multifile children of Multifile objects
 
 As said earlier in this tutorial, parsyfiles is able to parse multifile recursively, for example multifile collections of multifile objects, multifile objects containing attributes, etc.
 
@@ -806,7 +894,7 @@ As said earlier in this tutorial, parsyfiles is able to parse multifile recursiv
 ```
 
 
-#### (f) Diversity of formats supported: DataFrames - revisited
+#### (g) Diversity of formats supported: DataFrames - revisited
 
 Now that we've seen that parsyfiles is able to combine parsers and converters, we can try to parse `DataFrame` objects from many more sources:
 

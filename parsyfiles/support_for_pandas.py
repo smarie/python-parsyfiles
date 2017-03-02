@@ -8,18 +8,18 @@ from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser
 
 
 # def read_simpledf_from_xls_streaming(desired_type: Type[pd.DataFrame], file_object: TextIOBase,
-#                            logger: Logger, *args, **kwargs) -> pd.DataFrame:
+#                            logger: Logger, **kwargs) -> pd.DataFrame:
 #     """
 #     Helper method to read a dataframe from a xls file stream. By default this is well suited for a dataframe with
 #     headers in the first row, for example a parameter dataframe.
 #     :param file_object:
 #     :return:
 #     """
-#     return pd.read_excel(file_object, *args, **kwargs)
+#     return pd.read_excel(file_object, **kwargs)
 
 
 def read_dataframe_from_xls(desired_type: Type[T], file_path: str, encoding: str,
-                            logger: Logger, *args, **kwargs) -> pd.DataFrame:
+                            logger: Logger, **kwargs) -> pd.DataFrame:
     """
     We register this method rather than the other because pandas guesses the encoding by itself.
 
@@ -30,19 +30,23 @@ def read_dataframe_from_xls(desired_type: Type[T], file_path: str, encoding: str
     :param file_path:
     :param encoding:
     :param logger:
-    :param args:
     :param kwargs:
     :return:
     """
-    return pd.read_excel(file_path, *args, **kwargs)
+    return pd.read_excel(file_path, **kwargs)
 
 
 def read_df_or_series_from_csv(desired_type: Type[pd.DataFrame], file_path: str, encoding: str,
-                               logger: Logger, *args, **kwargs) -> pd.DataFrame:
+                               logger: Logger, **kwargs) -> pd.DataFrame:
     """
-    Helper method to read a dataframe from a csv file stream. By default this is well suited for a dataframe with
+    Helper method to read a dataframe from a csv file. By default this is well suited for a dataframe with
     headers in the first row, for example a parameter dataframe.
-    :param file_object:
+
+    :param desired_type:
+    :param file_path:
+    :param encoding:
+    :param logger:
+    :param kwargs:
     :return:
     """
     if desired_type is pd.Series:
@@ -52,7 +56,7 @@ def read_df_or_series_from_csv(desired_type: Type[pd.DataFrame], file_path: str,
         # TODO there should be a way to decide between row-oriented (squeeze=True) and col-oriented (index_col=0)
         # note : squeeze=true only works for row-oriented, so we dont use it. We rather expect that a row-oriented
         # dataframe would be convertible to a series using the df to series converter below
-        one_col_df = pd.read_csv(file_path, encoding=encoding, index_col=0, *args, **kwargs)
+        one_col_df = pd.read_csv(file_path, encoding=encoding, index_col=0, **kwargs)
         if one_col_df.shape[1] == 1:
             return one_col_df[one_col_df.columns[0]]
         else:
@@ -60,7 +64,7 @@ def read_df_or_series_from_csv(desired_type: Type[pd.DataFrame], file_path: str,
                             ' Probably the parsing chain $read_df_or_series_from_csv => single_row_or_col_df_to_series$'
                             'will work, though.')
     else:
-        return pd.read_csv(file_path, encoding=encoding, *args, **kwargs)
+        return pd.read_csv(file_path, encoding=encoding, **kwargs)
 
 
 def get_default_dataframe_parsers() -> List[AnyParser]:
@@ -80,11 +84,15 @@ def get_default_dataframe_parsers() -> List[AnyParser]:
 
 
 def dict_to_single_row_or_col_df(desired_type: Type[T], dict_obj: Dict, logger: Logger,
-                                 orient: str = None, *args, **kwargs) -> pd.DataFrame:
+                                 orient: str = None, **kwargs) -> pd.DataFrame:
     """
     Helper method to convert a dictionary into a dataframe with one row
 
+    :param desired_type:
     :param dict_obj:
+    :param logger:
+    :param orient: this parameter is actually overriden to improve pandas behaviour (?)
+    :param kwargs:
     :return:
     """
     orient = orient or 'columns'
@@ -96,7 +104,7 @@ def dict_to_single_row_or_col_df(desired_type: Type[T], dict_obj: Dict, logger: 
         return res.rename(columns={0:'value'})
 
 
-def single_row_or_col_df_to_series(desired_type: Type[T], single_rowcol_df: pd.DataFrame, logger: Logger, *args, **kwargs)\
+def single_row_or_col_df_to_series(desired_type: Type[T], single_rowcol_df: pd.DataFrame, logger: Logger, **kwargs)\
         -> pd.Series:
     """
     Helper method to convert a dataframe with one row or one or two columns into a Series
@@ -104,7 +112,6 @@ def single_row_or_col_df_to_series(desired_type: Type[T], single_rowcol_df: pd.D
     :param desired_type:
     :param single_col_df:
     :param logger:
-    :param args:
     :param kwargs:
     :return:
     """
@@ -124,12 +131,15 @@ def single_row_or_col_df_to_series(desired_type: Type[T], single_rowcol_df: pd.D
                          'expected exactly 1 row or 1 column, found : ' + str(single_rowcol_df.shape) + '')
 
 
-def single_row_or_col_df_to_dict(desired_type: Type[T], single_rowcol_df: pd.DataFrame, logger: Logger, *args, **kwargs)\
+def single_row_or_col_df_to_dict(desired_type: Type[T], single_rowcol_df: pd.DataFrame, logger: Logger, **kwargs)\
         -> Dict[str, str]:
     """
     Helper method to convert a dataframe with one row or one or two columns into a dictionary
 
+    :param desired_type:
     :param single_rowcol_df:
+    :param logger:
+    :param kwargs:
     :return:
     """
     if single_rowcol_df.shape[0] == 1:
