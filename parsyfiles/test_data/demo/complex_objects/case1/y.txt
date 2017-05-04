@@ -1,0 +1,2 @@
+foo_param = "foo"
+bar_param = 2.0
