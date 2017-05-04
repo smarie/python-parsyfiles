@@ -720,12 +720,12 @@ class TimeSeries(DataFrame):
         :param df:
         """
         if isinstance(df, DataFrame) and isinstance(df.index, DatetimeIndex):
-    if df.index.tz is None:
-        df.index = df.index.tz_localize(tz='UTC')# use the UTC hypothesis in absence of other hints
-    self._df = df
-else:
-    raise ValueError('Error creating TimeSeries from DataFrame: provided DataFrame does not have a '
-                     'valid DatetimeIndex')
+            if df.index.tz is None:
+                df.index = df.index.tz_localize(tz='UTC')# use the UTC hypothesis in absence of other hints
+            self._df = df
+        else:
+            raise ValueError('Error creating TimeSeries from DataFrame: provided DataFrame does not have a '
+                             'valid DatetimeIndex')
 
     def __getattr__(self, item):
         # Redirects anything that is not implemented here to the base dataframe.
@@ -789,12 +789,41 @@ dfs = parser.parse_collection('./test_data/demo/ts_collection', TimeSeries, opti
 
 #### (d) Registering a new parser
 
-Let's register an XML parser for a specific class
-TODO
+Parsyfiles offers several ways to register a parser. Here is a simple example, where we register a basic 'singlefile' xml parser:
 
 ```python
+from typing import Type
+from parsyfiles import RootParser
+from parsyfiles.parsing_core import SingleFileParserFunction, T
+from logging import Logger
+from xml.etree.ElementTree import ElementTree, parse, tostring
 
+def read_xml(desired_type: Type[T], file_path: str, encoding: str,
+             logger: Logger, **kwargs):
+    """
+    Opens an XML file and returns the tree parsed from it as an ElementTree.
+
+    :param desired_type:
+    :param file_path:
+    :param encoding:
+    :param logger:
+    :param kwargs:
+    :return:
+    """
+    return parse(file_path)
+
+my_parser = SingleFileParserFunction(parser_function=read_xml,
+                                     streaming_mode=False,
+                                     supported_exts={'.xml'},
+                                     supported_types={ElementTree})
+
+parser = RootParser('parsyfiles with timeseries')
+parser.register_parser(my_parser)
+xmls = parser.parse_collection('./test_data/demo/xml_collection', ElementTree)
+print({name: tostring(x.getroot()) for name, x in xmls.items()})
 ```
+
+For more examples on how the parser API can be used, please have a look at the [core](https://github.com/smarie/python-simple-file-collection-parsing-framework/tree/master/parsyfiles/plugins_base) and [optional](https://github.com/smarie/python-simple-file-collection-parsing-framework/tree/master/parsyfiles/plugins_optional) plugins.
 
 #### (e) Contract validation for parsed objects : combo with classtools-autocode and attrs
 
@@ -844,7 +873,7 @@ In order for parsyfiles to find the required type for each attribute declared us
 ```python
 import attr
 from attr.validators import instance_of
-from parsyfiles.support_for_attrs import chain
+from parsyfiles.plugins_optional.support_for_attrs import chain
 
 # custom contract used in the class
 def validate_op(instance, attribute, value):

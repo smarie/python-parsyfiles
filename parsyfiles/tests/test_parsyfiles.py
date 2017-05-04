@@ -7,6 +7,7 @@ from unittest import TestCase
 
 from parsyfiles import parse_collection, RootParser, parse_item
 from parsyfiles.converting_core import AnyObject
+from parsyfiles.parsing_core import SingleFileParserFunction
 from parsyfiles.parsing_core_api import ParsingException
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -159,7 +160,6 @@ class DemoTests(TestCase):
                          logger=getLogger())
         pprint(dft)
 
-
     def test_simple_collection_nologs(self):
         """
         parsing a collection of dataframe with a different logger
@@ -178,7 +178,6 @@ class DemoTests(TestCase):
         #
         # df = parse_item('./test_data/demo/simple_collection/c', DataFrame, logger=None)
         # pprint(df)
-
 
     def test_simple_collection_lazy(self):
         """
@@ -394,7 +393,6 @@ class DemoTests(TestCase):
         dfs = parser.parse_collection(fix_path('./test_data/demo/ts_collection'), DataFrame, options=opts)
         print(dfs)
 
-
     def test_parse_subclass_of_known_with_custom_converter(self):
         """
         Parses a subclass of DataFrame with a custom converter.
@@ -462,3 +460,38 @@ class DemoTests(TestCase):
         opts = add_parser_options(opts, 'read_dataframe_from_xls', {'index_col': 0})
 
         dfs = parser.parse_collection(fix_path('./test_data/demo/ts_collection'), TimeSeries, options=opts)
+
+    def test_parse_with_custom_parser(self):
+        """
+        Parses a subclass of DataFrame with a custom converter.
+        :return:
+        """
+
+        from typing import Type
+        from parsyfiles.converting_core import T
+        from logging import Logger
+        from xml.etree.ElementTree import ElementTree, parse, tostring
+
+        def read_xml(desired_type: Type[T], file_path: str, encoding: str,
+                     logger: Logger, **kwargs):
+            """
+            Opens an XML file and returns the tree parsed from it as an ElementTree.
+
+            :param desired_type:
+            :param file_path:
+            :param encoding:
+            :param logger:
+            :param kwargs:
+            :return:
+            """
+            return parse(file_path)
+
+        my_parser = SingleFileParserFunction(parser_function=read_xml,
+                                             streaming_mode=False,
+                                             supported_exts={'.xml'},
+                                             supported_types={ElementTree})
+
+        parser = RootParser('parsyfiles with timeseries')
+        parser.register_parser(my_parser)
+        xmls = parser.parse_collection(fix_path('./test_data/demo/xml_collection'), ElementTree)
+        pprint({name: tostring(x.getroot()) for name, x in xmls.items()})
