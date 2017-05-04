@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from io import TextIOBase
 from pprint import pprint
@@ -10,6 +11,20 @@ from parsyfiles.parsing_core import SingleFileParserFunction
 from parsyfiles.parsing_core_api import ParsingException
 from parsyfiles.parsing_fw import RootParser
 from parsyfiles.var_checker import check_var
+
+
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def fix_path(relative_path: str):
+    """
+    Helper method to transform a path relative to 'parsyfiles/' folder into an absolute path independent on the test 
+    execution dir
+
+    :param relative_path: 
+    :return: 
+    """
+    return os.path.join(THIS_DIR, os.pardir, relative_path)
 
 
 class Timer(object):
@@ -57,7 +72,7 @@ class MultifileAndCustomFunctionsTest(TestCase):
         self.assertEquals(len(match_approx), 0)
 
     def test_single_multifile_object_folders(self):
-        f = self.root_parser.parse_item('./test_data/custom_with_folders/item1', self.main_type)
+        f = self.root_parser.parse_item(fix_path('./test_data/custom_with_folders/item1'), self.main_type)
         pprint(f)
         return
 
@@ -67,32 +82,32 @@ class MultifileAndCustomFunctionsTest(TestCase):
 
         # Try to parse it as a list
         with self.assertRaises(ParsingException):
-            f = self.root_parser.parse_item('./test_data/custom_without_folders/item1', List[self.main_type], file_mapping_conf=config)
+            f = self.root_parser.parse_item(fix_path('./test_data/custom_without_folders/item1'), List[self.main_type], file_mapping_conf=config)
 
-        f = self.root_parser.parse_item('./test_data/custom_without_folders/item1', self.main_type, file_mapping_conf=config)
+        f = self.root_parser.parse_item(fix_path('./test_data/custom_without_folders/item1'), self.main_type, file_mapping_conf=config)
         pprint(f)
         return
 
     def test_single_list_object_with_folders(self):
-        f = self.root_parser.parse_item('./test_data/custom_with_folders', List[self.main_type])
+        f = self.root_parser.parse_item(fix_path('./test_data/custom_with_folders'), List[self.main_type])
         pprint(f)
         self.assertEqual(len(f), 3)
         return
 
     def test_list_object_with_folders(self):
-        l = self.root_parser.parse_item('./test_data/custom_with_folders', List[self.main_type])
+        l = self.root_parser.parse_item(fix_path('./test_data/custom_with_folders'), List[self.main_type])
         pprint(l)
         self.assertEqual(len(l), 3)
         return
 
     def test_with_folders_set(self):
-        s = self.root_parser.parse_item('./test_data/custom_with_folders', Set[self.main_type])
+        s = self.root_parser.parse_item(fix_path('./test_data/custom_with_folders'), Set[self.main_type])
         pprint(s)
         self.assertEqual(len(s), 3)
         return
 
     def test_with_folders_dict(self):
-        d = self.root_parser.parse_collection('./test_data/custom_with_folders', self.main_type)
+        d = self.root_parser.parse_collection(fix_path('./test_data/custom_with_folders'), self.main_type)
         pprint(d)
         self.assertEqual(len(d), 3)
         return
@@ -100,7 +115,7 @@ class MultifileAndCustomFunctionsTest(TestCase):
     def test_no_folders(self):
 
         config = FlatFileMappingConfiguration()
-        d = self.root_parser.parse_collection('./test_data/custom_without_folders', self.main_type, file_mapping_conf=config)
+        d = self.root_parser.parse_collection(fix_path('./test_data/custom_without_folders'), self.main_type, file_mapping_conf=config)
         pprint(d)
         self.assertEqual(len(d), 3)
         return
@@ -180,9 +195,6 @@ class MultifileAndCustomFunctionsTest(TestCase):
 
             def __repr__(self):
                 return self.get_as_dict().__repr__()
-
-
-        #todo being able to return all items in a collection that have no error, while ignoring the others
 
 
         # Step 2: for each basic type, define at least one parsing function, that has one mandatory input
@@ -367,11 +379,11 @@ class TestDemo(TestCase):
                 return str(self.input_a) + ' ' + self.op + ' ' + str(self.input_b) + ' =? ' + str(self.output)
 
         # And we parse a collection of these
-        results = root_parser.parse_collection('./test_data/custom_old_demo', OpTestCase)
+        results = root_parser.parse_collection(fix_path('./test_data/custom_old_demo'), OpTestCase)
         pprint(results)
 
         conf = FlatFileMappingConfiguration(separator='--')
-        results = root_parser.parse_collection('./test_data/custom_old_demo_flat', OpTestCase, file_mapping_conf=conf)
+        results = root_parser.parse_collection(fix_path('./test_data/custom_old_demo_flat'), OpTestCase, file_mapping_conf=conf)
         pprint(results)
 
         class OpTestCaseColl(object):
@@ -392,10 +404,10 @@ class TestDemo(TestCase):
                         self.output) + ' ' + str(self.input_c)
 
 
-        results = root_parser.parse_collection('./test_data/custom_old_demo_flat_coll', OpTestCaseColl,
+        results = root_parser.parse_collection(fix_path('./test_data/custom_old_demo_flat_coll'), OpTestCaseColl,
                                                file_mapping_conf=conf)
         pprint(results['case3'].input_c)
 
-        results = root_parser.parse_collection('./test_data/custom_old_demo_coll', OpTestCaseColl)
+        results = root_parser.parse_collection(fix_path('./test_data/custom_old_demo_coll'), OpTestCaseColl)
         pprint(results['case3'].input_c)
 

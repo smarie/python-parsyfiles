@@ -510,7 +510,7 @@ class SingleFileParserFunction(SingleFileParser): #metaclass=ABCMeta
         self._custom_name = custom_name
 
         # -- check the function
-        # TODO check the function signature to prevent TypeErrors to happen (and then remove the catch block below)
+        # TODO check the function signature to prevent TypeErrors to happen (and then remove the catch block below in _parse_singlefile)
         check_var(parser_function, var_types=Callable, var_name='parser_function')
         self._parser_func = parser_function
 

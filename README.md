@@ -68,7 +68,7 @@ This framework contains a bit of nontrivial logic in order to transparently infe
 * **Serialization**: pickle files (.pyc) are supported too. Base64-encoded pickle objects can also be included in any simple file content.
 * **Multiparser**: the library will use the best parser adapted to each file format and desired type. At the time of writing the library:
     * knows **44** ways to parse a file
-    * is able to parse **15** object types (including *'Any'* for generic parsers)
+    * is able to parse **15** object types (including *'AnyObject'* for generic parsers)
     * from **13** file extensions
 * **Multifile+Multiparser objects**: You may therefore parse complex objects requiring a combination of several parsers to be built from several files. The framework will introspect the object constructor in order to know the list of required attributes to parse as well as their their type, and if they are mandatory or optional.
 * **Recursive**: attributes may themselves be collections or complex types.

@@ -5,7 +5,7 @@ from io import StringIO, TextIOBase
 from logging import Logger
 from typing import Type, Union, Any
 
-from parsyfiles.converting_core import ConverterFunction, T
+from parsyfiles.converting_core import ConverterFunction, T, AnyObject
 from parsyfiles.parsing_core import SingleFileParserFunction
 
 any_primitive_type = Union[str, int, float, bool]
@@ -122,7 +122,7 @@ def get_default_primitive_converters():
                                 custom_name=t.__name__ + '_to_bool', can_chain=False) for t in {str, float, int}] \
            + [ConverterFunction(from_type=t, to_type=str, conversion_method=to_str,
                                 custom_name=t.__name__ + '_to_string', can_chain=False) for t in {bool, float, int}] \
-           + [ConverterFunction(from_type=str, to_type=Any, conversion_method=constructor_with_str_arg,
+           + [ConverterFunction(from_type=str, to_type=AnyObject, conversion_method=constructor_with_str_arg,
                                 can_chain=False)]
 
 

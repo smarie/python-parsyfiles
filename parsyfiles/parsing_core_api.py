@@ -1,10 +1,11 @@
 from abc import abstractmethod
 from logging import Logger
-from typing import TypeVar, Generic, Type, Callable, Dict, Any, Set, Tuple
+from typing import TypeVar, Generic, Type, Callable, Dict, Any, Set, Tuple, List
 
-from parsyfiles.converting_core import get_validated_types, S, Converter, get_options_for_id
+from parsyfiles.converting_core import get_validated_types, S, Converter, get_options_for_id, is_any_type, \
+    is_any_type_set
 from parsyfiles.filesystem_mapping import EXT_SEPARATOR, MULTIFILE_EXT, PersistedObject
-from parsyfiles.type_inspection_tools import get_pretty_type_str
+from parsyfiles.type_inspection_tools import get_pretty_type_str, robust_isinstance
 from parsyfiles.var_checker import check_var
 
 T = TypeVar('T')  # Can be anything - used for all other objects
@@ -67,14 +68,16 @@ class _BaseParserDeclarationForRegistries(object):
         supported object types.
 
         It is possible to declare that a parser is able to parse any type (typically, a pickle parser), by using
-        supported_types={Any} or {object}. It is also possible to declare a custom function 'is_able_to_parse_func'
-        telling if a specific object type is supported, in order to accept most types but not all.
+        supported_types={Any} or {object} or {AnyObject}. It is also possible to declare a custom function
+        'is_able_to_parse_func' telling if a specific object type is supported, in order to accept most types but not
+        all.
 
         Note: users wishing to only implement singlefile OR multifile should rather use or extend SingleFileParser or
         MultiFileParser classes.
 
         :param supported_types: a set of supported object types that may be parsed. To declare that a parser is able to
-        parse any type this should be {Any} ({object} is allowed but will be automatically replaced with {Any}).
+        parse any type this should be {AnyObject} ({object} ans {Any} is allowed but will be automatically replaced
+        with {AnyObject}).
         :param supported_exts: a set of supported file extensions that may be parsed
         :param can_chain: a boolean (default True) indicating if converters can be appended at the end of this
         parser to create a chain. Dont change this except if it really can never make sense.
@@ -111,7 +114,7 @@ class _BaseParserDeclarationForRegistries(object):
         return 1
 
     def is_generic(self):
-        return (Any in self.supported_types)
+        return is_any_type_set(self.supported_types)
 
     def is_able_to_parse(self, desired_type: Type[Any], desired_ext: str, strict: bool) -> Tuple[bool, bool]:
         """
@@ -150,7 +153,7 @@ class _BaseParserDeclarationForRegistries(object):
             return False, None
 
         # -- strict match : either the parser is able to parse Anything, or the type is in the list of supported types
-        if (Any in self.supported_types) or (desired_type in self.supported_types):
+        if self.is_generic() or (desired_type in self.supported_types):
             return True, True  # exact match
 
         # -- non-strict match : if the parser is able to parse a subclass of the desired type, it is ok
@@ -185,9 +188,9 @@ class _BaseParserDeclarationForRegistries(object):
         converter to create a parsing chain. Returns True if it brings value to chain them.
 
         To bring value,
-        * the second converter's output should not be a parent class of the first converter's output. Otherwise
+        * the converter's output should not be a parent class of the parser's output. Otherwise
         the chain does not even make any progress :)
-        * The first converter has to allow chaining (with converter.can_chain=True)
+        * The parser has to allow chaining (with converter.can_chain=True)
 
         :param parser:
         :param to_type:
@@ -198,8 +201,8 @@ class _BaseParserDeclarationForRegistries(object):
             # The base parser prevents chaining
             return False
 
-        elif converter.to_type is Any:
-            # Any is a capability to generate any type. So it is always interesting.
+        elif not is_any_type(to_type) and is_any_type(converter.to_type):
+            # we gain the capability to generate any type. So it is interesting.
             return True
 
         elif issubclass(to_type, converter.to_type):
@@ -393,9 +396,7 @@ class ParsingPlan(Generic[T], PersistedObject):
 
         # Check that the returned parsed object has the correct type
         if res is not None:
-            # we have to avoid the exception raised by isinstance with typing.Tuple
-            if (issubclass(self.obj_type, Tuple) and isinstance(res, tuple)) \
-                    or (not issubclass(self.obj_type, Tuple) and isinstance(res, self.obj_type)):
+            if robust_isinstance(res, self.obj_type):
                 return res
 
         # wrong type : error
@@ -435,7 +436,7 @@ class Parser(_BaseParserDeclarationForRegistries):
     'SingleFileParsingFunction'.
     """
 
-    # TODO split 'parsingplan factory' concept from 'single/multi file parser' > Distinct interfaces
+    # TODO split 'parsingplan factory' concept from 'single/multi file parser' > Distinct interfaces ?
     # That would make the rootparser clearer
 
     def get_id_for_options(self):

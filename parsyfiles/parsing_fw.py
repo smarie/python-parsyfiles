@@ -8,8 +8,8 @@ from warnings import warn
 from parsyfiles.filesystem_mapping import FileMappingConfiguration, WrappedFileMappingConfiguration
 from parsyfiles.parsing_core_api import T
 from parsyfiles.parsing_registries import ParserRegistryWithConverters
-from parsyfiles.support_for_collections import MultifileCollectionParser
-from parsyfiles.support_for_objects import MultifileObjectParser
+from parsyfiles.plugins_base.support_for_collections import MultifileCollectionParser
+from parsyfiles.plugins_base.support_for_objects import MultifileObjectParser
 from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
 
@@ -83,9 +83,10 @@ class RootParser(ParserRegistryWithConverters):
         self.multifile_installed = register_default_parsers
 
         if register_default_parsers:
+            # -------------------- CORE ---------------------------
             try:
                 # -- primitive types
-                from parsyfiles.support_for_primitive_types import get_default_primitive_parsers, get_default_primitive_converters
+                from parsyfiles.plugins_base.support_for_primitive_types import get_default_primitive_parsers, get_default_primitive_converters
                 self.register_parsers(get_default_primitive_parsers())
                 self.register_converters(get_default_primitive_converters())
             except ImportError as e:
@@ -93,7 +94,7 @@ class RootParser(ParserRegistryWithConverters):
 
             try:
                 # -- collections
-                from parsyfiles.support_for_collections import get_default_collection_parsers, get_default_collection_converters
+                from parsyfiles.plugins_base.support_for_collections import get_default_collection_parsers, get_default_collection_converters
                 self.register_parsers(get_default_collection_parsers(self, self))
                 self.register_converters(get_default_collection_converters(self))
             except ImportError as e:
@@ -101,7 +102,7 @@ class RootParser(ParserRegistryWithConverters):
 
             try:
                 # -- objects
-                from parsyfiles.support_for_objects import get_default_object_parsers, get_default_object_converters
+                from parsyfiles.plugins_base.support_for_objects import get_default_object_parsers, get_default_object_converters
                 self.register_parsers(get_default_object_parsers(self, self))
                 self.register_converters(get_default_object_converters(self))
             except ImportError as e:
@@ -109,25 +110,42 @@ class RootParser(ParserRegistryWithConverters):
 
             try:
                 # -- config
-                from parsyfiles.support_for_configparser import get_default_config_parsers, get_default_config_converters
+                from parsyfiles.plugins_base.support_for_configparser import get_default_config_parsers, get_default_config_converters
                 self.register_parsers(get_default_config_parsers())
                 self.register_converters(get_default_config_converters(self))
             except ImportError as e:
                 warn_import_error('config', e)
 
+            # ------------------------- OPTIONAL -----------------
+            try:
+                # -- jprops
+                from parsyfiles.plugins_optional.support_for_jprops import get_default_jprops_parsers
+                self.register_parsers(get_default_jprops_parsers(self, self))
+                # self.register_converters()
+            except ImportError as e:
+                warn_import_error('DataFrame', e)
+
+            try:
+                # -- yaml
+                from parsyfiles.plugins_optional.support_for_yaml import get_default_yaml_parsers
+                self.register_parsers(get_default_yaml_parsers(self, self))
+                # self.register_converters()
+            except ImportError as e:
+                warn_import_error('DataFrame', e)
+
             try:
                 # -- numpy
-                from parsyfiles.support_for_numpy import get_default_np_parsers, get_default_np_converters
+                from parsyfiles.plugins_optional.support_for_numpy import get_default_np_parsers, get_default_np_converters
                 self.register_parsers(get_default_np_parsers())
                 self.register_converters(get_default_np_converters())
             except ImportError as e:
                 warn_import_error('numpy', e)
 
             try:
-                # -- dataframe
-                from parsyfiles.support_for_pandas import get_default_dataframe_parsers, get_default_dataframe_converters
-                self.register_parsers(get_default_dataframe_parsers())
-                self.register_converters(get_default_dataframe_converters())
+                # -- pandas
+                from parsyfiles.plugins_optional.support_for_pandas import get_default_pandas_parsers, get_default_pandas_converters
+                self.register_parsers(get_default_pandas_parsers())
+                self.register_converters(get_default_pandas_converters())
             except ImportError as e:
                 warn_import_error('DataFrame', e)
 

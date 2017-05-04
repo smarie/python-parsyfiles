@@ -1,3 +1,4 @@
+import os
 import time
 from logging import getLogger
 from pprint import pprint
@@ -5,7 +6,21 @@ from typing import List, Any, Tuple, Dict, Set
 from unittest import TestCase
 
 from parsyfiles import parse_collection, RootParser, parse_item
+from parsyfiles.converting_core import AnyObject
 from parsyfiles.parsing_core_api import ParsingException
+
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def fix_path(relative_path: str):
+    """
+    Helper method to transform a path relative to 'parsyfiles/' folder into an absolute path independent on the test 
+    execution dir
+    
+    :param relative_path: 
+    :return: 
+    """
+    return os.path.join(THIS_DIR, os.pardir, relative_path)
 
 
 class Timer(object):
@@ -67,7 +82,7 @@ class AllTests(TestCase):
         self.root_parser.print_capabilities_for_type(typ=Any)
 
         # details
-        res = self.root_parser.find_all_matching_parsers(strict=False, desired_type=Any, required_ext='.cfg')
+        res = self.root_parser.find_all_matching_parsers(strict=False, desired_type=AnyObject, required_ext='.cfg')
         match_generic, match_approx, match_exact = res[0]
         self.assertEquals(len(match_generic), 0)
         self.assertEquals(len(match_approx), 0)
@@ -94,11 +109,11 @@ class AllTests(TestCase):
                 return str(self.x) + ' ' + self.op + ' ' + str(self.y) + ' =? ' + str(self.expected_result)
 
         # create the parser and parse a single file
-        e = parse_item('./test_data/objects/test_diff_1', ExecOpTest)
+        e = parse_item(fix_path('./test_data/objects/test_diff_1'), ExecOpTest)
         pprint(e)
 
         # parse all of them
-        e = parse_collection('./test_data/objects', ExecOpTest)
+        e = parse_collection(fix_path('./test_data/objects'), ExecOpTest)
         pprint(e)
 
     def test_collections(self):
@@ -106,7 +121,7 @@ class AllTests(TestCase):
         Tests all the supported ways to parse collections
         :return:
         """
-        l = parse_item('./test_data/collections', Tuple[Dict[str, int], List[int], Set[int], Tuple[str, int, str]])
+        l = parse_item(fix_path('./test_data/collections'), Tuple[Dict[str, int], List[int], Set[int], Tuple[str, int, str]])
         print(l)
 
 
@@ -121,10 +136,10 @@ class DemoTests(TestCase):
         :return:
         """
         from pandas import DataFrame
-        dfs = parse_collection('./test_data/demo/simple_collection', DataFrame)
+        dfs = parse_collection(fix_path('./test_data/demo/simple_collection'), DataFrame)
         pprint(dfs)
 
-        df = parse_item('./test_data/demo/simple_collection/c', DataFrame)
+        df = parse_item(fix_path('./test_data/demo/simple_collection/c'), DataFrame)
         pprint(df)
 
         RootParser().print_capabilities_for_type(typ=DataFrame)
@@ -135,12 +150,12 @@ class DemoTests(TestCase):
         :return:
         """
         from pandas import DataFrame
-        dfl = parse_item('./test_data/demo/simple_collection', List[DataFrame], logger=getLogger())
+        dfl = parse_item(fix_path('./test_data/demo/simple_collection'), List[DataFrame], logger=getLogger())
         pprint(dfl)
         # dataframe objects are not mutable > can't be hashed and therefore no set can be built
         #dfs = parse_item('./test_data/demo/simple_collection', Set[DataFrame], logger=getLogger())
         #pprint(dfs)
-        dft = parse_item('./test_data/demo/simple_collection', Tuple[DataFrame, DataFrame, DataFrame, DataFrame, DataFrame],
+        dft = parse_item(fix_path('./test_data/demo/simple_collection'), Tuple[DataFrame, DataFrame, DataFrame, DataFrame, DataFrame],
                          logger=getLogger())
         pprint(dft)
 
@@ -151,10 +166,10 @@ class DemoTests(TestCase):
         :return:
         """
         from pandas import DataFrame
-        dfs = parse_collection('./test_data/demo/simple_collection', DataFrame, logger=getLogger())
+        dfs = parse_collection(fix_path('./test_data/demo/simple_collection'), DataFrame, logger=getLogger())
         pprint(dfs)
 
-        df = parse_item('./test_data/demo/simple_collection/c', DataFrame, logger=getLogger())
+        df = parse_item(fix_path('./test_data/demo/simple_collection/c'), DataFrame, logger=getLogger())
         pprint(df)
 
         # -- this defaults to the default logger, so not interesting to test
@@ -171,7 +186,7 @@ class DemoTests(TestCase):
         :return:
         """
         from pandas import DataFrame
-        dfs = parse_collection('./test_data/demo/simple_collection', DataFrame, lazy_mfcollection_parsing=True)
+        dfs = parse_collection(fix_path('./test_data/demo/simple_collection'), DataFrame, lazy_mfcollection_parsing=True)
         # check len
         self.assertEquals(len(dfs), 5)
         print('dfs length : ' + str(len(dfs)))
@@ -230,7 +245,7 @@ class DemoTests(TestCase):
         # pprint(e)
 
         # parse all of them
-        sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
+        sf_tests = parse_collection(fix_path('./test_data/demo/simple_objects'), ExecOpTest)
         pprint(sf_tests)
 
         #
@@ -262,7 +277,7 @@ class DemoTests(TestCase):
                 return str(self.x) + ' ' + self.op + ' ' + str(self.y) + ' =? ' + str(self.expected_result)
 
         try:
-            sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
+            sf_tests = parse_collection(fix_path('./test_data/demo/simple_objects'), ExecOpTest)
         except ParsingException as e:
             self.assertIn('<class \'contracts.interface.ContractNotRespected\'> '
                           'Breach for argument \'op\' to ExecOpTest:generated_setter_fun().\n'
@@ -281,7 +296,7 @@ class DemoTests(TestCase):
 
         import attr
         from attr.validators import instance_of
-        from parsyfiles.support_for_attrs import chain
+        from parsyfiles.plugins_optional.support_for_attrs import chain
 
         # custom contract used in the class
         def validate_op(instance, attribute, value):
@@ -297,7 +312,7 @@ class DemoTests(TestCase):
             expected_result = attr.ib(convert=float, validator=instance_of(float))
 
         try:
-            sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
+            sf_tests = parse_collection(fix_path('./test_data/demo/simple_objects'), ExecOpTest)
         except ParsingException as e:
             self.assertIn('<class \'ValueError\'> \'op\' has to be a string, in ', e.args[0])
 
@@ -328,13 +343,13 @@ class DemoTests(TestCase):
                 self.expected_results = expected_results
 
         # parse all of them
-        mf_tests = parse_collection('./test_data/demo/complex_objects', ExecOpSeriesTest)
+        mf_tests = parse_collection(fix_path('./test_data/demo/complex_objects'), ExecOpSeriesTest)
         pprint(mf_tests)
 
         RootParser().print_capabilities_for_type(typ=ExecOpSeriesTest)
 
         from parsyfiles import FlatFileMappingConfiguration
-        dfs = parse_collection('./test_data/demo/complex_objects_flat', DataFrame,
+        dfs = parse_collection(fix_path('./test_data/demo/complex_objects_flat'), DataFrame,
                                file_mapping_conf=FlatFileMappingConfiguration())
         pprint(dfs)
 
@@ -344,7 +359,7 @@ class DemoTests(TestCase):
         :return:
         """
         from pandas import DataFrame
-        dfs = parse_collection('./test_data/demo/simple_collection_dataframe_inference', DataFrame)
+        dfs = parse_collection(fix_path('./test_data/demo/simple_collection_dataframe_inference'), DataFrame)
         pprint(dfs)
 
     def test_pass_parser_options(self):
@@ -376,7 +391,7 @@ class DemoTests(TestCase):
         opts = add_parser_options(opts, 'read_df_or_series_from_csv', {'parse_dates': True, 'index_col': 0})
         opts = add_parser_options(opts, 'read_dataframe_from_xls', {'index_col': 0})
 
-        dfs = parser.parse_collection('./test_data/demo/ts_collection', DataFrame, options=opts)
+        dfs = parser.parse_collection(fix_path('./test_data/demo/ts_collection'), DataFrame, options=opts)
         print(dfs)
 
 
@@ -446,4 +461,4 @@ class DemoTests(TestCase):
         opts = add_parser_options(opts, 'read_df_or_series_from_csv', {'parse_dates': True, 'index_col': 0})
         opts = add_parser_options(opts, 'read_dataframe_from_xls', {'index_col': 0})
 
-        dfs = parser.parse_collection('./test_data/demo/ts_collection', TimeSeries, options=opts)
+        dfs = parser.parse_collection(fix_path('./test_data/demo/ts_collection'), TimeSeries, options=opts)

@@ -79,7 +79,7 @@ def pandas_parsers_option_hints_csv():
     return 'all options from read_csv are supported, see http://pandas.pydata.org/pandas-docs/stable/generated/pandas.read_csv.html'
 
 
-def get_default_dataframe_parsers() -> List[AnyParser]:
+def get_default_pandas_parsers() -> List[AnyParser]:
     """
     Utility method to return the default parsers able to parse a dictionary from a file.
     :return:
@@ -177,8 +177,8 @@ def single_row_or_col_df_to_dict(desired_type: Type[T], single_rowcol_df: pd.Dat
                          'expected exactly 1 row or 1 column, found : ' + str(single_rowcol_df.shape) + '')
 
 
-def get_default_dataframe_converters() -> List[Union[Converter[Any, pd.DataFrame],
-                                                     Converter[pd.DataFrame, Any]]]:
+def get_default_pandas_converters() -> List[Union[Converter[Any, pd.DataFrame],
+                                                  Converter[pd.DataFrame, Any]]]:
     """
     Utility method to return the default converters associated to dataframes (from dataframe to other type,
     and from other type to dataframe)

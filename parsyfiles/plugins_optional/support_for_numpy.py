@@ -1,11 +1,11 @@
 from logging import Logger
-from typing import Type, Union, Any
+from typing import Type, Union
 
 from numpy import bool_, int8, int16, int32, int64, uint8, uint16, uint32, uint64, \
     float16, float32, float64, complex64, complex128
 
-from parsyfiles.converting_core import ConverterFunction, T, S
-from parsyfiles.support_for_primitive_types import all_primitive_types
+from parsyfiles.converting_core import ConverterFunction, T, S, AnyObject
+from parsyfiles.plugins_base.support_for_primitive_types import all_primitive_types
 
 # dont include int_, intc, intp, float_ and complex_ as they are only aliases
 any_numpy_primitive_type = Union[bool_, int8, int16, int32, int64, uint8, uint16, uint32, uint64,
@@ -32,6 +32,6 @@ def can_convert(strict: bool, from_type: Type[S], to_type: Type[T]):
 
 def get_default_np_converters():
     # for each type create a converter
-    return [ConverterFunction(from_type=t, to_type=Any, conversion_method=np_primitive_to_anything_by_constructor_call,
+    return [ConverterFunction(from_type=t, to_type=AnyObject, conversion_method=np_primitive_to_anything_by_constructor_call,
                               is_able_to_convert_func=can_convert,
                               custom_name='construct_from_' + t.__name__) for t in all_np_primitive_types]

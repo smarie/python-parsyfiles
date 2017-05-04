@@ -5,13 +5,14 @@ from pprint import pprint
 from typing import Type, Dict, Any, List, Set, Tuple
 from warnings import warn
 
-from parsyfiles.converting_core import S, Converter, ConversionChain
+from parsyfiles.converting_core import S, Converter, ConversionChain, AnyObject, is_any_type, get_validated_type
 from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_combining_parsers import ParsingChain, CascadingParser, DelegatingParser, \
     print_error_to_io_stream
 from parsyfiles.parsing_core import _InvalidParserException
 from parsyfiles.parsing_core_api import Parser, ParsingPlan, T
-from parsyfiles.type_inspection_tools import get_pretty_type_str, get_base_generic_type, get_pretty_type_keys_dict
+from parsyfiles.type_inspection_tools import get_pretty_type_str, get_base_generic_type, get_pretty_type_keys_dict, \
+    robust_isinstance
 from parsyfiles.var_checker import check_var
 
 
@@ -256,7 +257,6 @@ class AbstractParserCache(metaclass=ABCMeta):
     def print_capabilities_for_type(self, typ, strict_type_matching = False):
         pprint(self.get_capabilities_for_type(typ, strict_type_matching=strict_type_matching))
 
-
     def get_capabilities_for_type(self, typ, strict_type_matching) -> Dict[str, Dict[str, Parser]]:
         """
         Utility method to return, for a given type, all known ways to parse an object of this type, organized by file
@@ -369,8 +369,9 @@ class AbstractParserCache(metaclass=ABCMeta):
         get_capabilities_for_ext methods
 
         :param strict:
-        :param desired_type: a type of object to parse, or None for 'wildcard'(*) . WARNING: "object_type=Any" means "all
-        parsers able to parse anything", which is different from "object_type=None" which means "all parsers".
+        :param desired_type: a type of object to parse, or None for 'wildcard'(*) .
+        WARNING: "object_type=AnyObject/object/Any)"
+        means "all parsers able to parse anything", which is different from "object_type=None" which means "all parsers".
         :param required_ext: a specific extension to parse, or None for 'wildcard'(*)
         :return: a tuple: [matching parsers(*), parsers matching type but not ext, parsers matching ext but not type,
         parsers not matching at all]. (*) matching parsers is actually a tuple : (matching_parsers_generic,
@@ -478,6 +479,8 @@ class ParserCache(AbstractParserCache):
             no_match = []
         else:
             check_var(strict, var_types=bool, var_name='strict')
+            # first transform any 'Any' type requirement into the official class for that
+            desired_type = get_validated_type(desired_type, 'desired_type', enforce_not_none=False)
 
             matching_parsers_generic = []
             matching_parsers_approx = []
@@ -491,7 +494,7 @@ class ParserCache(AbstractParserCache):
                 match = p.is_able_to_parse(desired_type=desired_type, desired_ext=required_ext, strict=strict)[0]
                 if match:
                     # match
-                    if desired_type not in {Any, object}:
+                    if not is_any_type(desired_type):
                         matching_parsers_generic.append(p)
                     else:
                         # special case : what is required is Any, so put in exact match
@@ -505,7 +508,7 @@ class ParserCache(AbstractParserCache):
                 match, exact_match = p.is_able_to_parse(desired_type=desired_type, desired_ext=required_ext,
                                                         strict=strict)
                 if match:
-                    if desired_type not in {Any, object}:
+                    if not is_any_type(desired_type):
                         if exact_match is None or exact_match:
                             matching_parsers_exact.append(p)
                         else:
@@ -594,15 +597,15 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
             # No match. Do we have a close match ? (correct type, but not correct extension ?)
             if len(no_ext_match_but_type_match) > 0:
                 raise NoParserFoundForObjectExt.create(obj_on_filesystem, object_type,
-                                                       [ext_ for ext_list in
+                                                       set([ext_ for ext_set in
                                                         [p.supported_exts for p in no_ext_match_but_type_match]
-                                                        for ext_ in ext_list])
+                                                        for ext_ in ext_set]))
             else:
                 # no, no match at all
                 raise NoParserFoundForObjectType.create(obj_on_filesystem, object_type,
-                                                       [typ_ for typ_list in
+                                                        set([typ_ for typ_set in
                                                         [p.supported_types for p in no_type_match_but_ext_match]
-                                                        for typ_ in typ_list])
+                                                        for typ_ in typ_set]))
 
         elif len(matching_parsers) == 1:
             # return the match directly
@@ -731,10 +734,12 @@ class ConversionFinder(metaclass=ABCMeta):
         """
         Utility method to find all converters or conversion chains matching the provided query.
 
-        :param from_type: a required type of input object, or None for 'wildcard'(*) . WARNING: "from_type=Any" means
+        :param from_type: a required type of input object, or None for 'wildcard'(*) .
+        WARNING: "from_type=AnyObject/object/Any" means
         "all converters able to source from anything", which is different from "from_type=None" which means "all
         converters whatever their source type".
-        :param to_type: a required type of output object, or None for 'wildcard'(*) . WARNING: "to_type=Any" means "all
+        :param to_type: a required type of output object, or None for 'wildcard'(*) .
+        WARNING: "to_type=AnyObject/object/Any" means "all
         converters able to produce any type of object", which is different from "to_type=None" which means "all
         converters whatever type they are able to produce".
         :return: a tuple of lists of matching converters, by type of *dest_type* match : generic, approximate, exact
@@ -749,9 +754,7 @@ class ConversionFinder(metaclass=ABCMeta):
         :return:
         """
 
-        # we have to avoid the exception raised by isinstance with typing.Tuple
-        if (issubclass(desired_attr_type, Tuple) and isinstance(attr_value, tuple)) \
-                or (not issubclass(desired_attr_type, Tuple) and isinstance(attr_value, desired_attr_type)):
+        if isinstance(attr_value, desired_attr_type):
             # value is already of the correct type
             return attr_value
 
@@ -790,9 +793,8 @@ class ConversionFinder(metaclass=ABCMeta):
         """
 
         # check if we need additional conversion
-        # --- for some reason Tuple does not work with isinstance so there is a special check here
-        if (issubclass(desired_attr_type, Tuple) and not isinstance(attr_value, tuple)) \
-                or (not issubclass(desired_attr_type, Tuple) and not isinstance(attr_value, desired_attr_type)):
+        # --- typing types do not work with isinstance so there is a special check here
+        if not robust_isinstance(attr_value, desired_attr_type):
             if conversion_finder is not None:
                 return conversion_finder.find_and_convert(attr_name,
                                                           attr_value,
@@ -1015,10 +1017,12 @@ class ConverterCache(AbstractConverterCache):
         """
         Utility method to find matching converters or conversion chains.
 
-        :param from_type: a required type of input object, or None for 'wildcard'(*) . WARNING: "from_type=Any" means
+        :param from_type: a required type of input object, or None for 'wildcard'(*) .
+        WARNING: "from_type=AnyObject/object/Any" means
         "all converters able to source from anything", which is different from "from_type=None" which means "all
         converters whatever their source type".
-        :param to_type: a required type of output object, or None for 'wildcard'(*) . WARNING: "to_type=Any" means "all
+        :param to_type: a required type of output object, or None for 'wildcard'(*) .
+        WARNING: "to_type=AnyObject/object/Any" means "all
         converters able to produce any type of object", which is different from "to_type=None" which means "all
         converters whatever type they are able to produce".
         :return: a tuple of lists of matching converters, by type of *dest_type* match : generic, approximate, exact.
@@ -1033,6 +1037,8 @@ class ConverterCache(AbstractConverterCache):
                                   self._specific_conversion_chains.copy()
 
         else:
+            # first transform any 'Any' type requirement into the official class for that
+            to_type = get_validated_type(to_type, 'to_type', enforce_not_none=False)
             matching_dest_generic, matching_dest_approx, matching_dest_exact = [], [], []
 
             # handle generic converters first
@@ -1040,7 +1046,7 @@ class ConverterCache(AbstractConverterCache):
                 match = p.is_able_to_convert(strict=self.strict, from_type=from_type, to_type=to_type)[0]
                 if match:
                     # match
-                    if to_type not in {Any, object}:
+                    if not is_any_type(to_type):
                         matching_dest_generic.append(p)
                     else:
                         # special case of Any
@@ -1051,7 +1057,7 @@ class ConverterCache(AbstractConverterCache):
                 match, source_exact, dest_exact = p.is_able_to_convert(strict=self.strict, from_type=from_type,
                                                                        to_type=to_type)
                 if match:
-                    if to_type not in {Any, object}:
+                    if not is_any_type(to_type):
                         if dest_exact:
                             # we dont care if source is exact or approximate as long as dest is exact
                             matching_dest_exact.append(p)

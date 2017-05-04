@@ -566,7 +566,7 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
 
         example if location = '<parent_folder>/
 
-        location/
+        parent_folder/
         |-singlefile_sub_item1.<ext>
         |-singlefile_sub_item2.<ext>
         |-multifile_sub_item3<sep>singlesub1.<ext>
@@ -579,7 +579,7 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
         """
 
         # (1) Find the base directory and base name
-        if isdir(parent_location):  # special case of root folder. maybe TODO be more strict: root_folder = self.root_folder
+        if isdir(parent_location):  # special case: parent location is the root folder where all the files are.
             parent_dir = parent_location
             base_prefix = ''
             start_with = ''

@@ -1,34 +1,15 @@
 from inspect import Parameter
-from io import TextIOBase
 from logging import Logger, warning
 from typing import Type, Any, List, Dict, Union, Tuple, Set
 
-from parsyfiles.converting_core import Converter, T, ConverterFunction
+from parsyfiles.converting_core import Converter, T, ConverterFunction, AnyObject
 from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_core import MultiFileParser, AnyParser, SingleFileParserFunction
 from parsyfiles.parsing_registries import ParserFinder, ConversionFinder
-from parsyfiles.support_for_collections import DictOfDict
+from parsyfiles.plugins_base.support_for_collections import DictOfDict
 from parsyfiles.type_inspection_tools import get_pretty_type_str, get_constructor_attributes_types, \
     TypeInformationRequiredError, is_collection
 from parsyfiles.var_checker import check_var
-
-
-def read_object_from_yaml(desired_type: Type[Any], file_object: TextIOBase, logger: Logger,
-                          fix_imports: bool = True, errors: str = 'strict', *args, **kwargs) -> Any:
-    """
-    Parses a yaml file.
-
-    :param desired_type:
-    :param file_object:
-    :param logger:
-    :param fix_imports:
-    :param errors:
-    :param args:
-    :param kwargs:
-    :return:
-    """
-    import yaml
-    return yaml.load(file_object)
 
 
 def read_object_from_pickle(desired_type: Type[T], file_path: str, encoding: str,
@@ -317,20 +298,7 @@ def get_default_object_parsers(parser_finder: ParserFinder, conversion_finder: C
     return [SingleFileParserFunction(parser_function=read_object_from_pickle,
                                      streaming_mode=False,
                                      supported_exts={'.pyc'},
-                                     supported_types={Any}),
-            # yaml for any object
-            SingleFileParserFunction(parser_function=read_object_from_yaml,
-                                     streaming_mode=True,
-                                     supported_exts={'.yaml','.yml'},
-                                     supported_types={Any},
-                                     ),
-            # yaml for collection objects
-            SingleFileParserFunction(parser_function=read_object_from_yaml,
-                                     custom_name='read_collection_from_yaml',
-                                     streaming_mode=True,
-                                     supported_exts={'.yaml','.yml'},
-                                     supported_types={Tuple, Dict, List, Set},
-                                     ),
+                                     supported_types={AnyObject}),
             MultifileObjectParser(parser_finder, conversion_finder)
             ]
 
@@ -360,11 +328,13 @@ def get_default_object_converters(conversion_finder: ConversionFinder) \
     """
 
     return [
-            ConverterFunction(str, Any, base64_ascii_str_pickle_to_object),
-            ConverterFunction(DictOfDict, Any, dict_to_object, custom_name='dict_of_dict_to_object',
+            ConverterFunction(from_type=str, to_type=AnyObject, conversion_method=base64_ascii_str_pickle_to_object),
+            ConverterFunction(from_type=DictOfDict, to_type=Any, conversion_method=dict_to_object,
+                              custom_name='dict_of_dict_to_object',
                               is_able_to_convert_func=_not_able_to_convert_collections, unpack_options=False,
                               function_args={'conversion_finder': conversion_finder, 'is_dict_of_dicts': True}),
-            ConverterFunction(dict, Any, dict_to_object, custom_name='dict_to_object', unpack_options=False,
+            ConverterFunction(from_type=dict, to_type=AnyObject, conversion_method=dict_to_object,
+                              custom_name='dict_to_object', unpack_options=False,
                               is_able_to_convert_func=_not_able_to_convert_collections,
                               function_args={'conversion_finder': conversion_finder, 'is_dict_of_dicts': False})
             ]
@@ -383,7 +353,7 @@ class MultifileObjectParser(MultiFileParser):
         collection
         :param parser_finder:
         """
-        super(MultifileObjectParser, self).__init__(supported_types={Any})
+        super(MultifileObjectParser, self).__init__(supported_types={AnyObject})
         self.parser_finder = parser_finder
         self.conversion_finder = conversion_finder
 

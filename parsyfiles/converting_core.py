@@ -7,12 +7,42 @@ from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
 
 
+class AnyObject(object):
+    """Helper class alias for 'Any', see method is_any_type below"""
+    pass
+
+
+def is_any_type(typ: Type[Any]) -> bool:
+    """
+    Helper function to check if a type is 'Any'. Created in order to easily change the behaviour for the whole module.
+    Indeed before we used 'typing.Any' but now that typing.py prevents use of Any in isinstance and issubclass, we
+    switched back to 'object'.
+
+    Note that parsers/converters may use 'object' or 'Any' to denote 'any type', but at creation time the type will be
+    converted to AnyObject (see get_validated_type method)
+
+    :param typ:
+    :return:
+    """
+    return typ is AnyObject
+
+
+def is_any_type_set(sett: Set[Type]) -> bool:
+    """
+    Helper method to check if a set of types is the {AnyObject} singleton
+
+    :param sett:
+    :return:
+    """
+    return len(sett) == 1 and is_any_type(min(sett))  # min is a way to access the single element of a size 1 set
+
+
 def get_validated_types(object_types: Set[Type], set_name: str) -> Set[Type]:
     """
     Utility to validate a set of types :
     * None is not allowed as a whole or within the set,
-    * object is converted into Any
-    * if Any is in the set, it must be the only element
+    * object and Any are converted into AnyObject
+    * if AnyObject is in the set, it must be the only element
 
     :param object_types: the set of types to validate
     :param set_name: a name used in exceptions if any
@@ -20,26 +50,29 @@ def get_validated_types(object_types: Set[Type], set_name: str) -> Set[Type]:
     """
     check_var(object_types, var_types=set, var_name=set_name)
     res = {get_validated_type(typ, set_name + '[x]') for typ in object_types}
-    if Any in res and len(res) > 1:
-        raise ValueError('The set of types contains \'object\'/\'Any\', so no other type must be present in the set')
+    if AnyObject in res and len(res) > 1:
+        raise ValueError('The set of types contains \'object\'/\'Any\'/\'AnyObject\', so no other type must be present '
+                         'in the set')
     else:
         return res
 
 
-def get_validated_type(object_type: Type[Any], name: str) -> Type[Any]:
+def get_validated_type(object_type: Type[Any], name: str, enforce_not_none:bool = True) -> Type[Any]:
     """
     Utility to validate a type :
     * None is not allowed,
-    * 'object' is converted into 'Any'
+    * 'object' and 'Any' are converted into 'AnyObject'
 
     :param object_type: the type to validate
     :param name: a name used in exceptions if any
+    :param enforce_not_none: a boolean, set to False to tolerate None types
     :return: the fixed type
     """
-    check_var(object_type, var_types=type, var_name=name)
-    if object_type is object:
-        return Any
+    if object_type is object or object_type is Any or object_type is AnyObject:
+        return AnyObject
     else:
+        # note: we dont check var earlier, since 'typing.Any' is now not a subclass of type anymore
+        check_var(object_type, var_types=type, var_name=name, enforce_not_none=enforce_not_none)
         return object_type
 
 
@@ -50,9 +83,9 @@ T = TypeVar('T')  # Can be anything - used for all other objects
 class Converter(Generic[S, T], metaclass=ABCMeta):
     """
     Parent class of all converters able to convert an object of a given source type to another, of a destination type.
-    A destination type of 'Any' is allowed. In that case the converter is a 'generic' converter. A custom function
+    A destination type of 'AnyObject' is allowed. In that case the converter is a 'generic' converter. A custom function
     may be provided at construction time, to enable converters to reject some conversions, even if their dest type is
-    'Any'.
+    'AnyObject'.
     """
 
     def __init__(self, from_type: Type[S], to_type: Type[T],
@@ -60,14 +93,14 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
                  can_chain: bool = True):
         """
         Constructor for a converter from one source type (from_type) to one destination type (to_type).
-        from_type may be any type except Any or object. to_type may be Any.
+        from_type may be any type except AnyObject or object. to_type may be AnyObject.
 
         A custom function may be provided to enable converters to reject some conversions, even if the provided type
         is a subclass of their source type and the expected type is a parent class of their dest type (or their dest
-        type is 'Any').
+        type is 'AnyObject').
 
         :param from_type: the source type
-        :param to_type: the destination type, or Any (for generic converters)
+        :param to_type: the destination type, or AnyObject (for generic converters)
         :param is_able_to_convert_func: an optional function taking a desired object type as an input and outputting a
         boolean. It will be called in 'is_able_to_convert'. This allows implementors to reject some conversions even if
         they are compliant with their declared 'to_type'.
@@ -76,7 +109,7 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         """
         # --from type
         self.from_type = get_validated_type(from_type, 'from_type')
-        if from_type is Any:
+        if from_type is AnyObject:
             raise ValueError('A converter\'s \'from_type\' cannot be anything at the moment, it would be a mess.')
 
         # --to type
@@ -97,10 +130,10 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
 
     def is_generic(self):
         """
-        A converter is generic if its destination type is 'Any'.
+        A converter is generic if its destination type is 'AnyObject'.
         :return:
         """
-        return self.to_type is Any
+        return is_any_type(self.to_type)
 
     def __str__(self):
         return '<Converter from ' + get_pretty_type_str(self.from_type) + ' to ' + get_pretty_type_str(self.to_type) \
@@ -181,8 +214,8 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         if not left_converter.can_chain:
             return False
 
-        elif right_converter.to_type is Any:
-            # Any is a capability to generate any type. So it is always interesting.
+        elif not is_any_type(left_converter.to_type) and is_any_type(right_converter.to_type):
+            # we gain the capability to generate any type. So it is interesting.
             return True
 
         elif issubclass(left_converter.from_type, right_converter.to_type) \
@@ -317,7 +350,7 @@ class ConverterFunction(Converter[S, T]):
         See Converter class for details on other arguments.
 
         :param from_type: the source type
-        :param to_type: the destination type, or Any (for generic converters)
+        :param to_type: the destination type, or AnyObject (for generic converters)
         :param conversion_method: the function the conversion step will be delegated to
         :param custom_name: an optional custom name to override the provided function name. this might be useful for
         example if the same function is used in several converters

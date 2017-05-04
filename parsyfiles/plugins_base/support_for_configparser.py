@@ -6,7 +6,7 @@ from typing import List, Union, Any, Dict, Type
 from parsyfiles.converting_core import Converter, ConverterFunction, T
 from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser
 from parsyfiles.parsing_registries import ConversionFinder
-from parsyfiles.support_for_collections import DictOfDict, convert_collection_values_according_to_pep
+from parsyfiles.plugins_base.support_for_collections import DictOfDict, convert_collection_values_according_to_pep
 from parsyfiles.type_inspection_tools import _extract_collection_base_type
 
 

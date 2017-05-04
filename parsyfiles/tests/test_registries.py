@@ -3,6 +3,7 @@ from random import shuffle
 from typing import Generic, TypeVar, Dict, Type, Any
 from unittest import TestCase
 
+from parsyfiles.converting_core import AnyObject
 from parsyfiles.filesystem_mapping import MULTIFILE_EXT, PersistedObject
 from parsyfiles.parsing_core import SingleFileParserFunction, MultiFileParser, AnyParser, T, _BaseParsingPlan
 from parsyfiles.parsing_registries import ParserCache
@@ -33,7 +34,7 @@ class TestParserRegistry(TestCase):
         self.B = B
         self.C = C
         self.D = D
-        self.all_types = {A, B, C, D, Any}
+        self.all_types = {A, B, C, D, AnyObject}
 
         self.all_parsers_for_a = set()
         self.all_parsers_for_b = set()
@@ -202,14 +203,14 @@ class TestParserRegistry(TestCase):
         def parse_any():
             pass
 
-        any_parser_singlefile = SingleFileParserFunction(parse_any, supported_types={Any},
+        any_parser_singlefile = SingleFileParserFunction(parse_any, supported_types={AnyObject},
                                                          supported_exts=set(all_d_extensions))
         parsers_generic_singlefile = [any_parser_singlefile]
 
-        any_parser_multifile = DummyMultifileParser(supported_types={Any})
+        any_parser_multifile = DummyMultifileParser(supported_types={AnyObject})
         parsers_generic_multifile = [any_parser_multifile]
 
-        any_parser_bothfile = DummyParser(supported_types={Any}, supported_exts=set(self.all_a_extensions))
+        any_parser_bothfile = DummyParser(supported_types={AnyObject}, supported_exts=set(self.all_a_extensions))
         parsers_generic_bothfile = [any_parser_bothfile]
 
         self.all_parsers_generic = self.all_parsers_generic.union(set(parsers_generic_singlefile)) \
@@ -230,7 +231,7 @@ class TestParserRegistry(TestCase):
                             B: self.all_parsers_for_b,
                             C: self.all_parsers_for_c,
                             D: self.all_parsers_for_d,
-                            Any: self.all_parsers_generic}
+                            AnyObject: self.all_parsers_generic}
 
     def create_shuffled_registry(self):
         r = ParserCache()

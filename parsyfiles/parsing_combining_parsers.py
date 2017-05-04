@@ -3,7 +3,7 @@ from io import StringIO, TextIOBase
 from logging import Logger
 from typing import Type, Dict, Any, List
 
-from parsyfiles.converting_core import Converter, T, S, ConversionChain
+from parsyfiles.converting_core import Converter, T, S, ConversionChain, AnyObject
 from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_core import AnyParser
 from parsyfiles.parsing_core_api import get_parsing_plan_log_str, Parser, ParsingPlan
@@ -198,8 +198,8 @@ class CascadingParser(DelegatingParser):
                     'Cannot add this parser to this parsing cascade : it does not match the rest of the cascades '
                     'configuration (multifile support)')
 
-        if Any not in parser.supported_types:
-            if Any in self.supported_types:
+        if AnyObject not in parser.supported_types:
+            if AnyObject in self.supported_types:
                 raise ValueError(
                     'Cannot add this parser to this parsing cascade : it does not match the rest of the cascades '
                     'configuration (the cascade supports any type while the parser only supports '
@@ -412,7 +412,7 @@ class ParsingChain(AnyParser):
         :param base_parser_chosen_dest_type
         """
         check_var(base_parser, var_types=AnyParser, var_name='base_parser')
-        if Any in base_parser.supported_types:
+        if base_parser.is_generic():
             raise ValueError('Creating a parsing chain from a base parser able to parse any type is just pointless.')
         self._base_parser = base_parser
 

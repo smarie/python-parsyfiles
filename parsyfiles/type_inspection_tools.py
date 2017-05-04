@@ -1,9 +1,19 @@
 from inspect import getmembers, signature, _empty, Parameter
-from pydoc import locate
-from typing import Type, Any, Tuple, List, Set, Dict, Generic
-from warnings import warn
+from typing import Type, Any, Tuple, List, Set, Dict
 
 from parsyfiles.var_checker import check_var
+
+
+def robust_isinstance(inst, typ):
+    """
+    Similar to isinstance, but if 'typ' is a parametrized generic Type, it is first transformed into its base generic
+    class so that the instance check works
+
+    :param inst:
+    :param typ:
+    :return:
+    """
+    return isinstance(inst, get_base_generic_type(typ))
 
 
 def get_pretty_type_str(object_type):
@@ -38,51 +48,54 @@ def get_pretty_type_keys_dict(dict):
     return {get_pretty_type_str(typ): val for typ, val in dict.items()}
 
 
-def is_generic(object_type):
+def is_parametrized_generic(object_type):
     """
-    Utility method to check for example if a type is a subclass of typing.{List,Dict,Set,Tuple}
-    or of list, dict, set, tuple
+    Utility method to check if a "typing" type is parametrized as in List[str], or if it not, as in List
 
     :param object_type:
     :return:
     """
-    try:
-        return issubclass(object_type, Generic)
-    except TypeError as e:
-        if e.args[0].startswith('descriptor \'__subclasses__\' of'):
-            # known bug that is supposed to be fixed by now https://github.com/python/typing/issues/266.
-            # as a fallback, at least return true if class is a subclass of the 'must know' classes
-            # (todo find a better way?)
-            return issubclass(object_type, (List, Set, Tuple, Dict))
-
-        elif e.args[0].startswith('cannot create weak reference to'):
-            # assuming this is fixed : https://github.com/python/typing/issues/345
-            # then what remains is a type that is does not extend the typing module
-            return False
-
-        else:
-            raise e
+    # TODO when https://github.com/python/typing/issues/423 is resolved, rely on it
+    return hasattr(object_type, '__origin__') and object_type.__origin__ is not None
+    # try:
+    #     return issubclass(object_type, Generic)
+    # except TypeError as e:
+    #     if e.args[0].startswith('descriptor \'__subclasses__\' of'):
+    #         # known bug that is supposed to be fixed by now https://github.com/python/typing/issues/266.
+    #         # as a fallback, at least return true if class is a subclass of the 'must know' classes
+    #         return issubclass(object_type, (List, Set, Tuple, Dict))
+    #
+    #     elif e.args[0].startswith('cannot create weak reference to'):
+    #         # assuming this is fixed : https://github.com/python/typing/issues/345
+    #         # then what remains is a type that is does not extend the typing module
+    #         return False
+    #
+    #     else:
+    #         raise e
 
 
 def get_base_generic_type(object_type):
     """
     Utility method to return the equivalent non-customized type for a Generic type, including user-defined ones.
-    for example calling it on typing.List<~T>[int] will return typing.List<~T>
+    for example calling it on typing.List<~T>[int] will return typing.List<~T>.
+
+    If the type is not parametrized it is returned as is
 
     :param object_type:
     :return:
     """
-    if is_generic(object_type):
-        inferred_base_type = locate(object_type.__module__ + '.' + object_type.__name__)
-        if inferred_base_type is not None:
-            return inferred_base_type
-        else:
-            # that may happen if your generic class has been defined inside a local class
-            # For these classes, we cant' get the base (expressed with 'T') class, strangely enough
-            # TODO improve.
-            warn('Unable to find the base generic class for ' + str(object_type) + ' although it seems to extend '
-                 'typing.Generic. Using the class directly')
-            return object_type
+    # TODO when https://github.com/python/typing/issues/423 is resolved, rely on it
+    if is_parametrized_generic(object_type):
+        # inferred_base_type = locate(object_type.__module__ + '.' + object_type.__name__)
+        return object_type.__origin__
+        # if inferred_base_type is not None:
+        #     return inferred_base_type
+        # else:
+        #     # that may happen if your generic class has been defined inside a local class
+        #     # For these classes, we cant' get the base (expressed with 'T') class, strangely enough
+        #     warn('Unable to find the base generic class for ' + str(object_type) + ' although it seems to extend '
+        #          'typing.Generic. Using the class directly')
+        #     return object_type
     else:
         return object_type
 
@@ -125,11 +138,10 @@ def _extract_collection_base_type(collection_object_type: Type[Any], exception_i
     Utility method to extract the base item type from a collection/iterable item type.
     Throws
     * a TypeError if the collection_object_type a Dict with non-string keys.
-    * a TypeError if the collection_object_type is a Tuple (not handled yet)
     * an AttributeError if the collection_object_type is actually not a collection
     * a TypeInformationRequiredError if somehow the inner type can't be found from the collection type (either if dict,
     list, set, tuple were used instead of their typing module equivalents (Dict, List, Set, Tuple), or if the latter
-    were specified without inner content types (as in Dict[str, Foo])
+    were specified without inner content types (as in Dict instead of Dict[str, Foo])
 
     :param collection_object_type:
     :return:
@@ -158,8 +170,8 @@ def _extract_collection_base_type(collection_object_type: Type[Any], exception_i
     elif issubclass(collection_object_type, Tuple):
         # Tuple
         # noinspection PyUnresolvedReferences
-        if hasattr(collection_object_type, '__tuple_params__') and collection_object_type.__tuple_params__ is not None:
-            contents_item_type = collection_object_type.__tuple_params__
+        if hasattr(collection_object_type, '__args__') and collection_object_type.__args__ is not None:
+            contents_item_type = collection_object_type.__args__
 
     elif issubclass(collection_object_type, dict) or issubclass(collection_object_type, list) \
                 or issubclass(collection_object_type, tuple) or issubclass(collection_object_type, set):
@@ -205,7 +217,7 @@ def get_constructor_attributes_types(item_type) -> Dict[str, Tuple[Type[Any], bo
 
     try:
         # -- Try to read an attr declaration and to extract types and optionality
-        from parsyfiles.support_for_attrs import get_attrs_declarations
+        from parsyfiles.plugins_optional.support_for_attrs import get_attrs_declarations
         res = get_attrs_declarations(item_type)
 
         # check that types are correct

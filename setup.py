@@ -50,9 +50,12 @@ except(ImportError):
 INSTALL_REQUIRES = []
 DEPENDENCY_LINKS = []
 SETUP_REQUIRES = ['setuptools_scm','pypandoc']
-TESTS_REQUIRE = ['nose', 'numpy', 'pandas']
-EXTRAS_REQUIRE = {'pandas_parser': ['numpy', 'pandas'],
-                  'jprops_parser': ['jprops']}
+TESTS_REQUIRE = ['nose', 'numpy', 'pandas', 'jprops', 'pyyaml', 'classtools_autocode', 'pycontracts']
+EXTRAS_REQUIRE = {'numpy_parser': ['numpy'],
+                  'pandas_parser': ['numpy', 'pandas'],
+                  'jprops_parser': ['jprops'],
+                  'yaml_parser': ['pyyaml'],
+                  'classtools_autocode': ['classtools_autocode']}
 
 setup(
     name=DISTNAME,
