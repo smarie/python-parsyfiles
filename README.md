@@ -117,9 +117,9 @@ As usual :
 
 ## Usage
 
-### 1- Collections of known types : a list of DataFrame
+### 1- Collections of known types
 
-#### (a) Example
+#### (a) Example: parsing a list of DataFrame
 
 The most simple case of all: you wish to parse a collection of files that all have the same type, and for which a parser is already registered. For example your wish to parse a list of `DataFrame` for a data folder that looks like this:
 
@@ -266,7 +266,7 @@ Finally, note that it is not possible to mix collection and non-collection items
 
 ### 2- Simple user-defined types
 
-#### (a) Example
+#### (a) Example: parsing a collection of test cases
 
 Suppose that you want to test the following `exec_op` function, and you want to read your test datasets from a bunch of files.
 
@@ -305,7 +305,7 @@ Obviously this class is not known by the `parsyfiles` framework: there is no reg
 * From a `.properties` or `.txt` file using the `jprops` module
 * From a `.yaml` or `.yml` file using the `yaml` module
 * From a `.csv`, `.txt`, `.xls`, `.xlsx`, `.xlsm` file using the `pandas` module
-* ...
+* etc.
 
 It also knows how to convert a dictionary into an object, as long as the object constructor contains the right information about expected types. For example in the example above, the constructor has explicit PEP484 annotations `x: float, y: float, op: str, expected_result: float`.
 
@@ -625,7 +625,7 @@ pprint(dfs.get('b'))
 
 The result log shows that `parse_collection` returned without parsing, and that parsing is executed when item `'b'` is read from the dictionary:
  
- ```
+```
 Executing Parsing Plan for ./demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Collection parser (parsyfiles defaults)
 Parsing ./demo/simple_collection (multifile) > Dict[str, DataFrame] ------- using Multifile Collection parser (parsyfiles defaults)
 Assembling a Dict[str, DataFrame] from all children of ./demo/simple_collection (multifile) (lazy parsing: children will be parsed when used) 
