@@ -860,9 +860,9 @@ sf_tests = parse_collection('./demo/simple_objects', ExecOpTest)
 
 The above code has a contract associated to `allowed_op` that checks that it must be in `{'+','*'}`. When `'-'` is found in a test file, it fails:
 
-```
-  ParsingException : Error while parsing ./demo/simple_objects\test_diff_1 (singlefile, .cfg) as a ExecOpTest with parser '$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : caught 
-  ObjectInstantiationException : Error while building object of type <ExecOpTest> using its constructor and parsed contents : {'y': 1.0, 'x': 1.0, 'expected_result': 0.0, 'op': '-'} : 
+```bash
+ParsingException : Error while parsing ./demo/simple_objects\test_diff_1 (singlefile, .cfg) as a ExecOpTest with parser '$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : caught 
+ObjectInstantiationException : Error while building object of type <ExecOpTest> using its constructor and parsed contents : {'y': 1.0, 'x': 1.0, 'expected_result': 0.0, 'op': '-'} : 
 <class 'contracts.interface.ContractNotRespected'> Breach for argument 'op' to ExecOpTest:generated_setter_fun().
 Value does not pass criteria of <lambda>()() (module: test_parsyfiles).
 checking: callable()       for value: Instance of <class 'str'>: '-'   
@@ -899,9 +899,9 @@ sf_tests = parse_collection('./test_data/demo/simple_objects', ExecOpTest)
 
 When `'-'` is found in a test file, it also fails with a nice error message:
 
-```
-  ParsingException : Error while parsing ./test_data/demo/simple_objects\test_diff_1 (singlefile, .cfg) as a ExecOpTest with parser '$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : caught 
-  ObjectInstantiationException : Error while building object of type <ExecOpTest> using its constructor and parsed contents : {'y': 1.0, 'x': 1.0, 'expected_result': 0.0, 'op': '-'} : 
+```bash
+ParsingException : Error while parsing ./test_data/demo/simple_objects\test_diff_1 (singlefile, .cfg) as a ExecOpTest with parser '$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$' using options=({'MultifileCollectionParser': {'lazy_parsing': False}}) : caught 
+ObjectInstantiationException : Error while building object of type <ExecOpTest> using its constructor and parsed contents : {'y': 1.0, 'x': 1.0, 'expected_result': 0.0, 'op': '-'} : 
 <class 'ValueError'> 'op' has to be a string, in {'*', '+'}!
 ```
 

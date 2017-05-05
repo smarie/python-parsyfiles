@@ -3,10 +3,9 @@ See:
 https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
 """
-
 from os import path
 
-from setuptools import setup
+from setuptools import setup, find_packages
 from setuptools_scm import get_version
 
 here = path.abspath(path.dirname(__file__))
@@ -35,10 +34,45 @@ KEYWORDS = 'file collection complex simple test object parser converter parsing 
 try:
     import pypandoc
     LONG_DESCRIPTION = pypandoc.convert(path.join(here, 'README.md'), 'rst').replace('\r', '')
+    from docutils.parsers.rst import Parser
+    from docutils.utils import new_document
+    from docutils.frontend import OptionParser
+    #import pygments
+    settings = OptionParser(components=(Parser,)).get_default_values()
+    document = new_document('(generated) DESCRIPTION.rst', settings=settings)
+
+    from distutils.command.check import SilentReporter
+    reporter = SilentReporter('(generated) DESCRIPTION.rst',
+                              settings.report_level,
+                              settings.halt_level,
+                              stream=settings.warning_stream,
+                              debug=settings.debug,
+                              encoding=settings.error_encoding,
+                              error_handler=settings.error_encoding_error_handler)
+    document.reporter = reporter
+    parser = Parser()
+    parser.parse(LONG_DESCRIPTION, document)
+    from warnings import warn
+    if len(reporter.messages) > 0:
+        # display all errors
+        for warning in reporter.messages:
+            line = warning[-1].get('line')
+            if line is None:
+                warning = warning[1]
+            else:
+                warning = '%s (line %s)' % (warning[1], line)
+            warn(warning)
+        # dump the created file so that one can have a look
+        with open('GENERATED_DESCRIPTION_TO_DELETE.rst', 'wb') as f:
+            f.write(LONG_DESCRIPTION.encode('utf-8'))
+        print('There are warnings in the generated DESCRIPTION.rst. The created description file has been dumped to '
+              'GENERATED_DESCRIPTION_TO_DELETE.rst temporary file for review')
+        input("Press Enter to continue...")
+
 except(ImportError):
     from warnings import warn
-    warn('WARNING pypandoc could not be imported - we recommend that you install it in order to package the '
-         'documentation correctly')
+    warn('WARNING pypandoc and/or docutils could not be imported - we recommend that you install them in order to '
+         'package the documentation correctly')
     LONG_DESCRIPTION = open('README.md').read()
 
 # ************* VERSION AND DEPENDENCIES **************
@@ -105,7 +139,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=['parsyfiles'], #find_packages(exclude=['contrib', 'docs', 'tests']),
+    packages=find_packages(exclude=['contrib', 'docs', 'tests', 'test-data']), #['parsyfiles'],
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
