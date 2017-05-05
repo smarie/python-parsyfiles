@@ -90,6 +90,8 @@ EXTRAS_REQUIRE = {'numpy_parser': ['numpy'],
                   'jprops_parser': ['jprops'],
                   'yaml_parser': ['pyyaml'],
                   'classtools_autocode': ['classtools_autocode']}
+OBSOLETES = ['sficopaf']
+
 
 setup(
     name=DISTNAME,
@@ -165,7 +167,9 @@ setup(
     # dependencies). You can install these using the following syntax,
     # for example:
     # $ pip install -e .[dev,test]
-    extras_require=EXTRAS_REQUIRE
+    extras_require=EXTRAS_REQUIRE,
+
+    obsoletes=OBSOLETES,
 
     # If there are data files included in your packages that need to be
     # installed, specify them here.  If using Python 2.6 or less, then these
