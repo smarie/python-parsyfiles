@@ -1050,6 +1050,8 @@ python setup.py egg_info bdist_wheel rotate -m.whl -k3
 ### Releasing memo
 
 ```bash
+twine register dist/* -r pypitest
 twine upload dist/* -r pypitest
+twine register dist/*
 twine upload dist/*
 ```
