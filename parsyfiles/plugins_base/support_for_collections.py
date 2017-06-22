@@ -1,7 +1,7 @@
-from collections import Mapping, ItemsView, ValuesView, MutableSet, MutableSequence
+from collections import Mapping, ItemsView, ValuesView, MutableSet, MutableSequence, Sequence
 from io import TextIOBase
 from logging import Logger
-from typing import Dict, Any, List, Union, Type, Set, Tuple, Callable
+from typing import Dict, Any, List, Union, Type, Set, Tuple, Callable, AbstractSet
 
 from parsyfiles.converting_core import Converter, ConverterFunction
 from parsyfiles.filesystem_mapping import PersistedObject, FolderAndFilesStructureError
@@ -44,7 +44,7 @@ def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List
     """
     base_desired_type = get_base_generic_type(desired_type)
 
-    if base_desired_type in {Dict, dict}:
+    if issubclass(base_desired_type, Mapping) or issubclass(base_desired_type, dict):
         # get the base collection type if provided
         base_typ, discarded = _extract_collection_base_type(desired_type, exception_if_none=False)
 
@@ -52,6 +52,7 @@ def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List
             # nothing is required in terms of dict values: consider that it is correct
             return coll_to_convert
         else:
+            # TODO resuse appropriate container type (not necessary a dict) according to type of coll_to_convert
             # there is a specific type required for the dict values.
             res = dict()
             # convert if required
@@ -59,7 +60,7 @@ def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List
                 res[key] = ConversionFinder.try_convert_value(conversion_finder, '', val, base_typ, logger, **kwargs)
             return res
 
-    elif base_desired_type in {List, list}:
+    elif issubclass(base_desired_type, Sequence) or issubclass(base_desired_type, list):
         # get the base collection type if provided
         base_typ, discarded = _extract_collection_base_type(desired_type, exception_if_none=False)
 
@@ -67,11 +68,12 @@ def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List
             # nothing is required in terms of dict values: consider that it is correct
             return coll_to_convert
         else:
+            # TODO resuse appropriate container type (not necessary a list) according to type of coll_to_convert
             # there is a specific type required for the list values. convert if required
             return [ConversionFinder.try_convert_value(conversion_finder, '', val, base_typ, logger, **kwargs)
                     for val in coll_to_convert]
 
-    elif base_desired_type in {Set, set}:
+    elif issubclass(base_desired_type, AbstractSet) or issubclass(base_desired_type, set):
         # get the base collection type if provided
         base_typ, discarded = _extract_collection_base_type(desired_type, exception_if_none=False)
 
@@ -79,12 +81,13 @@ def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List
             # nothing is required in terms of dict values: consider that it is correct
             return coll_to_convert
         else:
+            # TODO resuse appropriate container type (not necessary a set) according to type of coll_to_convert
             # there is a specific type required for the list values. convert if required
             return {ConversionFinder.try_convert_value(conversion_finder, '', val, base_typ, logger, **kwargs)
                     for val in coll_to_convert}
     else:
         raise TypeError('Cannot convert collection values, expected type is not a supported collection '
-                        '(dict, list, set)! : ' + str(desired_type))
+                        '(dict, list, set, Mapping, Sequence, AbstractSet)! : ' + str(desired_type))
 
 
 def read_dict_or_list_from_json(desired_type: Type[dict], file_object: TextIOBase,

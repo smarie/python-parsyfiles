@@ -97,25 +97,55 @@ def get_default_pandas_parsers() -> List[AnyParser]:
             ]
 
 
-def dict_to_single_row_or_col_df(desired_type: Type[T], dict_obj: Dict, logger: Logger,
-                                 orient: str = None, **kwargs) -> pd.DataFrame:
+def dict_to_df(desired_type: Type[T], dict_obj: Dict, logger: Logger, orient: str = None, **kwargs) -> pd.DataFrame:
     """
-    Helper method to convert a dictionary into a dataframe with one row
+    Helper method to convert a dictionary into a dataframe. It supports both simple key-value dicts as well as true
+    table dicts. For this it uses pd.DataFrame constructor or pd.DataFrame.from_dict intelligently depending on the
+    case.
+
+    The orientation of the resulting dataframe can be configured, or left to default behaviour. Default orientation is
+    different depending on the contents:
+    * 'index' for 2-level dictionaries, in order to align as much as possible with the natural way to express rows in
+    JSON
+    * 'columns' for 1-level (simple key-value) dictionaries, so as to preserve the data types of the scalar values in
+    the resulting dataframe columns if they are different
 
     :param desired_type:
     :param dict_obj:
     :param logger:
-    :param orient: this parameter is actually overriden to improve pandas behaviour (?)
+    :param orient: the orientation of the resulting dataframe.
     :param kwargs:
     :return:
     """
-    orient = orient or 'columns'
-    if orient is 'columns':
-        return pd.DataFrame(dict_obj, index=[0])
+
+    if len(dict_obj) > 0:
+        first_val = dict_obj[next(iter(dict_obj))]
+        if isinstance(first_val, dict) or isinstance(first_val, list):
+            # --'full' table
+
+            # default is index orientation
+            orient = orient or 'index'
+
+            # if orient is 'columns':
+            #     return pd.DataFrame(dict_obj)
+            # else:
+            return pd.DataFrame.from_dict(dict_obj, orient=orient)
+        else:
+            # --scalar > single-row or single-col
+
+            # default is columns orientation
+            orient = orient or 'columns'
+
+            if orient is 'columns':
+                return pd.DataFrame(dict_obj, index=[0])
+            else:
+                res = pd.DataFrame.from_dict(dict_obj, orient=orient)
+                res.index.name = 'key'
+                return res.rename(columns={0: 'value'})
     else:
-        res = pd.DataFrame.from_dict(dict_obj, orient=orient)
-        res.index.name = 'key'
-        return res.rename(columns={0:'value'})
+        # for empty dictionaries, orientation does not matter
+        # but maybe we should still create a column 'value' in this empty dataframe ?
+        return pd.DataFrame.from_dict(dict_obj)
 
 
 def dict_to_single_row_or_col_df_opts():
@@ -185,7 +215,7 @@ def get_default_pandas_converters() -> List[Union[Converter[Any, pd.DataFrame],
     :return:
     """
     return [ConverterFunction(from_type=pd.DataFrame, to_type=dict, conversion_method=single_row_or_col_df_to_dict),
-            ConverterFunction(from_type=dict, to_type=pd.DataFrame, conversion_method=dict_to_single_row_or_col_df,
+            ConverterFunction(from_type=dict, to_type=pd.DataFrame, conversion_method=dict_to_df,
                               option_hints=dict_to_single_row_or_col_df_opts),
             ConverterFunction(from_type=pd.DataFrame, to_type=pd.Series,
                               conversion_method=single_row_or_col_df_to_series)]

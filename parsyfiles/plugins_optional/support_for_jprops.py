@@ -9,10 +9,38 @@ from parsyfiles.parsing_registries import ConversionFinder, ParserFinder
 from parsyfiles.plugins_base.support_for_collections import convert_collection_values_according_to_pep
 
 
+def try_parse_num_and_booleans(num_str):
+    """
+    Tries to parse the provided string as a number or boolean
+    :param num_str:
+    :return:
+    """
+    if isinstance(num_str, str):
+        # bool
+        if num_str.lower() == 'true':
+            return True
+        elif num_str.lower() == 'false':
+            return False
+        # int
+        if num_str.isdigit():
+            return int(num_str)
+        # float
+        try:
+            return float(num_str)
+        except ValueError:
+            # give up
+            return num_str
+    else:
+        # dont try
+        return num_str
+
+
 def read_dict_from_properties(desired_type: Type[dict], file_object: TextIOBase,
                               logger: Logger, conversion_finder: ConversionFinder, **kwargs) -> Dict[str, Any]:
     """
     Helper method to read a dictionary from a .properties file (java-style) using jprops.
+    Since jprops does not provide automatic handling for boolean and numbers, this tries to add the feature.
+
     :param file_object:
     :return:
     """
@@ -32,7 +60,10 @@ def read_dict_from_properties(desired_type: Type[dict], file_object: TextIOBase,
 
     res = jprops.load_properties(Unicoder(file_object))
 
-    # convert if required
+    # first automatic conversion of strings > numbers
+    res = {key: try_parse_num_and_booleans(val) for key, val in res.items()}
+
+    # further convert if required
     return convert_collection_values_according_to_pep(res, desired_type, conversion_finder, logger, **kwargs)
 
 

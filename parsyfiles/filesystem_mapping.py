@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABCMeta
 from logging import Logger
 from os import listdir
-from os.path import isfile, join, isdir, dirname, basename
+from os.path import isfile, join, isdir, dirname, basename, exists
 from typing import Dict, List, Any, Tuple, Union
 
 from parsyfiles.var_checker import check_var
@@ -150,14 +150,14 @@ class AbstractFileMappingConfiguration(metaclass=ABCMeta):
             raise ObjectPresentMultipleTimesOnFileSystemError.create(location, list(u.keys()))
 
         elif len(simpleobjects_found) == 1:
-            # create the output
+            # a singlefile object > create the output
             is_single_file = True
             ext = list(simpleobjects_found.keys())[0]
             singlefile_object_file_path = simpleobjects_found[ext]
             return is_single_file, ext, singlefile_object_file_path
 
         elif len(complexobject_attributes_found) > 0:
-            # create the output
+            # a multifile object > create the output
             is_single_file = False
             ext = MULTIFILE_EXT
             if '' in complexobject_attributes_found.keys() or None in complexobject_attributes_found.keys():
@@ -165,8 +165,14 @@ class AbstractFileMappingConfiguration(metaclass=ABCMeta):
             return is_single_file, ext, complexobject_attributes_found
 
         else:
-            # the object was not found in a form that can be parsed
-            raise ObjectNotFoundOnFileSystemError.create(location)
+            # handle special case of multifile object with no children (if applicable)
+            if self.is_multifile_object_without_children(location):
+                is_single_file = False
+                ext = MULTIFILE_EXT
+                return is_single_file, ext, dict()
+            else:
+                # the object was not found in a form that can be parsed
+                raise ObjectNotFoundOnFileSystemError.create(location)
 
     def is_present_as_singlefile_object(self, location, sep_for_flat):
         """
@@ -190,14 +196,22 @@ class AbstractFileMappingConfiguration(metaclass=ABCMeta):
         """
         pass
 
-    def is_present_as_multifile_object(self, location: str) -> bool:
-        """
-        Returns True if an item with this location is present as a multifile object, or False otherwise
+    # def is_present_as_multifile_object(self, location: str) -> bool:
+    #     """
+    #     Returns True if an item with this location is present as a multifile object with children, or False otherwise
+    #
+    #     :param location:
+    #     :return:
+    #     """
+    #     return len(self.find_multifile_object_children(location)) > 0
 
+    @abstractmethod
+    def is_multifile_object_without_children(self, location: str) -> bool:
+        """
+        Returns True if an item with this location is present as a multifile object without children
         :param location:
         :return:
         """
-        return len(self.find_multifile_object_children(location)) > 0
 
     @abstractmethod
     def find_multifile_object_children(self, parent_location: str, no_errors: bool = False) -> Dict[str, str]:
@@ -489,6 +503,16 @@ class WrappedFileMappingConfiguration(FileMappingConfiguration):
         # (4) return all
         return items
 
+    def is_multifile_object_without_children(self, location: str) -> bool:
+        """
+        Returns True if an item with this location is present as a multifile object without children.
+        For this implementation, this means that there is a folder without any files in it
+
+        :param location:
+        :return:
+        """
+        return isdir(location) and len(self.find_multifile_object_children(location)) == 0
+
     def get_multifile_object_child_location(self, parent_item_prefix: str, child_name: str) -> str:
         """
         Implementation of the parent abstract method.
@@ -585,10 +609,13 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
             start_with = ''
         else:
             parent_dir = dirname(parent_location)
-            base_prefix = basename(parent_location) #+ self.separator
+            # TODO one day we'll rather want to have a uniform definition of 'location' across filemappings
+            # Indeed as of today, location is not abstract from the file mapping implementation, since we
+            # "just" use basename() rather than replacing os separators with our separator:
+            base_prefix = basename(parent_location)  # --> so it should already include self.separator to be valid
             start_with = self.separator
 
-        # (2) list files that are not singlefiles
+        # (2) list children files that are singlefiles
         content_files = [content_file for content_file in listdir(parent_dir)
                          # -> we are in flat mode : should be a file not a folder :
                          if isfile(join(parent_dir,content_file))
@@ -611,6 +638,25 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
             item_prefixes[item_name] = join(parent_dir, base_prefix + start_with + item_name)
 
         return item_prefixes
+
+    def is_multifile_object_without_children(self, location: str) -> bool:
+        """
+        Returns True if an item with this location is present as a multifile object without children.
+        For this implementation, this means that there is a file with the appropriate name but without extension
+
+        :param location:
+        :return:
+        """
+        # (1) Find the base directory and base name
+        if isdir(location):  # special case: parent location is the root folder where all the files are.
+            return len(self.find_multifile_object_children(location)) == 0
+        else:
+            # TODO same comment than in find_multifile_object_children
+            if exists(location):
+                # location is a file without extension. We can accept that as being a multifile object without children
+                return True
+            else:
+                return False
 
     def get_multifile_object_child_location(self, parent_location: str, child_name: str):
         """

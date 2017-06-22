@@ -1,5 +1,6 @@
 from inspect import getmembers, signature, _empty, Parameter
-from typing import Type, Any, Tuple, List, Set, Dict
+import typing
+from typing import Type, Any, Tuple, List, Set, Dict, Mapping
 
 from parsyfiles.var_checker import check_var
 
@@ -151,7 +152,7 @@ def _extract_collection_base_type(collection_object_type: Type[Any], exception_i
 
     check_var(collection_object_type, var_types=type, var_name='collection_object_type')
 
-    if issubclass(collection_object_type, Dict):
+    if issubclass(collection_object_type, Mapping):
         # Dictionary
         # noinspection PyUnresolvedReferences
         if hasattr(collection_object_type, '__args__') and collection_object_type.__args__ is not None:
@@ -161,7 +162,7 @@ def _extract_collection_base_type(collection_object_type: Type[Any], exception_i
                                 'keys as being of type ' + str(contents_key_type) + ' which is not supported. Only str '
                                 'keys are supported at the moment, since we use them as item names')
 
-    elif issubclass(collection_object_type, List) or issubclass(collection_object_type, Set):
+    elif issubclass(collection_object_type, typing.Collection):
         # List or Set
         # noinspection PyUnresolvedReferences
         if hasattr(collection_object_type, '__args__') and collection_object_type.__args__ is not None:
@@ -240,6 +241,7 @@ def get_constructor_attributes_types(item_type) -> Dict[str, Tuple[Type[Any], bo
 
                 # -- get and check the attribute type
                 typ = s.parameters[attr_name].annotation
+                # TODO use the API rather, and support Optional (Union to NoneType) that is not an instance of type
                 if typ is None or typ is Parameter.empty or not isinstance(typ, type):
                     raise TypeInformationRequiredError.create_for_object_attributes(item_type, attr_name)
 
