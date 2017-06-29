@@ -18,7 +18,7 @@ DESCRIPTION = 'Combines most popular python parsers (json, jprops, pickle...) wi
               'chain, and to try several combinations if relevant'
 
 MAINTAINER = 'Sylvain Marié'
-MAINTAINER_EMAIL = '"Sylvain Marié" <sylvain.marie@schneider-electric.com>'
+MAINTAINER_EMAIL = 'sylvain.marie@schneider-electric.com'
 URL = 'https://github.com/smarie/python-simple-file-collection-parsing-framework'
 LICENSE = 'BSD 3-Clause'
 LICENSE_LONG = 'License :: OSI Approved :: BSD License'
