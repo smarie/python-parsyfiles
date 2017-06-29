@@ -34,10 +34,12 @@ KEYWORDS = 'file collection complex simple test object parser converter parsing 
 try:
     import pypandoc
     LONG_DESCRIPTION = pypandoc.convert(path.join(here, 'README.md'), 'rst').replace('\r', '')
+
+    # Validate that the generated doc is correct
     from docutils.parsers.rst import Parser
     from docutils.utils import new_document
     from docutils.frontend import OptionParser
-    #import pygments
+    # import pygments
     settings = OptionParser(components=(Parser,)).get_default_values()
     document = new_document('(generated) DESCRIPTION.rst', settings=settings)
 
@@ -83,7 +85,7 @@ except(ImportError):
 
 INSTALL_REQUIRES = []
 DEPENDENCY_LINKS = []
-SETUP_REQUIRES = ['setuptools_scm', 'pypandoc']
+SETUP_REQUIRES = ['setuptools_scm', 'pypandoc', 'docutils']
 TESTS_REQUIRE = ['nose', 'numpy', 'pandas', 'jprops', 'pyyaml', 'classtools_autocode', 'pycontracts']
 EXTRAS_REQUIRE = {'numpy_parser': ['numpy'],
                   'pandas_parser': ['numpy', 'pandas'],
