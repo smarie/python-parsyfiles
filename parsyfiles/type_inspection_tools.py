@@ -1,6 +1,5 @@
 from inspect import getmembers, signature, _empty, Parameter
-import typing
-from typing import Type, Any, Tuple, List, Set, Dict, Mapping
+from typing import Type, Any, Tuple, List, Set, Dict, Mapping, Iterable
 
 from parsyfiles.var_checker import check_var
 
@@ -162,17 +161,17 @@ def _extract_collection_base_type(collection_object_type: Type[Any], exception_i
                                 'keys as being of type ' + str(contents_key_type) + ' which is not supported. Only str '
                                 'keys are supported at the moment, since we use them as item names')
 
-    elif issubclass(collection_object_type, typing.Collection):
-        # List or Set
-        # noinspection PyUnresolvedReferences
-        if hasattr(collection_object_type, '__args__') and collection_object_type.__args__ is not None:
-            contents_item_type = collection_object_type.__args__[0]
-
     elif issubclass(collection_object_type, Tuple):
         # Tuple
         # noinspection PyUnresolvedReferences
         if hasattr(collection_object_type, '__args__') and collection_object_type.__args__ is not None:
             contents_item_type = collection_object_type.__args__
+
+    elif issubclass(collection_object_type, Iterable):
+        # List or Set
+        # noinspection PyUnresolvedReferences
+        if hasattr(collection_object_type, '__args__') and collection_object_type.__args__ is not None:
+            contents_item_type = collection_object_type.__args__[0]
 
     elif issubclass(collection_object_type, dict) or issubclass(collection_object_type, list) \
                 or issubclass(collection_object_type, tuple) or issubclass(collection_object_type, set):

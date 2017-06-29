@@ -122,7 +122,8 @@ class AllTests(TestCase):
         Tests all the supported ways to parse collections
         :return:
         """
-        l = parse_item(fix_path('./test_data/collections'), Tuple[Dict[str, int], List[int], Set[int], Tuple[str, int, str]])
+        l = parse_item(fix_path('./test_data/collections'), Tuple[Dict[str, int], List[int], Set[int], Tuple[str, int,
+                                                                                                             str]])
         print(l)
 
 
