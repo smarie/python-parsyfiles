@@ -57,7 +57,8 @@ def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List
             res = dict()
             # convert if required
             for key, val in coll_to_convert.items():
-                res[key] = ConversionFinder.try_convert_value(conversion_finder, '', val, base_typ, logger, **kwargs)
+                res[key] = ConversionFinder.try_convert_value(conversion_finder, '', val, base_typ, logger,
+                                                              options=kwargs)
             return res
 
     elif issubclass(base_desired_type, Sequence) or issubclass(base_desired_type, list):
@@ -70,7 +71,7 @@ def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List
         else:
             # TODO resuse appropriate container type (not necessary a list) according to type of coll_to_convert
             # there is a specific type required for the list values. convert if required
-            return [ConversionFinder.try_convert_value(conversion_finder, '', val, base_typ, logger, **kwargs)
+            return [ConversionFinder.try_convert_value(conversion_finder, '', val, base_typ, logger, options=kwargs)
                     for val in coll_to_convert]
 
     elif issubclass(base_desired_type, AbstractSet) or issubclass(base_desired_type, set):
@@ -83,7 +84,7 @@ def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List
         else:
             # TODO resuse appropriate container type (not necessary a set) according to type of coll_to_convert
             # there is a specific type required for the list values. convert if required
-            return {ConversionFinder.try_convert_value(conversion_finder, '', val, base_typ, logger, **kwargs)
+            return {ConversionFinder.try_convert_value(conversion_finder, '', val, base_typ, logger, options=kwargs)
                     for val in coll_to_convert}
     else:
         raise TypeError('Cannot convert collection values, expected type is not a supported collection '
