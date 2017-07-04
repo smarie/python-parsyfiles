@@ -209,6 +209,11 @@ class _BaseParserDeclarationForRegistries(object):
             # Not interesting : the outcome of the chain would be not better than one of the parser alone
             return False
 
+        # Note: we dont say that chaining a generic parser with a converter is useless. Indeed it might unlock some
+        # capabilities for the user (new file extensions, etc.) that would not be available with the generic parser
+        # targetting to_type alone. For example parsing object A from its constructor then converting A to B might
+        # sometimes be interesting, rather than parsing B from its constructor
+
         else:
             # Interesting
             return True

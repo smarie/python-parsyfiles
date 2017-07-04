@@ -412,8 +412,14 @@ class ParsingChain(AnyParser):
         :param base_parser_chosen_dest_type
         """
         check_var(base_parser, var_types=AnyParser, var_name='base_parser')
-        if base_parser.is_generic():
-            raise ValueError('Creating a parsing chain from a base parser able to parse any type is just pointless.')
+
+        # Removed this check : in some cases, it makes sense
+        # (for example use a generic parser to parse object A then convert A to B ; might be more convenient than using
+        # the generic parser to parse B directly)
+        #
+        # if base_parser.is_generic():
+        #     raise ValueError('Creating a parsing chain from a base parser able to parse any type is just pointless.')
+
         self._base_parser = base_parser
 
         # did the user explicitly restrict the destination type of the base parser ?
@@ -492,7 +498,8 @@ class ParsingChain(AnyParser):
         """
         Implementation of AnyParser API
         """
-        return self._base_parser._get_parsing_plan_for_multifile_children(obj_on_fs, desired_type, logger)
+        return self._base_parser._get_parsing_plan_for_multifile_children(obj_on_fs, self._converter.from_type, logger)
+        # return self._base_parser._get_parsing_plan_for_multifile_children(obj_on_fs, desired_type, logger)
 
     def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
                          parsing_plan_for_children: Dict[str, ParsingPlan],
@@ -501,7 +508,9 @@ class ParsingChain(AnyParser):
         Implementation of AnyParser API
         """
         # first use the base parser
-        first = self._base_parser._parse_multifile(desired_type, obj, parsing_plan_for_children, logger, options)
+        # first = self._base_parser._parse_multifile(desired_type, obj, parsing_plan_for_children, logger, options)
+        first = self._base_parser._parse_multifile(self._converter.from_type, obj, parsing_plan_for_children, logger,
+                                                   options)
 
         # then apply the conversion chain
         return self._converter.convert(desired_type, first, logger, options)

@@ -175,23 +175,23 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         if self.is_able_to_convert_func is not None and not self.is_able_to_convert_func(strict, from_type, to_type):
             return False, None, None
 
-        # -- check from type strict
-        if from_type is None or from_type is self.from_type:
+        # -- from_type strict match
+        if from_type is None or from_type is self.from_type or is_any_type(from_type):
             # -- check to type strict
             if to_type is None or self.is_generic() or (to_type is self.to_type):
-                return True, True, True  # exact match
+                return True, True, True  # strict to_type match
             # -- check to type non-strict
             elif (not strict) and issubclass(self.to_type, to_type):
-                return True, True, False
+                return True, True, False  # approx to_type match
 
-        # -- check from type non-strict
+        # -- from_type non-strict match
         elif (not strict) and issubclass(from_type, self.from_type):
             # -- check to type strict
             if to_type is None or self.is_generic() or (to_type is self.to_type):
-                return True, False, True  # exact match
+                return True, False, True  # exact to_type match
             # -- check to type non-strict
             elif (not strict) and issubclass(self.to_type, to_type):
-                return True, False, False
+                return True, False, False  # approx to_type match
 
         # -- otherwise no match
         return False, None, None

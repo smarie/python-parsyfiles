@@ -1117,21 +1117,25 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
         matching_p_generic, matching_p_approx, matching_p_exact = matching
 
         if desired_type is None:
-            # then we want to append everything even exact match
-            parsers_to_complete_with_converters = no_type_match_but_ext_match + matching_p_approx + matching_p_exact
+            # then we want to try to append every possible converter chain, even if we have already found an exact match
+            # (exact match will probably contain all parsers in that case?...)
+            parsers_to_complete_with_converters = no_type_match_but_ext_match + matching_p_generic + matching_p_approx \
+                                                  + matching_p_exact
         else:
-            # then at least try with the approx
-            parsers_to_complete_with_converters = no_type_match_but_ext_match + matching_p_approx
+            # then we can try to complete all the ones matching the extension (even the generic because combining them
+            # with a conversion chain might provide another way to reach the result - different from using the generic
+            # alone to reach the to_type)
+            parsers_to_complete_with_converters = no_type_match_but_ext_match + matching_p_generic + matching_p_approx
 
         # (2) find all conversion chains that lead to the expected result
         matching_c_generic_to_type, matching_c_approx_to_type, matching_c_exact_to_type = \
             self.get_all_conversion_chains_to_type(to_type=desired_type)
         all_matching_converters = matching_c_generic_to_type + matching_c_approx_to_type + matching_c_exact_to_type
 
-
-        # (3) combine both and append to the appropriate list depending on the match
-        # -- first Parsers matching EXT (not type) + Converters matching their type
+        # (3) combine both (parser + conversion chain), and append to the appropriate list depending on the match
+        # -- (a) first Parsers matching EXT (not type) + Converters matching their type
         # for all parsers able to parse this extension, and for all the types they support
+        #
         # (we have to reverse the list because now we want 'preferred first'. Indeed we wish to prepend to the match
         # lists in order not to hide the parser direct matches)
         matching_p_generic_with_approx_chain, matching_p_approx_with_approx_chain, matching_p_exact_with_approx_chain\
@@ -1142,20 +1146,25 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
                                                                        matching_c_generic_to_type,
                                                                        matching_c_approx_to_type,
                                                                        matching_c_exact_to_type)
+                # prepend the existing lists with the new match
                 matching_p_generic = match_results[1] + matching_p_generic
-                matching_p_generic_with_approx_chain = match_results[0] + matching_p_generic_with_approx_chain
                 matching_p_approx = match_results[3] + matching_p_approx
-                matching_p_approx_with_approx_chain = match_results[2] + matching_p_approx_with_approx_chain
                 matching_p_exact = match_results[5] + matching_p_exact
+
+                # store the approximate matchs in the separate lists
+                matching_p_generic_with_approx_chain = match_results[0] + matching_p_generic_with_approx_chain
+                matching_p_approx_with_approx_chain = match_results[2] + matching_p_approx_with_approx_chain
                 matching_p_exact_with_approx_chain = match_results[4] + matching_p_exact_with_approx_chain
 
-        # now merge the approx/approx
+        # finally prepend the approximate match lists
         matching_p_generic = matching_p_generic_with_approx_chain + matching_p_generic
         matching_p_approx = matching_p_approx_with_approx_chain + matching_p_approx
         matching_p_exact = matching_p_exact_with_approx_chain + matching_p_exact
 
-        # -- then parsers that do not match at all: we can find parsing chains that make them at least match the type
-        # we have to reverse it because it was 'best last', now it will be 'best first'
+        # -- (b) then parsers that do not match at all (not the file extension nor the type): we can find parsing chains
+        # that make them at least match the type
+        #
+        # (we have to reverse it because it was 'best last', now it will be 'best first')
         for parser in reversed(no_match):
             for typ in parser.supported_types:
                 for converter in reversed(all_matching_converters):
@@ -1193,23 +1202,24 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
         matching_p_approx, matching_p_approx_with_approx_chain,\
         matching_p_exact, matching_p_exact_with_approx_chain = [], [], [], [], [], []
 
-        # ---- Generic converters
-        for converter in matching_c_generic_to_type:
-            # if the converter can attach to this parser, we have a matching parser !
-            # --start from strict
-            if converter.is_able_to_convert(True, from_type=parser_supported_type, to_type=desired_type)[0]:
-                if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
-                    chain = ParsingChain(parser, converter, strict=True,
-                                         base_parser_chosen_dest_type=parser_supported_type)
-                    # insert it at the beginning since it should have less priority
-                    matching_p_generic.append(chain)
-            elif (not self.strict) and converter.is_able_to_convert(False, from_type=parser_supported_type,
-                                                                    to_type=desired_type)[0]:
-                if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
-                    chain = ParsingChain(parser, converter, strict=False,
-                                         base_parser_chosen_dest_type=parser_supported_type)
-                    # insert it at the beginning since it should have less priority
-                    matching_p_generic_with_approx_chain.append(chain)
+        # ---- Generic converters - only if the parsed type is not already 'any'
+        if not is_any_type(parser_supported_type):
+            for converter in matching_c_generic_to_type:
+                # if the converter can attach to this parser, we have a matching parser !
+                # --start from strict
+                if converter.is_able_to_convert(True, from_type=parser_supported_type, to_type=desired_type)[0]:
+                    if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
+                        chain = ParsingChain(parser, converter, strict=True,
+                                             base_parser_chosen_dest_type=parser_supported_type)
+                        # insert it at the beginning since it should have less priority
+                        matching_p_generic.append(chain)
+                elif (not self.strict) and converter.is_able_to_convert(False, from_type=parser_supported_type,
+                                                                        to_type=desired_type)[0]:
+                    if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
+                        chain = ParsingChain(parser, converter, strict=False,
+                                             base_parser_chosen_dest_type=parser_supported_type)
+                        # insert it at the beginning since it should have less priority
+                        matching_p_generic_with_approx_chain.append(chain)
 
         # ---- Approx to_type
         for converter in matching_c_approx_to_type:
