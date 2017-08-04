@@ -296,13 +296,12 @@ class DemoTests(TestCase):
         try:
             sf_tests = parse_collection(fix_path('./test_data/demo/simple_objects'), ExecOpTest)
         except ParsingException as e:
-            self.assertIn('<class \'contracts.interface.ContractNotRespected\'> '
-                          'Breach for argument \'op\' to ExecOpTest:generated_setter_fun().\n'
-                          'Value does not pass criteria of <lambda>()() (module: test_parsyfiles).\n'
-                          'checking: callable()       for value: Instance of <class \'str\'>: \'-\'   \n'
-                          'checking: allowed_op       for value: Instance of <class \'str\'>: \'-\'   \n'
-                          'checking: str,allowed_op   for value: Instance of <class \'str\'>: \'-\'   \n'
-                          'Variables bound in inner context:\n! cannot write context\n'
+            self.assertIn("<class 'contracts.interface.ContractNotRespected'>"
+                          + " Breach for argument 'op' to ExecOpTest:generated_setter_fun().\n"
+                          + "Value does not pass criteria of <lambda>()() (module: parsyfiles.tests.test_parsyfiles).\n"
+                          + "checking: callable()       for value: Instance of <class 'str'>: '-'   \n"
+                          + "checking: allowed_op       for value: Instance of <class 'str'>: '-'   \n"
+                          + "checking: str,allowed_op   for value: Instance of <class 'str'>: '-'"
                           , e.args[0])
 
     def test_simple_object_with_contract_attrs(self):
