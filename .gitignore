@@ -90,3 +90,11 @@ ENV/
 
 # Pycharm
 .idea/
+
+# Mkdocs
+site/
+prof/
+
+# travis CI
+github_travis_rsa*
+reports/

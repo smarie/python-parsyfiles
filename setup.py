@@ -6,20 +6,40 @@ https://github.com/pypa/sampleproject
 from os import path
 
 from setuptools import setup, find_packages
-from setuptools_scm import get_version
 
 here = path.abspath(path.dirname(__file__))
+
+# *************** Dependencies *********
+INSTALL_REQUIRES = []
+DEPENDENCY_LINKS = []
+SETUP_REQUIRES = ['pytest-runner', 'setuptools_scm', 'pypandoc', 'pandoc', 'docutils']
+TESTS_REQUIRE = ['pytest', 'pytest-logging', 'pytest-cov', 'numpy', 'pandas', 'jprops', 'pyyaml', 'xlrd', 'autoclass',
+                 'pycontracts']
+EXTRAS_REQUIRE = {'xls_parser': ['xlrd'],
+                  'numpy_parser': ['numpy'],
+                  'pandas_parser': ['numpy', 'pandas'],
+                  'jprops_parser': ['jprops'],
+                  'yaml_parser': ['pyyaml'],
+                  'autoclass': ['autoclass']}
+
+# simple check
+try:
+    from setuptools_scm import get_version
+except Exception as e:
+    raise Exception('Required packages for setup not found. You may wish you execute '
+                    '"pip install -r ci_tools/requirements-setup.txt" to install them or alternatively install them '
+                    'manually using conda or other system. The list is : ' + str(SETUP_REQUIRES)) from e
 
 # ************** ID card *****************
 DISTNAME = 'parsyfiles'
 DESCRIPTION = 'Combines most popular python parsers (json, jprops, pickle...) with user-defined parsers and type ' \
               'converters to read objects from files. Supports multifile & multiparser objects, typically useful to ' \
-              'organize test data. Leverages PEP484 type hints in order to intelligently use the best parser/converter ' \
-              'chain, and to try several combinations if relevant'
+              'organize test data. Leverages PEP484 type hints in order to intelligently use the best parser/converter'\
+              ' chain, and to try several combinations if relevant'
 
 MAINTAINER = 'Sylvain Marié'
 MAINTAINER_EMAIL = 'sylvain.marie@schneider-electric.com'
-URL = 'https://github.com/smarie/python-simple-file-collection-parsing-framework'
+URL = 'https://github.com/smarie/parsyfiles'
 LICENSE = 'BSD 3-Clause'
 LICENSE_LONG = 'License :: OSI Approved :: BSD License'
 
@@ -77,21 +97,12 @@ except(ImportError):
          'package the documentation correctly')
     LONG_DESCRIPTION = open('README.md').read()
 
-# ************* VERSION AND DEPENDENCIES **************
+# ************* VERSION  **************
 # --Get the Version number from VERSION file, see https://packaging.python.org/single_source_version/ option 4.
 # THIS IS DEPRECATED AS WE NOW USE GIT TO MANAGE VERSION
 # with open(path.join(here, 'VERSION')) as version_file:
 #    VERSION = version_file.read().strip()
 
-INSTALL_REQUIRES = []
-DEPENDENCY_LINKS = []
-SETUP_REQUIRES = ['setuptools_scm', 'pypandoc', 'pandoc', 'docutils']
-TESTS_REQUIRE = ['nose', 'numpy', 'pandas', 'jprops', 'pyyaml', 'classtools_autocode', 'pycontracts']
-EXTRAS_REQUIRE = {'numpy_parser': ['numpy'],
-                  'pandas_parser': ['numpy', 'pandas'],
-                  'jprops_parser': ['jprops'],
-                  'yaml_parser': ['pyyaml'],
-                  'classtools_autocode': ['classtools_autocode']}
 OBSOLETES = ['sficopaf']
 
 
@@ -118,7 +129,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',

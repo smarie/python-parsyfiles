@@ -1,0 +1,13 @@
+site_name: python-parsyfiles
+site_description: 'A short description of my project'
+repo_url: https://github.com/smarie/python-parsyfiles
+pages:
+    - Home: index.md
+    - Usage: usage.md
+    - Known Formats Reference: known_formats_reference.md
+theme: material  # readthedocs  mkdocs
+
+markdown_extensions:
+  - admonition  # to add notes such as http://squidfunk.github.io/mkdocs-material/extensions/admonition/
+  - codehilite(guess_lang=false)
+  - toc(permalink=true)

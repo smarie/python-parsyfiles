@@ -1,0 +1,10 @@
+# requirements needed to run the tests
+numpy
+pandas
+jprops
+pyyaml
+xlrd
+autoclass
+pycontracts
+pytest
+pytest-logging
