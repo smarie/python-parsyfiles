@@ -124,19 +124,19 @@ class _BaseParsingPlan(ParsingPlan[T]):
             if not hasattr(_BaseParsingPlan.thrd_locals, 'flag_exec') \
                     or _BaseParsingPlan.thrd_locals.flag_exec == 0:
                 # print('Executing Parsing Plan for ' + str(self))
-                logger.info('Executing Parsing Plan for ' + str(self))
+                logger.debug('Executing Parsing Plan for ' + str(self))
                 _BaseParsingPlan.thrd_locals.flag_exec = 1
                 in_root_call = True
 
         # Common log message
-        logger.info('Parsing ' + str(self))
+        logger.debug('Parsing ' + str(self))
 
         try:
             res = super(_BaseParsingPlan, self).execute(logger, options)
             logger.info('--> Successfully parsed a ' + get_pretty_type_str(self.obj_type) + ' from ' + self.location)
             if in_root_call:
                 # print('Completed parsing successfully')
-                logger.info('Completed parsing successfully')
+                logger.debug('Completed parsing successfully')
             return res
 
         finally:
@@ -266,7 +266,7 @@ class AnyParser(_BaseParser):
         if _main_call and (not hasattr(AnyParser.thrd_locals, 'flag_init') or AnyParser.thrd_locals.flag_init == 0):
             # print('Building a parsing plan to parse ' + str(filesystem_object) + ' into a ' +
             #      get_pretty_type_str(desired_type))
-            logger.info('Building a parsing plan to parse ' + str(filesystem_object) + ' into a ' +
+            logger.debug('Building a parsing plan to parse ' + str(filesystem_object) + ' into a ' +
                         get_pretty_type_str(desired_type))
             AnyParser.thrd_locals.flag_init = 1
             in_root_call = True
@@ -282,7 +282,7 @@ class AnyParser(_BaseParser):
         # -- log success only if in root call
         if in_root_call:
             # print('Parsing Plan created successfully')
-            logger.info('Parsing Plan created successfully')
+            logger.debug('Parsing Plan created successfully')
 
         # -- finally return
         return pp
@@ -296,7 +296,7 @@ class AnyParser(_BaseParser):
         :param logger:
         :return:
         """
-        logger.info(get_parsing_plan_log_str(filesystem_object, desired_type, self))
+        logger.debug(get_parsing_plan_log_str(filesystem_object, desired_type, self))
         return AnyParser._RecursiveParsingPlan(desired_type, filesystem_object, self, logger)
 
     @abstractmethod

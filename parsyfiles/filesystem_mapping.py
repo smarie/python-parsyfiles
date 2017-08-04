@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABCMeta
 from logging import Logger
 from os import listdir
-from os.path import isfile, join, isdir, dirname, basename, exists
+from os.path import isfile, join, isdir, dirname, basename, exists, splitext
 from typing import Dict, List, Any, Tuple, Union
 
 from parsyfiles.var_checker import check_var
@@ -63,7 +63,7 @@ class ObjectNotFoundOnFileSystemError(FileNotFoundError):
         super(ObjectNotFoundOnFileSystemError, self).__init__(contents)
 
     @staticmethod
-    def create(location: str):  # -> ObjectNotFoundOnFileSystemError:
+    def create(location: str, simpleobjects_found = None, complexobject_attributes_found = None):  # -> ObjectNotFoundOnFileSystemError:
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
         https://github.com/nose-devs/nose/issues/725
@@ -71,8 +71,16 @@ class ObjectNotFoundOnFileSystemError(FileNotFoundError):
         :param location:
         :return:
         """
-        return ObjectNotFoundOnFileSystemError('Mandatory object : ' + location + ' could not be found on the file'
-                                               ' system, either as a multifile or as a singlefile with any extension.')
+        if len(complexobject_attributes_found) > 0 or len(simpleobjects_found) > 0:
+            return ObjectNotFoundOnFileSystemError('Mandatory object : ' + location + ' could not be found on the file'
+                                                   ' system, either as a multifile or as a singlefile with any '
+                                                   'extension, but it seems that this is because you have left the '
+                                                   'extension in the location name. Please remove the file extension '
+                                                   'from the location name and try again')
+        else:
+            return ObjectNotFoundOnFileSystemError('Mandatory object : ' + location + ' could not be found on the file'
+                                                   ' system, either as a multifile or as a singlefile with any '
+                                                   'extension.')
 
 
 class IllegalContentNameError(Exception):
@@ -171,8 +179,14 @@ class AbstractFileMappingConfiguration(metaclass=ABCMeta):
                 ext = MULTIFILE_EXT
                 return is_single_file, ext, dict()
             else:
+                # try if by any chance the issue is that location has an extension
+                loc_without_ext = splitext(location)[0]
+                simpleobjects_found = self.find_simpleobject_file_occurrences(loc_without_ext)
+                complexobject_attributes_found = self.find_multifile_object_children(loc_without_ext, no_errors=True)
+
                 # the object was not found in a form that can be parsed
-                raise ObjectNotFoundOnFileSystemError.create(location)
+                raise ObjectNotFoundOnFileSystemError.create(location, simpleobjects_found,
+                                                             complexobject_attributes_found)
 
     def is_present_as_singlefile_object(self, location, sep_for_flat):
         """
@@ -373,7 +387,7 @@ class FileMappingConfiguration(AbstractFileMappingConfiguration):
 
                 # -- log this for easy debug
                 if logger is not None:
-                    logger.info(str(self))
+                    logger.debug(str(self))
 
                 # -- create and attach all the self.children if multifile
                 if not self.is_singlefile:
@@ -385,7 +399,7 @@ class FileMappingConfiguration(AbstractFileMappingConfiguration):
                     IllegalContentNameError) as e:
                 # -- log the object that was being built, just for consistency of log messages
                 if logger is not None:
-                    logger.info(location)
+                    logger.debug(location)
                 raise e.with_traceback(e.__traceback__)
 
         def get_singlefile_path(self):
@@ -397,7 +411,7 @@ class FileMappingConfiguration(AbstractFileMappingConfiguration):
                 return self._contents_or_path
             else:
                 raise NotImplementedError(
-                    'get_file_path does not make any sense on a multifile object. Use object.location'
+                    'get_file_path_no_ext does not make any sense on a multifile object. Use object.location'
                     ' to get the file prefix')
 
         def get_singlefile_encoding(self):
@@ -440,11 +454,11 @@ class FileMappingConfiguration(AbstractFileMappingConfiguration):
         :return:
         """
         #print('Checking all files under ' + location)
-        logger.info('Checking all files under ' + location)
+        logger.debug('Checking all files under ' + location)
         obj = FileMappingConfiguration.RecursivePersistedObject(location=location, file_mapping_conf=self,
                                                                 logger=logger)
         #print('File checks done')
-        logger.info('File checks done')
+        logger.debug('File checks done')
         return obj
 
 

@@ -1,8 +1,9 @@
+from abc import ABCMeta
 from inspect import Parameter
 from logging import Logger, warning
-from typing import Type, Any, List, Dict, Union, Tuple, Set
+from typing import Type, Any, List, Dict, Union
 
-from parsyfiles.converting_core import Converter, T, ConverterFunction, AnyObject
+from parsyfiles.converting_core import Converter, ConverterFunction, AnyObject, S, T, is_any_type, JOKER
 from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_core import MultiFileParser, AnyParser, SingleFileParserFunction
 from parsyfiles.parsing_registries import ParserFinder, ConversionFinder
@@ -34,7 +35,16 @@ def read_object_from_pickle(desired_type: Type[T], file_path: str, encoding: str
         file_object.close()
 
 
-def base64_ascii_str_pickle_to_object(desired_type: Type[T], b64_ascii_str: str, logger: Logger,
+class b64str(metaclass=ABCMeta):
+    pass
+
+
+b64str.register(str)
+assert issubclass(str, b64str)
+assert isinstance('', b64str)
+
+
+def base64_ascii_str_pickle_to_object(desired_type: Type[T], b64_ascii_str: b64str, logger: Logger,
                                       *args, **kwargs) -> Any:
     import base64
     import pickle
@@ -173,6 +183,37 @@ class CaughtTypeErrorDuringInstantiation(Exception):
         return CaughtTypeErrorDuringInstantiation(msg).with_traceback(caught.__traceback__)
 
 
+def _is_valid_for_dict_to_object_conversion(strict_mode: bool, from_type: Type, to_type: Type) -> bool:
+    """
+    Returns true if the provided types are valid for dict_to_object conversion
+
+    Explicitly declare that we are not able to parse collections nor able to create an object from a dictionary if the
+    object's constructor is non correctly PEP484-specified.
+
+    None should be treated as a Joker here (but we know that never from_type and to_type will be None at the same time)
+
+    :param strict_mode:
+    :param from_type:
+    :param to_type:
+    :return:
+    """
+    # if the destination type is 'strictly a collection' (not a subclass of a collection) we cant handle it here
+    if is_collection(to_type, strict=True):
+        return False
+    # we have to explicitly handle the 'None' (joker) or 'any' type
+    elif to_type is None or is_any_type(to_type):
+        return True
+    else:
+        try:
+            # test pep-484 compliance
+            get_constructor_attributes_types(to_type)
+            return True
+
+        except TypeInformationRequiredError:
+            # failed: we cant guess the required types of constructor arguments
+            return False
+
+
 def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger: Logger,
                    options: Dict[str, Dict[str, Any]], conversion_finder: ConversionFinder = None,
                    is_dict_of_dicts: bool = False) -> T:
@@ -303,22 +344,6 @@ def get_default_object_parsers(parser_finder: ParserFinder, conversion_finder: C
             ]
 
 
-def _not_able_to_convert_collections(strict: bool, from_type: Type[Any] = None, to_type: Type[Any] = None):
-    """
-    Explicitly declare that we are not able to parse collections
-
-    :param strict:
-    :param from_type:
-    :param to_type:
-    :return:
-    """
-    # here strict means 'strictly a collection' (allow subclasses)
-    if to_type is not None and is_collection(to_type, strict=True):
-        return False
-    else:
-        return True
-
-
 def get_default_object_converters(conversion_finder: ConversionFinder) \
         -> List[Union[Converter[Any, Type[None]], Converter[Type[None], Any]]]:
     """
@@ -328,14 +353,14 @@ def get_default_object_converters(conversion_finder: ConversionFinder) \
     """
 
     return [
-            ConverterFunction(from_type=str, to_type=AnyObject, conversion_method=base64_ascii_str_pickle_to_object),
+            ConverterFunction(from_type=b64str, to_type=AnyObject, conversion_method=base64_ascii_str_pickle_to_object),
             ConverterFunction(from_type=DictOfDict, to_type=Any, conversion_method=dict_to_object,
                               custom_name='dict_of_dict_to_object',
-                              is_able_to_convert_func=_not_able_to_convert_collections, unpack_options=False,
+                              is_able_to_convert_func=_is_valid_for_dict_to_object_conversion, unpack_options=False,
                               function_args={'conversion_finder': conversion_finder, 'is_dict_of_dicts': True}),
             ConverterFunction(from_type=dict, to_type=AnyObject, conversion_method=dict_to_object,
                               custom_name='dict_to_object', unpack_options=False,
-                              is_able_to_convert_func=_not_able_to_convert_collections,
+                              is_able_to_convert_func=_is_valid_for_dict_to_object_conversion,
                               function_args={'conversion_finder': conversion_finder, 'is_dict_of_dicts': False})
             ]
 
@@ -357,7 +382,7 @@ class MultifileObjectParser(MultiFileParser):
         self.parser_finder = parser_finder
         self.conversion_finder = conversion_finder
 
-    def is_able_to_parse(self, desired_type: Type[Any], desired_ext: str, strict: bool):
+    def is_able_to_parse_detailed(self, desired_type: Type[Any], desired_ext: str, strict: bool):
         """
         Explicitly declare that we are not able to parse collections
 
@@ -366,10 +391,11 @@ class MultifileObjectParser(MultiFileParser):
         :param strict:
         :return:
         """
-        if is_collection(desired_type, strict=True):
+
+        if not _is_valid_for_dict_to_object_conversion(strict, None, None if desired_type is JOKER else desired_type):
             return False, None
         else:
-            return super(MultifileObjectParser, self).is_able_to_parse(desired_type, desired_ext, strict)
+            return super(MultifileObjectParser, self).is_able_to_parse_detailed(desired_type, desired_ext, strict)
 
     def __str__(self):
         return 'Multifile Object parser (' + str(self.parser_finder) + ')'
@@ -460,7 +486,7 @@ class MultifileObjectParser(MultiFileParser):
             results[child_name] = child_plan.execute(logger, options)
 
         # 2) finally build the resulting object
-        logger.info('Assembling a ' + get_pretty_type_str(desired_type) + ' from all parsed children of ' + str(obj)
+        logger.debug('Assembling a ' + get_pretty_type_str(desired_type) + ' from all parsed children of ' + str(obj)
                     + ' by passing them as attributes of the constructor')
 
         return dict_to_object(desired_type, results, logger, options, conversion_finder=self.conversion_finder)

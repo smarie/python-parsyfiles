@@ -1,17 +1,33 @@
 import sys
 import traceback
 from io import StringIO
-from logging import getLogger, StreamHandler, Logger
-from typing import Type, Dict, Any
+from logging import getLogger, StreamHandler, Logger, INFO
+from typing import Type, Dict, Any, Set, Tuple, List
 from warnings import warn
 
+from copy import copy
+
+from parsyfiles.converting_core import JOKER
 from parsyfiles.filesystem_mapping import FileMappingConfiguration, WrappedFileMappingConfiguration
-from parsyfiles.parsing_core_api import T
+from parsyfiles.parsing_core_api import T, Parser
 from parsyfiles.parsing_registries import ParserRegistryWithConverters
 from parsyfiles.plugins_base.support_for_collections import MultifileCollectionParser
 from parsyfiles.plugins_base.support_for_objects import MultifileObjectParser
 from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
+
+from pprint import pprint
+
+
+def pprint_out(dct: Dict):
+    """
+    Utility methods to pretty-print a dictionary that is typically outputted by parsyfiles (an ordered dict)
+    :param dct:
+    :return:
+    """
+    for name, val in dct.items():
+        print(name + ':')
+        pprint(val, indent=4)
 
 
 def warn_import_error(type_of_obj_support: str, caught: ImportError):
@@ -56,6 +72,79 @@ def add_parser_options(options: Dict[str, Dict[str, Any]], parser_id: str, parse
     return options
 
 
+def register_default_plugins(root_parser: ParserRegistryWithConverters):
+    """
+    Utility method to register all default plugins on the given parser+converter registry
+
+    :param root_parser:
+    :return:
+    """
+    # -------------------- CORE ---------------------------
+    try:
+        # -- primitive types
+        from parsyfiles.plugins_base.support_for_primitive_types import get_default_primitive_parsers, \
+            get_default_primitive_converters
+        root_parser.register_parsers(get_default_primitive_parsers())
+        root_parser.register_converters(get_default_primitive_converters())
+    except ImportError as e:
+        warn_import_error('primitive types', e)
+    try:
+        # -- collections
+        from parsyfiles.plugins_base.support_for_collections import get_default_collection_parsers, \
+            get_default_collection_converters
+        root_parser.register_parsers(get_default_collection_parsers(root_parser, root_parser))
+        root_parser.register_converters(get_default_collection_converters(root_parser))
+    except ImportError as e:
+        warn_import_error('dict', e)
+    try:
+        # -- objects
+        from parsyfiles.plugins_base.support_for_objects import get_default_object_parsers, \
+            get_default_object_converters
+        root_parser.register_parsers(get_default_object_parsers(root_parser, root_parser))
+        root_parser.register_converters(get_default_object_converters(root_parser))
+    except ImportError as e:
+        warn_import_error('objects', e)
+    try:
+        # -- config
+        from parsyfiles.plugins_base.support_for_configparser import get_default_config_parsers, \
+            get_default_config_converters
+        root_parser.register_parsers(get_default_config_parsers())
+        root_parser.register_converters(get_default_config_converters(root_parser))
+    except ImportError as e:
+        warn_import_error('config', e)
+
+    # ------------------------- OPTIONAL -----------------
+    try:
+        # -- jprops
+        from parsyfiles.plugins_optional.support_for_jprops import get_default_jprops_parsers
+        root_parser.register_parsers(get_default_jprops_parsers(root_parser, root_parser))
+        # root_parser.register_converters()
+    except ImportError as e:
+        warn_import_error('jprops', e)
+    try:
+        # -- yaml
+        from parsyfiles.plugins_optional.support_for_yaml import get_default_yaml_parsers
+        root_parser.register_parsers(get_default_yaml_parsers(root_parser, root_parser))
+        # root_parser.register_converters()
+    except ImportError as e:
+        warn_import_error('yaml', e)
+    try:
+        # -- numpy
+        from parsyfiles.plugins_optional.support_for_numpy import get_default_np_parsers, get_default_np_converters
+        root_parser.register_parsers(get_default_np_parsers())
+        root_parser.register_converters(get_default_np_converters())
+    except ImportError as e:
+        warn_import_error('numpy', e)
+    try:
+        # -- pandas
+        from parsyfiles.plugins_optional.support_for_pandas import get_default_pandas_parsers, \
+            get_default_pandas_converters
+        root_parser.register_parsers(get_default_pandas_parsers())
+        root_parser.register_converters(get_default_pandas_converters())
+    except ImportError as e:
+        warn_import_error('pandas', e)
+
+
 class RootParser(ParserRegistryWithConverters):
     """
     The root parser
@@ -65,8 +154,19 @@ class RootParser(ParserRegistryWithConverters):
     _default_logger = getLogger('parsyfiles')
     ch = StreamHandler(sys.stdout)
     _default_logger.addHandler(ch)
+    _default_logger.setLevel(INFO)
 
-    def __init__(self, pretty_name: str = None, strict_matching: bool = False,
+    # When register_default_parsers is True, return a copy of the DefaultRootParser singleton
+    def __new__(cls, pretty_name: str = None, *, strict_matching: bool = False,
+                register_default_parsers: bool = True, logger: Logger = _default_logger):
+        if cls is RootParser and register_default_parsers:
+            # return a copy of the DefaultRootParser singleton
+            return DefaultRootParser.get_singleton_copy()
+        else:
+            # new instance creation, as usual
+            return super(RootParser, cls).__new__(cls)
+
+    def __init__(self, pretty_name: str = None, *, strict_matching: bool = False,
                  register_default_parsers: bool = True, logger: Logger = _default_logger):
         """
         Constructor. Initializes the dictionary of parsers with the optionally provided initial_parsers, and
@@ -77,77 +177,18 @@ class RootParser(ParserRegistryWithConverters):
         :param register_default_parsers:
         :param logger:
         """
-        super(RootParser, self).__init__(pretty_name or 'parsyfiles defaults', strict_matching)
+        if not register_default_parsers:
+            # otherwise this has already been done in __new__
+            super(RootParser, self).__init__(pretty_name or 'parsyfiles defaults', strict_matching)
 
         # remember if the user registers the default parsers - for future calls to install_basic_multifile_support()
         self.multifile_installed = register_default_parsers
 
         if register_default_parsers:
-            # -------------------- CORE ---------------------------
-            try:
-                # -- primitive types
-                from parsyfiles.plugins_base.support_for_primitive_types import get_default_primitive_parsers, get_default_primitive_converters
-                self.register_parsers(get_default_primitive_parsers())
-                self.register_converters(get_default_primitive_converters())
-            except ImportError as e:
-                warn_import_error('primitive types', e)
-
-            try:
-                # -- collections
-                from parsyfiles.plugins_base.support_for_collections import get_default_collection_parsers, get_default_collection_converters
-                self.register_parsers(get_default_collection_parsers(self, self))
-                self.register_converters(get_default_collection_converters(self))
-            except ImportError as e:
-                warn_import_error('dict', e)
-
-            try:
-                # -- objects
-                from parsyfiles.plugins_base.support_for_objects import get_default_object_parsers, get_default_object_converters
-                self.register_parsers(get_default_object_parsers(self, self))
-                self.register_converters(get_default_object_converters(self))
-            except ImportError as e:
-                warn_import_error('objects', e)
-
-            try:
-                # -- config
-                from parsyfiles.plugins_base.support_for_configparser import get_default_config_parsers, get_default_config_converters
-                self.register_parsers(get_default_config_parsers())
-                self.register_converters(get_default_config_converters(self))
-            except ImportError as e:
-                warn_import_error('config', e)
-
-            # ------------------------- OPTIONAL -----------------
-            try:
-                # -- jprops
-                from parsyfiles.plugins_optional.support_for_jprops import get_default_jprops_parsers
-                self.register_parsers(get_default_jprops_parsers(self, self))
-                # self.register_converters()
-            except ImportError as e:
-                warn_import_error('DataFrame', e)
-
-            try:
-                # -- yaml
-                from parsyfiles.plugins_optional.support_for_yaml import get_default_yaml_parsers
-                self.register_parsers(get_default_yaml_parsers(self, self))
-                # self.register_converters()
-            except ImportError as e:
-                warn_import_error('DataFrame', e)
-
-            try:
-                # -- numpy
-                from parsyfiles.plugins_optional.support_for_numpy import get_default_np_parsers, get_default_np_converters
-                self.register_parsers(get_default_np_parsers())
-                self.register_converters(get_default_np_converters())
-            except ImportError as e:
-                warn_import_error('numpy', e)
-
-            try:
-                # -- pandas
-                from parsyfiles.plugins_optional.support_for_pandas import get_default_pandas_parsers, get_default_pandas_converters
-                self.register_parsers(get_default_pandas_parsers())
-                self.register_converters(get_default_pandas_converters())
-            except ImportError as e:
-                warn_import_error('DataFrame', e)
+            # register_default_plugins(self)
+            # we are already a copy of the default instance : dont register anything
+            # if this assertion fails, thats a discrepancy between __new__ and __init__ arguments
+            assert len(self.get_all_parsers()) > 0
 
         logger = logger or RootParser._default_logger
         check_var(logger, var_types=Logger, var_name='logger')
@@ -155,7 +196,7 @@ class RootParser(ParserRegistryWithConverters):
 
     def install_basic_multifile_support(self):
         """
-        Utility method for users who created a RootParser with register_default_parsers=False, in order to register only
+        Utility method for users who created a RootParser with register_default_plugins=False, in order to register only
          the multifile support
         :return:
         """
@@ -185,7 +226,7 @@ class RootParser(ParserRegistryWithConverters):
 
         # creating the wrapping dictionary type
         collection_type = Dict[str, base_item_type]
-        self._logger.info('**** Starting to parse ' + item_name_for_log + ' collection of <'
+        self._logger.debug('**** Starting to parse ' + item_name_for_log + ' collection of <'
                           + get_pretty_type_str(base_item_type) + '> at location ' + item_file_prefix +' ****')
 
         # common steps
@@ -208,7 +249,7 @@ class RootParser(ParserRegistryWithConverters):
         item_name_for_log = item_name_for_log or ''
         check_var(item_name_for_log, var_types=str, var_name='item_name_for_log')
 
-        self._logger.info('**** Starting to parse single object ' + item_name_for_log + ' of type <'
+        self._logger.debug('**** Starting to parse single object ' + item_name_for_log + ' of type <'
                           + get_pretty_type_str(item_type) + '> at location ' + location + ' ****')
 
         # common steps
@@ -234,12 +275,12 @@ class RootParser(ParserRegistryWithConverters):
         file_mapping_conf = file_mapping_conf or WrappedFileMappingConfiguration()
         obj = file_mapping_conf.create_persisted_object(item_file_prefix, logger=self._logger)
         # print('')
-        self._logger.info('')
+        self._logger.debug('')
 
         # create the parsing plan
         pp = self.create_parsing_plan(item_type, obj, logger=self._logger)
         # print('')
-        self._logger.info('')
+        self._logger.debug('')
 
         # parse
         res = pp.execute(logger=self._logger, options=options)
@@ -247,6 +288,61 @@ class RootParser(ParserRegistryWithConverters):
         self._logger.info('')
 
         return res
+
+
+class DefaultRootParser(RootParser):
+    """ an attempt to have a singleton instance with default parsers registered """
+
+    _instance = None
+
+    @staticmethod
+    def get_singleton_copy():
+        """
+        Returns a copy of the singleton. This is faster than registering all parsers again
+        :return:
+        """
+        return DefaultRootParser.__new__(DefaultRootParser, this_is_an_explicit_call=True)
+
+    def __new__(cls, this_is_an_explicit_call: bool = False):
+        if not this_is_an_explicit_call:
+            # this is a copy operation, just create an instance
+            return super(DefaultRootParser, cls).__new__(cls)
+        else:
+            # create if needed
+            if DefaultRootParser._instance is None:
+                # create the default instance and init it
+                inst = super(DefaultRootParser, cls).__new__(cls)
+                DefaultRootParser.__init__(inst)
+                # save it
+                DefaultRootParser._instance = inst
+
+            # return a copy of the default instance
+            return copy(DefaultRootParser._instance)
+
+    def __init__(self, *args, **kwargs):
+        if DefaultRootParser._instance is None:
+            # this is the first instance creation
+            super(DefaultRootParser, self).__init__(register_default_parsers=False)
+            register_default_plugins(self)
+        else:
+            # this object is already a copy of it
+            pass
+
+
+# _default_rp = None
+
+
+def get_default_parser():
+    """ Returns the default parser. """
+
+    # # We used a cached instance in order to avoid paying the instantiation time
+    # global _default_rp
+    # if _default_rp is None:
+    #     _default_rp = RootParser()
+    # return _default_rp
+
+    # Now the class itself has a cached default instance
+    return RootParser()
 
 
 def parse_item(location: str, item_type: Type[T], item_name_for_log: str = None,
@@ -263,7 +359,7 @@ def parse_item(location: str, item_type: Type[T], item_name_for_log: str = None,
     :param lazy_mfcollection_parsing:
     :return:
     """
-    rp = RootParser('parsyfiles defaults', logger=logger)
+    rp = get_default_parser()
     opts = create_parser_options(lazy_mfcollection_parsing=lazy_mfcollection_parsing)
     return rp.parse_item(location, item_type, item_name_for_log=item_name_for_log, file_mapping_conf=file_mapping_conf,
                          options=opts)
@@ -284,7 +380,56 @@ def parse_collection(location: str, base_item_type: Type[T], item_name_for_log: 
     :param lazy_mfcollection_parsing:
     :return:
     """
-    rp = RootParser('parsyfiles defaults', logger=logger)
+    rp = get_default_parser()
     opts = create_parser_options(lazy_mfcollection_parsing=lazy_mfcollection_parsing)
     return rp.parse_collection(location, base_item_type, item_name_for_log=item_name_for_log,
                                file_mapping_conf=file_mapping_conf, options=opts)
+
+
+def print_capabilities_by_ext(strict_type_matching: bool = False):
+    get_default_parser().print_capabilities_by_ext(strict_type_matching=strict_type_matching)
+
+
+def print_capabilities_by_type(strict_type_matching: bool = False):
+    get_default_parser().print_capabilities_by_type(strict_type_matching=strict_type_matching)
+
+
+def get_all_supported_types_pretty_str() -> Set[str]:
+    return get_default_parser().get_all_supported_types_pretty_str()
+
+
+def get_capabilities_by_type(strict_type_matching: bool = False) -> Dict[Type, Dict[str, Dict[str, Parser]]]:
+    return get_default_parser().get_capabilities_by_type(strict_type_matching=strict_type_matching)
+
+
+def print_capabilities_for_type(typ, strict_type_matching: bool = False):
+    get_default_parser().print_capabilities_for_type(typ, strict_type_matching=strict_type_matching)
+
+
+def get_capabilities_for_type(typ, strict_type_matching: bool = False) -> Dict[str, Dict[str, Parser]]:
+    return get_default_parser().get_capabilities_for_type(typ, strict_type_matching=strict_type_matching)
+
+
+def get_capabilities_by_ext(strict_type_matching: bool = False) -> Dict[str, Dict[Type, Dict[str, Parser]]]:
+    return get_default_parser().get_capabilities_by_ext(strict_type_matching=strict_type_matching)
+
+
+def print_capabilities_for_ext(ext, strict_type_matching: bool = False):
+    get_default_parser().print_capabilities_for_ext(ext, strict_type_matching=strict_type_matching)
+
+
+def get_capabilities_for_ext(ext, strict_type_matching: bool = False) -> Dict[Type, Dict[str, Parser]]:
+    return get_default_parser().get_capabilities_for_ext(ext, strict_type_matching=strict_type_matching)
+
+
+def get_all_supported_types(strict_type_matching: bool = False) -> Set[Type]:
+    return get_default_parser().get_all_supported_types(strict_type_matching=strict_type_matching)
+
+
+def get_all_supported_exts() -> Set[str]:
+    return get_default_parser().get_all_supported_exts()
+
+
+def find_all_matching_parsers(strict: bool, desired_type: Type[Any] = JOKER, required_ext: str = JOKER) \
+        -> Tuple[List[Parser], List[Parser], List[Parser], List[Parser]]:
+    return get_default_parser().find_all_matching_parsers(strict, desired_type, required_ext)

@@ -5,7 +5,8 @@ from pprint import pprint
 from typing import Type, Dict, Any, List, Set, Tuple
 from warnings import warn
 
-from parsyfiles.converting_core import S, Converter, ConversionChain, AnyObject, is_any_type, get_validated_type
+from parsyfiles.converting_core import S, Converter, ConversionChain, is_any_type, get_validated_type, JOKER, \
+    ConversionException
 from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_combining_parsers import ParsingChain, CascadingParser, DelegatingParser, \
     print_error_to_io_stream
@@ -67,11 +68,12 @@ class NoParserFoundForObjectExt(Exception):
 
         # add details
         if extensions_supported is not None and len(extensions_supported) > 0:
-            msg += ' If you wish to parse this object in that type, you may replace the file with any of the ' \
-                   'following extensions currently supported :' + str(extensions_supported) + '. \n' \
+            msg += ' If you wish to parse this fileobject in that type, you may replace the file with any of the ' \
+                   'following extensions currently supported :' + str(extensions_supported) + ' (see ' \
+                   'get_capabilities_for_type(' + get_pretty_type_str(obj_type) + ', strict_type_matching=False) for ' \
+                   'details).\n' \
                    + 'Otherwise, please register a new parser for type ' + get_pretty_type_str(obj_type) \
-                   + ' and extension ' + obj.get_pretty_file_ext() + '\n Reminder: use print_capabilities_by_ext()'\
-                   + ' and print_capabilities_by_type() to diagnose what are the parsers available'
+                   + ' and extension ' + obj.get_pretty_file_ext()
         else:
             raise ValueError('extensions_supported should be provided to create a NoParserFoundForObjectExt. If no '
                              'extension is supported, use NoParserFoundForObjectType.create instead')
@@ -217,21 +219,25 @@ class AbstractParserCache(metaclass=ABCMeta):
         Used to print the list of all file extensions that can be parsed by this parser registry.
         :return:
         """
+        print('\nCapabilities by file extension: ')
         l = self.get_capabilities_by_ext(strict_type_matching=strict_type_matching)
         pprint({ext: get_pretty_type_keys_dict(parsers) for ext, parsers in l.items()})
+        print('\n')
 
     def print_capabilities_by_type(self, strict_type_matching: bool = False):
         """
         Used to print the list of all file extensions that can be parsed by this parser registry.
         :return:
         """
+        print('\nCapabilities by object type: ')
         l = self.get_capabilities_by_type(strict_type_matching=strict_type_matching)
         pprint({get_pretty_type_str(typ): parsers for typ, parsers in l.items()})
+        print('\n')
 
     def get_all_supported_types_pretty_str(self) -> Set[str]:
         return {get_pretty_type_str(typ) for typ in self.get_all_supported_types()}
 
-    def get_capabilities_by_type(self, strict_type_matching: bool) -> Dict[Type, Dict[str, Dict[str, Parser]]]:
+    def get_capabilities_by_type(self, strict_type_matching: bool = False) -> Dict[Type, Dict[str, Dict[str, Parser]]]:
         """
         For all types that are supported,
         lists all extensions that can be parsed into such a type.
@@ -249,15 +255,15 @@ class AbstractParserCache(metaclass=ABCMeta):
         res = dict()
 
         # List all types that can be parsed
-        for typ in self.get_all_supported_types_for_ext(None):
+        for typ in self.get_all_supported_types():
             res[typ] = self.get_capabilities_for_type(typ, strict_type_matching)
 
         return res
 
-    def print_capabilities_for_type(self, typ, strict_type_matching = False):
+    def print_capabilities_for_type(self, typ, strict_type_matching: bool = False):
         pprint(self.get_capabilities_for_type(typ, strict_type_matching=strict_type_matching))
 
-    def get_capabilities_for_type(self, typ, strict_type_matching) -> Dict[str, Dict[str, Parser]]:
+    def get_capabilities_for_type(self, typ, strict_type_matching: bool = False) -> Dict[str, Dict[str, Parser]]:
         """
         Utility method to return, for a given type, all known ways to parse an object of this type, organized by file
         extension.
@@ -268,18 +274,28 @@ class AbstractParserCache(metaclass=ABCMeta):
         """
         r = dict()
         # For all extensions that are supported,
-        for ext in self.get_all_supported_exts_for_type(None, strict=strict_type_matching):
+        for ext in self.get_all_supported_exts():
             # Use the query to fill
             matching = self.find_all_matching_parsers(strict_type_matching, desired_type=typ, required_ext=ext)[0]
             # matching_list = matching[0] + matching[1] + matching[2]
             # insert_element_to_dict_of_dicts_of_list(res, typ, ext, list(reversed(matching_list)))
-            r[ext] = {'1_exact_match': list(reversed(matching[2])),
-                      '2_approx_match': list(reversed(matching[1])),
-                      '3_generic': list(reversed(matching[0]))}
+            r[ext] = dict()
+            exact = list(reversed(matching[2]))
+            if len(exact) > 0:
+                r[ext]['1_exact_match'] = exact
+
+            approx = list(reversed(matching[1]))
+            if len(approx) > 0:
+                r[ext]['2_approx_match'] = approx
+
+            generic = list(reversed(matching[0]))
+            if len(generic) > 0:
+                r[ext]['3_generic'] = generic
+
             # insert_element_to_dict_of_dicts(res, typ, ext, matching_dict)
         return r
 
-    def get_capabilities_by_ext(self, strict_type_matching: bool) -> Dict[str, Dict[Type, Dict[str, Parser]]]:
+    def get_capabilities_by_ext(self, strict_type_matching: bool = False) -> Dict[str, Dict[Type, Dict[str, Parser]]]:
         """
         For all extensions that are supported,
         lists all types that can be parsed from this extension.
@@ -295,15 +311,15 @@ class AbstractParserCache(metaclass=ABCMeta):
         res = dict()
 
         # For all extensions that are supported,
-        for ext in self.get_all_supported_exts_for_type(None, strict=strict_type_matching):
+        for ext in self.get_all_supported_exts_for_type(type_to_match=JOKER, strict=strict_type_matching):
             res[ext] = self.get_capabilities_for_ext(ext, strict_type_matching)
 
         return res
 
-    def print_capabilities_for_ext(self, ext, strict_type_matching = False):
+    def print_capabilities_for_ext(self, ext, strict_type_matching: bool = False):
         pprint(get_pretty_type_keys_dict(self.get_capabilities_for_ext(ext, strict_type_matching)))
 
-    def get_capabilities_for_ext(self, ext, strict_type_matching) -> Dict[Type, Dict[str, Parser]]:
+    def get_capabilities_for_ext(self, ext, strict_type_matching: bool = False) -> Dict[Type, Dict[str, Parser]]:
         """
         Utility method to return, for a given file extension, all known ways to parse a file with this extension,
         organized by target object type.
@@ -319,22 +335,33 @@ class AbstractParserCache(metaclass=ABCMeta):
             matching = self.find_all_matching_parsers(strict_type_matching, desired_type=typ, required_ext=ext)[0]
             # matching_list = matching[0] + matching[1] + matching[2]
             # insert_element_to_dict_of_dicts_of_list(res, ext, typ, list(reversed(matching_list)))
-            r[typ] = {'1_exact_match': list(reversed(matching[2])),
-                      '2_approx_match': list(reversed(matching[1])),
-                      '3_generic': list(reversed(matching[0]))}
+            r[typ] = dict()
+            exact = list(reversed(matching[2]))
+            if len(exact) > 0:
+                r[typ]['1_exact_match'] = exact
+
+            approx = list(reversed(matching[1]))
+            if len(approx) > 0:
+                r[typ]['2_approx_match'] = approx
+
+            generic = list(reversed(matching[0]))
+            if len(generic) > 0:
+                r[typ]['3_generic'] = generic
+
             # insert_element_to_dict_of_dicts(res, ext, typ, matching_dict)
         return r
 
-    def get_all_supported_types(self) -> Set[Type]:
-        return self.get_all_supported_types_for_ext(ext_to_match=None)
+    def get_all_supported_types(self, strict_type_matching: bool = False) -> Set[Type]:
+        # note: we have to keep strict_type_matching for conversion chains... ?
+        return self.get_all_supported_types_for_ext(ext_to_match=JOKER, strict_type_matching=strict_type_matching)
 
     @abstractmethod
-    def get_all_supported_types_for_ext(self, ext_to_match: str) -> Set[Type]:
+    def get_all_supported_types_for_ext(self, ext_to_match: str, strict_type_matching: bool = False) -> Set[Type]:
         pass
 
     def get_all_supported_exts(self) -> Set[str]:
-        # no need to use strict = False here :)
-        return self.get_all_supported_exts_for_type(type_to_match=None, strict=True)
+        # no need to use strict = False here - we just want a list of extensions :)
+        return self.get_all_supported_exts_for_type(type_to_match=JOKER, strict=True)
 
     @abstractmethod
     def get_all_supported_exts_for_type(self, type_to_match: Type[Any], strict: bool) -> Set[str]:
@@ -351,7 +378,7 @@ class AbstractParserCache(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def find_all_matching_parsers(self, strict: bool, desired_type: Type[Any] = None, required_ext: str = None) \
+    def find_all_matching_parsers(self, strict: bool, desired_type: Type[Any] = JOKER, required_ext: str = JOKER) \
             -> Tuple[List[Parser], List[Parser], List[Parser], List[Parser]]:
         """
         Main method to find parsers matching a query. Its first output is made of three lists without duplicates:
@@ -369,10 +396,10 @@ class AbstractParserCache(metaclass=ABCMeta):
         get_capabilities_for_ext methods
 
         :param strict:
-        :param desired_type: a type of object to parse, or None for 'wildcard'(*) .
+        :param desired_type: a type of object to parse, or JOKER for 'wildcard'(*) .
         WARNING: "object_type=AnyObject/object/Any)"
-        means "all parsers able to parse anything", which is different from "object_type=None" which means "all parsers".
-        :param required_ext: a specific extension to parse, or None for 'wildcard'(*)
+        means "all parsers able to parse anything", which is different from "object_type=JOKER" which means "all parsers".
+        :param required_ext: a specific extension to parse, or JOKER for 'wildcard'(*)
         :return: a tuple: [matching parsers(*), parsers matching type but not ext, parsers matching ext but not type,
         parsers not matching at all]. (*) matching parsers is actually a tuple : (matching_parsers_generic,
         matching_parsers_approx, matching_parsers_exact), each list from less relevant to most relevant.
@@ -405,6 +432,12 @@ class ParserCache(AbstractParserCache):
             # invalid
             raise _InvalidParserException.create(parser)
 
+        # (0) sanity check : check that parser handles jokers properly
+        res = parser.is_able_to_parse_detailed(desired_type=JOKER, desired_ext=JOKER, strict=True)
+        if not (res[0] is True and res[1] is None):
+            raise ValueError('Parser ' + str(parser) + ' can not be registered since it does not handle the JOKER cases '
+                             'correctly')
+
         # (1) store in the main lists
         if parser.is_generic():
             self._generic_parsers.append(parser)
@@ -417,7 +450,7 @@ class ParserCache(AbstractParserCache):
                 insert_element_to_dict_of_list(self._strict_types_to_ext, typ, ext)
                 insert_element_to_dict_of_list(self._ext_to_strict_types, ext, typ)
 
-    def get_all_parsers(self, strict_type_matching: bool) -> List[Parser]:
+    def get_all_parsers(self, strict_type_matching: bool = False) -> List[Parser]:
         """
         Returns the list of all parsers in order of relevance.
         :return:
@@ -430,22 +463,23 @@ class ParserCache(AbstractParserCache):
             raise Exception('Internal error - this matching[1] list is supposed to be empty for such a query')
         return matching[0] + matching[2]
 
-    def get_all_supported_types_for_ext(self, ext_to_match: str) -> Set[Type]:
+    def get_all_supported_types_for_ext(self, ext_to_match: str, strict_type_matching: bool = False) -> Set[Type]:
         """
         Utility method to return the set of all supported types that may be parsed from files with the given extension.
-        ext=None is a joker that means all extensions
+        ext=JOKER is a joker that means all extensions
 
         :param ext_to_match:
+        :param strict_type_matching:
         :return:
         """
-        matching = self.find_all_matching_parsers(required_ext=ext_to_match, strict=True)[0]
+        matching = self.find_all_matching_parsers(required_ext=ext_to_match, strict=strict_type_matching)[0]
         return {typ for types in [p.supported_types for p in (matching[0] + matching[1] + matching[2])]
                 for typ in types}
 
     def get_all_supported_exts_for_type(self, type_to_match: Type[Any], strict: bool) -> Set[str]:
         """
         Utility method to return the set of all supported file extensions that may be converted to objects of the given
-        type. type=None is a joker that means all types
+        type. type=JOKER is a joker that means all types
 
         :param type_to_match:
         :param strict:
@@ -455,7 +489,7 @@ class ParserCache(AbstractParserCache):
         return {ext for exts in [p.supported_exts for p in (matching[0] + matching[1] + matching[2])]
                 for ext in exts}
 
-    def find_all_matching_parsers(self, strict: bool, desired_type: Type[Any] = None, required_ext: str = None) \
+    def find_all_matching_parsers(self, strict: bool, desired_type: Type[Any] = JOKER, required_ext: str = JOKER) \
             -> Tuple[Tuple[List[Parser], List[Parser], List[Parser]],
                      List[Parser], List[Parser], List[Parser]]:
         """
@@ -463,66 +497,81 @@ class ParserCache(AbstractParserCache):
         order
 
         :param strict:
-        :param desired_type:
+        :param desired_type: the desired type, or 'JOKER' for a wildcard
         :param required_ext:
         :return: match=(matching_parsers_generic, matching_parsers_approx, matching_parsers_exact),
                  no_type_match_but_ext_match, no_ext_match_but_type_match, no_match
         """
 
-        if desired_type is None and required_ext is None:
-            # Easy : return everything (GENERIC first, SPECIFIC then) in order (make a copy first :) )
-            matching_parsers_generic = self._generic_parsers.copy()
-            matching_parsers_approx = []
-            matching_parsers_exact = self._specific_parsers.copy()
-            no_type_match_but_ext_match = []
-            no_ext_match_but_type_match = []
-            no_match = []
-        else:
-            check_var(strict, var_types=bool, var_name='strict')
-            # first transform any 'Any' type requirement into the official class for that
-            desired_type = get_validated_type(desired_type, 'desired_type', enforce_not_none=False)
+        # if desired_type is JOKER and required_ext is JOKER:
+        #     # Easy : return everything (GENERIC first, SPECIFIC then) in order (make a copy first :) )
+        #     matching_parsers_generic = self._generic_parsers.copy()
+        #     matching_parsers_approx = []
+        #     matching_parsers_exact = self._specific_parsers.copy()
+        #     no_type_match_but_ext_match = []
+        #     no_ext_match_but_type_match = []
+        #     no_match = []
+        # else:
+        #
+        # Although the above could be thought as an easy way to accelerate the process, it does not any more since the
+        # JOKER  special cases are handled in parser.is_able_to_parse and converter.is_able_to_convert functions.
+        #
+        # It was also dangerous since it prevented us to get consistency across views - hence parser/converter
+        # implementors could get the feeling that their parser was correctly registered where it wasn't
 
-            matching_parsers_generic = []
-            matching_parsers_approx = []
-            matching_parsers_exact = []
-            no_type_match_but_ext_match = []
-            no_ext_match_but_type_match = []
-            no_match = []
+        check_var(strict, var_types=bool, var_name='strict')
+        # first transform any 'Any' type requirement into the official class for that
+        desired_type = get_validated_type(desired_type, 'desired_type', enforce_not_joker=False)
 
-            # handle generic parsers first - except if desired type is Any
-            for p in self._generic_parsers:
-                match = p.is_able_to_parse(desired_type=desired_type, desired_ext=required_ext, strict=strict)[0]
-                if match:
-                    # match
-                    if not is_any_type(desired_type):
-                        matching_parsers_generic.append(p)
-                    else:
-                        # special case : what is required is Any, so put in exact match
-                        matching_parsers_exact.append(p)
+        matching_parsers_generic = []
+        matching_parsers_approx = []
+        matching_parsers_exact = []
+        no_type_match_but_ext_match = []
+        no_ext_match_but_type_match = []
+        no_match = []
+
+        # handle generic parsers first - except if desired type is Any
+        for p in self._generic_parsers:
+            match = p.is_able_to_parse(desired_type=desired_type, desired_ext=required_ext, strict=strict)
+            if match:
+                # match
+                if is_any_type(desired_type):
+                    # special case : what is required is Any, so put in exact match
+                    matching_parsers_exact.append(p)
                 else:
-                    # type matches always
+                    matching_parsers_generic.append(p)
+
+            else:
+                # type matches always
+                no_ext_match_but_type_match.append(p)
+
+        # then the specific
+        for p in self._specific_parsers:
+            match, exact_match = p.is_able_to_parse_detailed(desired_type=desired_type,
+                                                             desired_ext=required_ext,
+                                                             strict=strict)
+            if match:
+                if is_any_type(desired_type):
+                    # special case: dont register as a type match
+                    no_type_match_but_ext_match.append(p)
+                else:
+                    if exact_match is None or exact_match:
+                        matching_parsers_exact.append(p)
+                    else:
+                        matching_parsers_approx.append(p)
+
+            else:
+                # try to set the type to a supported type to see if that makes a match
+                if p.is_able_to_parse(desired_type=JOKER, desired_ext=required_ext, strict=strict):
+                    no_type_match_but_ext_match.append(p)
+
+                # try to set the ext to a supported ext to see if that makes a match
+                elif p.is_able_to_parse(desired_type=desired_type, desired_ext=JOKER, strict=strict):
                     no_ext_match_but_type_match.append(p)
 
-            # then the specific
-            for p in self._specific_parsers:
-                match, exact_match = p.is_able_to_parse(desired_type=desired_type, desired_ext=required_ext,
-                                                        strict=strict)
-                if match:
-                    if not is_any_type(desired_type):
-                        if exact_match is None or exact_match:
-                            matching_parsers_exact.append(p)
-                        else:
-                            matching_parsers_approx.append(p)
-                    else:
-                        # special case: dont register as a type match
-                        no_type_match_but_ext_match.append(p)
+                # no match at all
                 else:
-                    if p.is_able_to_parse(desired_type=None, desired_ext=required_ext, strict=strict)[0]:
-                        no_type_match_but_ext_match.append(p)
-                    elif p.is_able_to_parse(desired_type=desired_type, desired_ext=None, strict=strict)[0]:
-                        no_ext_match_but_type_match.append(p)
-                    else:
-                        no_match.append(p)
+                    no_match.append(p)
 
         return (matching_parsers_generic, matching_parsers_approx, matching_parsers_exact), \
                no_type_match_but_ext_match, no_ext_match_but_type_match, no_match
@@ -616,7 +665,7 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
             return CascadingParser(list(reversed(matching_parsers)))
 
 
-class ConversionException(Exception):
+class AttrConversionException(ConversionException):
     """
     Raised whenever parsing fails
     """
@@ -629,7 +678,7 @@ class ConversionException(Exception):
 
         :param contents:
         """
-        super(ConversionException, self).__init__(contents)
+        super(AttrConversionException, self).__init__(contents)
 
     @staticmethod
     def create(att_name: str, parsed_att: S, attribute_type: Type[T], caught_exec: Dict[Converter[S, T], Exception]):
@@ -659,7 +708,7 @@ class ConversionException(Exception):
                 print_error_to_io_stream(err, msg)
                 msg.write('\n')
 
-        return ConversionException(base_msg + msg.getvalue())
+        return AttrConversionException(base_msg + msg.getvalue())
 
 
 class NoConverterAvailableForAttributeException(FileNotFoundError):
@@ -703,6 +752,14 @@ class NoConverterAvailableForAttributeException(FileNotFoundError):
                                                              'finder \'' + str(conversion_finder) +'\'.')
 
 
+# def _handle_from_type_wildcard(desired_from_type: Optional[Type], c: Converter):
+#     return desired_from_type or c.from_type
+# 
+# 
+# def _handle_to_type_wildcard(desired_type: Optional[Type], c: Converter):
+#     return desired_type or c.to_type
+
+
 class ConversionFinder(metaclass=ABCMeta):
     """
     Abstract class for objects able to find a conversion chain between two types
@@ -729,18 +786,18 @@ class ConversionFinder(metaclass=ABCMeta):
         return self.get_all_conversion_chains(from_type=from_type)
 
     @abstractmethod
-    def get_all_conversion_chains(self, from_type: Type[Any] = None, to_type: Type[Any] = None)\
+    def get_all_conversion_chains(self, from_type: Type[Any] = JOKER, to_type: Type[Any] = JOKER)\
             -> Tuple[List[Converter], List[Converter], List[Converter]]:
         """
         Utility method to find all converters or conversion chains matching the provided query.
 
-        :param from_type: a required type of input object, or None for 'wildcard'(*) .
+        :param from_type: a required type of input object, or JOKER for 'wildcard'(*) .
         WARNING: "from_type=AnyObject/object/Any" means
-        "all converters able to source from anything", which is different from "from_type=None" which means "all
+        "all converters able to source from anything", which is different from "from_type=JOKER" which means "all
         converters whatever their source type".
-        :param to_type: a required type of output object, or None for 'wildcard'(*) .
+        :param to_type: a required type of output object, or JOKER for 'wildcard'(*) .
         WARNING: "to_type=AnyObject/object/Any" means "all
-        converters able to produce any type of object", which is different from "to_type=None" which means "all
+        converters able to produce any type of object", which is different from "to_type=JOKER" which means "all
         converters whatever type they are able to produce".
         :return: a tuple of lists of matching converters, by type of *dest_type* match : generic, approximate, exact
         """
@@ -770,7 +827,7 @@ class ConversionFinder(metaclass=ABCMeta):
                         return chain.convert(desired_attr_type, attr_value, logger, options)
                     except Exception as e:
                         all_errors[chain] = e
-                raise ConversionException.create(attr_name, attr_value, desired_attr_type, all_errors)
+                raise AttrConversionException.create(attr_name, attr_value, desired_attr_type, all_errors)
 
             else:
                 # did not find any conversion chain
@@ -827,7 +884,7 @@ class AbstractConverterCache(ConversionFinder):
         pass
 
     @abstractmethod
-    def get_all_conversion_chains(self, from_type: Type[Any] = None, to_type: Type[Any] = None)\
+    def get_all_conversion_chains(self, from_type: Type[Any] = JOKER, to_type: Type[Any] = JOKER)\
             -> Tuple[List[Converter], List[Converter], List[Converter]]:
         pass
 
@@ -854,6 +911,12 @@ class ConverterCache(AbstractConverterCache):
         """
         check_var(converter, var_types=Converter, var_name='converter')
 
+        # (0) sanity check : check that parser handles jokers properly
+        res = converter.is_able_to_convert_detailed(from_type=JOKER, to_type=JOKER, strict=True)
+        if not (res[0] is True and res[1] is None and res[2] is None):
+            raise ValueError('Converter ' + str(converter) + ' can not be registered since it does not handle the JOKER'
+                             ' cases correctly')
+
         # compute all possible chains and save them
         generic_chains, generic_nonstrict_chains, specific_chains, specific_nonstrict_chains \
             = self._create_all_new_chains(converter)
@@ -870,7 +933,6 @@ class ConverterCache(AbstractConverterCache):
                                                              reverse=True)
         self._specific_conversion_chains = sorted(self._specific_conversion_chains, key=len, reverse=True)
 
-
     def _create_all_new_chains(self, converter) -> Tuple[List[Converter], List[Converter],
                                                          List[Converter], List[Converter]]:
         """
@@ -883,92 +945,86 @@ class ConverterCache(AbstractConverterCache):
         specific_chains, specific_nonstrict_chains, generic_chains, generic_nonstrict_chains = [], [], [], []
 
         if converter.is_generic():
-            # the smaller chain :)
+            # the smaller chain : the singleton :)
             generic_chains.append(ConversionChain(initial_converters=[converter], strict_chaining=True))
-
-            # create new generic chain by appending this converter at the end of an existing *non-generic* one
-            for existing_specific in self._specific_conversion_chains:
-                if converter.can_be_appended_to(existing_specific, strict=True):
-                    if ConversionChain.are_worth_chaining(existing_specific, converter):
-                        generic_chains.append(ConversionChain.chain(existing_specific, converter, strict=True))
-                elif (not self.strict) and converter.can_be_appended_to(existing_specific, strict=False):
-                    if ConversionChain.are_worth_chaining(existing_specific, converter):
-                        generic_nonstrict_chains.append(ConversionChain.chain(existing_specific, converter,
-                                                                          strict=False))
-
-            for existing_specific_ns in self._specific_non_strict_conversion_chains:
-                if converter.can_be_appended_to(existing_specific_ns, strict=False):
-                    if ConversionChain.are_worth_chaining(existing_specific_ns, converter):
-                        generic_nonstrict_chains.append(ConversionChain.chain(existing_specific_ns, converter,
-                                                                          strict=False))
-
-            # FOLLOWING IS NOT POSSIBLE : generic
-            # by inserting this converter at the beginning of an existing one
-            # by combining both created chains into a big one
         else:
-            # the smaller chain :)
             specific_chains.append(ConversionChain(initial_converters=[converter], strict_chaining=True))
 
-            # 1) create new specific chains by adding this converter at the beginning or end of all *non-generic* ones
-            # -- non-strict
-            new_c_at_end_ns = []
-            new_c_at_beginning_ns = []
-            if not self.strict:
-                # then there are non-strict chains already. Try to connect to them
-                for existing_specific_nonstrict in self._specific_non_strict_conversion_chains:
-                    if converter.can_be_appended_to(existing_specific_nonstrict, strict=False):
-                        if ConversionChain.are_worth_chaining(existing_specific_nonstrict, converter):
-                            new_c_at_end_ns.append(ConversionChain.chain(existing_specific_nonstrict, converter,
-                                                                         strict=False))
-                    if existing_specific_nonstrict.can_be_appended_to(converter, strict=False):
-                        if ConversionChain.are_worth_chaining(converter, existing_specific_nonstrict):
-                            new_c_at_beginning_ns.append(ConversionChain.chain(converter, existing_specific_nonstrict,
-                                                                               strict=False))
 
-            # -- strict
-            new_c_at_end = []
-            new_c_at_beginning = []
-            for existing_specific in self._specific_conversion_chains:
-                # first try *strict* mode
-                if converter.can_be_appended_to(existing_specific, strict=True):
-                    if ConversionChain.are_worth_chaining(existing_specific, converter):
-                        new_c_at_end.append(ConversionChain.chain(existing_specific, converter, strict=True))
-                elif (not self.strict) and converter.can_be_appended_to(existing_specific, strict=False):
-                    if ConversionChain.are_worth_chaining(existing_specific, converter):
-                        new_c_at_end_ns.append(ConversionChain.chain(existing_specific, converter, strict=False))
+        # 1) create new specific chains by adding this converter at the beginning or end of all *non-generic* ones
+        # -- non-strict
+        new_c_at_end_ns = []
+        new_c_at_beginning_ns = []
+        if not self.strict:
+            # then there are non-strict chains already. Try to connect to them
+            for existing_specific_nonstrict in self._specific_non_strict_conversion_chains:
+                if converter.can_be_appended_to(existing_specific_nonstrict, strict=False):
+                    if ConversionChain.are_worth_chaining(existing_specific_nonstrict, converter):
+                        new_c_at_end_ns.append(ConversionChain.chain(existing_specific_nonstrict, converter,
+                                                                     strict=False))
+                if existing_specific_nonstrict.can_be_appended_to(converter, strict=False):
+                    if ConversionChain.are_worth_chaining(converter, existing_specific_nonstrict):
+                        new_c_at_beginning_ns.append(ConversionChain.chain(converter, existing_specific_nonstrict,
+                                                                           strict=False))
 
-                if existing_specific.can_be_appended_to(converter, strict=True):
-                    if ConversionChain.are_worth_chaining(converter, existing_specific):
-                        new_c_at_beginning.append(ConversionChain.chain(converter, existing_specific, strict=True))
-                elif (not self.strict) and existing_specific.can_be_appended_to(converter, strict=False):
-                    if ConversionChain.are_worth_chaining(converter, existing_specific):
-                        new_c_at_beginning_ns.append(ConversionChain.chain(converter, existing_specific, strict=False))
+        # -- strict
+        new_c_at_end = []
+        new_c_at_beginning = []
+        for existing_specific in self._specific_conversion_chains:
+            # first try *strict* mode
+            if converter.can_be_appended_to(existing_specific, strict=True):
+                if ConversionChain.are_worth_chaining(existing_specific, converter):
+                    new_c_at_end.append(ConversionChain.chain(existing_specific, converter, strict=True))
+            elif (not self.strict) and converter.can_be_appended_to(existing_specific, strict=False):
+                if ConversionChain.are_worth_chaining(existing_specific, converter):
+                    new_c_at_end_ns.append(ConversionChain.chain(existing_specific, converter, strict=False))
 
+            if existing_specific.can_be_appended_to(converter, strict=True):
+                if ConversionChain.are_worth_chaining(converter, existing_specific):
+                    # TODO this is where when chaining a generic to a specific, we would actually have to restrict it
+                    # note: but maybe we dont care since now this is checked and prevented in the convert() method
+                    new_c_at_beginning.append(ConversionChain.chain(converter, existing_specific, strict=True))
+            elif (not self.strict) and existing_specific.can_be_appended_to(converter, strict=False):
+                if ConversionChain.are_worth_chaining(converter, existing_specific):
+                    # TODO this is where when chaining a generic to a specific, we would actually have to restrict it
+                    # note: but maybe we dont care since now this is checked and prevented in the convert() method
+                    new_c_at_beginning_ns.append(ConversionChain.chain(converter, existing_specific, strict=False))
+
+        # append to the right list depending on the nature of this converter
+        if converter.is_generic():
+            generic_chains += new_c_at_end
+            generic_nonstrict_chains += new_c_at_end_ns
+        else:
             specific_chains += new_c_at_end
-            specific_chains += new_c_at_beginning
             specific_nonstrict_chains += new_c_at_end_ns
-            specific_nonstrict_chains += new_c_at_beginning_ns
+        # common for both types
+        specific_chains += new_c_at_beginning
+        specific_nonstrict_chains += new_c_at_beginning_ns
 
-            # by combining all created chains into a big one
-            for a in new_c_at_end:
-                for b in new_c_at_beginning:
-                    b_ = b.remove_first()
-                    if b_.can_be_appended_to(a, strict=True):
-                        if ConversionChain.are_worth_chaining(a, b_):
-                            specific_chains.append(ConversionChain.chain(a, b_, strict=True))
-                for b in new_c_at_beginning_ns:
-                    b_ = b.remove_first()
-                    if b_.can_be_appended_to(a, strict=False):
-                        if ConversionChain.are_worth_chaining(a, b_):
-                            specific_nonstrict_chains.append(ConversionChain.chain(a, b_, strict=False))
-            for a in new_c_at_end_ns:
-                for b in (new_c_at_beginning_ns + new_c_at_beginning):
-                    b_ = b.remove_first()
-                    if b_.can_be_appended_to(a, strict=False):
-                        if ConversionChain.are_worth_chaining(a, b_):
-                            specific_nonstrict_chains.append(ConversionChain.chain(a, b_, strict=False))
+        # by combining all created chains into a big one
+        for a in new_c_at_end:
+            for b in new_c_at_beginning:
+                b_ = b.remove_first()
+                if b_.can_be_appended_to(a, strict=True):
+                    if ConversionChain.are_worth_chaining(a, b_):
+                        specific_chains.append(ConversionChain.chain(a, b_, strict=True))
+            for b in new_c_at_beginning_ns:
+                b_ = b.remove_first()
+                if b_.can_be_appended_to(a, strict=False):
+                    if ConversionChain.are_worth_chaining(a, b_):
+                        specific_nonstrict_chains.append(ConversionChain.chain(a, b_, strict=False))
+        for a in new_c_at_end_ns:
+            for b in (new_c_at_beginning_ns + new_c_at_beginning):
+                b_ = b.remove_first()
+                if b_.can_be_appended_to(a, strict=False):
+                    if ConversionChain.are_worth_chaining(a, b_):
+                        specific_nonstrict_chains.append(ConversionChain.chain(a, b_, strict=False))
 
-            # by inserting this converter at the beginning of an existing *generic*
+        # by inserting this converter at the beginning of an existing *generic*
+        if converter.is_generic():
+            # we want to avoid chaining generic converters together
+            pass
+        else:
             new_c_at_beginning_generic = []
             new_c_at_beginning_generic_ns = []
             for existing_specific in self._generic_conversion_chains:
@@ -990,7 +1046,6 @@ class ConverterCache(AbstractConverterCache):
             generic_chains += new_c_at_beginning_generic
             generic_nonstrict_chains += new_c_at_beginning_generic_ns
 
-
             # by combining specific and generic created chains into a big one
             for a in new_c_at_end:
                 for b in new_c_at_beginning_generic:
@@ -1010,26 +1065,27 @@ class ConverterCache(AbstractConverterCache):
                         if ConversionChain.are_worth_chaining(a, b_):
                             generic_nonstrict_chains.append(ConversionChain.chain(a, b_, strict=False))
 
+
         return generic_chains, generic_nonstrict_chains, specific_chains, specific_nonstrict_chains
 
-    def get_all_conversion_chains(self, from_type: Type[Any] = None, to_type: Type[Any] = None) \
+    def get_all_conversion_chains(self, from_type: Type[Any] = JOKER, to_type: Type[Any] = JOKER) \
             -> Tuple[List[Converter], List[Converter], List[Converter]]:
         """
         Utility method to find matching converters or conversion chains.
 
-        :param from_type: a required type of input object, or None for 'wildcard'(*) .
+        :param from_type: a required type of input object, or JOKER for 'wildcard'(*) .
         WARNING: "from_type=AnyObject/object/Any" means
-        "all converters able to source from anything", which is different from "from_type=None" which means "all
+        "all converters able to source from anything", which is different from "from_type=JOKER" which means "all
         converters whatever their source type".
-        :param to_type: a required type of output object, or None for 'wildcard'(*) .
+        :param to_type: a required type of output object, or JOKER for 'wildcard'(*) .
         WARNING: "to_type=AnyObject/object/Any" means "all
-        converters able to produce any type of object", which is different from "to_type=None" which means "all
+        converters able to produce any type of object", which is different from "to_type=JOKER" which means "all
         converters whatever type they are able to produce".
         :return: a tuple of lists of matching converters, by type of *dest_type* match : generic, approximate, exact.
         The order of each list is from *less relevant* to *most relevant*
         """
 
-        if from_type is None and to_type is None:
+        if from_type is JOKER and to_type is JOKER:
             matching_dest_generic = self._generic_nonstrict_conversion_chains.copy() + \
                                     self._generic_conversion_chains.copy()
             matching_dest_approx = []
@@ -1037,33 +1093,39 @@ class ConverterCache(AbstractConverterCache):
                                   self._specific_conversion_chains.copy()
 
         else:
-            # first transform any 'Any' type requirement into the official class for that
-            to_type = get_validated_type(to_type, 'to_type', enforce_not_none=False)
             matching_dest_generic, matching_dest_approx, matching_dest_exact = [], [], []
 
+            # first transform any 'Any' type requirement into the official class for that
+            to_type = get_validated_type(to_type, 'to_type', enforce_not_joker=False)
+
             # handle generic converters first
-            for p in (self._generic_nonstrict_conversion_chains + self._generic_conversion_chains):
-                match = p.is_able_to_convert(strict=self.strict, from_type=from_type, to_type=to_type)[0]
+            for c in (self._generic_nonstrict_conversion_chains + self._generic_conversion_chains):
+                match, source_exact, dest_exact = c.is_able_to_convert_detailed(strict=self.strict,
+                                                                                from_type=from_type,
+                                                                                to_type=to_type)
                 if match:
                     # match
-                    if not is_any_type(to_type):
-                        matching_dest_generic.append(p)
+                    if is_any_type(to_type):
+                        # special case where desired to_type is already Any : in that case a generic converter will
+                        # appear in 'exact match'
+                        matching_dest_exact.append(c)
                     else:
-                        # special case of Any
-                        matching_dest_exact.append(p)
+                        # this is a match from a generic parser to a specific type : add in 'generic' cataegory
+                        matching_dest_generic.append(c)
 
             # then the specific
-            for p in (self._specific_non_strict_conversion_chains + self._specific_conversion_chains):
-                match, source_exact, dest_exact = p.is_able_to_convert(strict=self.strict, from_type=from_type,
-                                                                       to_type=to_type)
+            for c in (self._specific_non_strict_conversion_chains + self._specific_conversion_chains):
+                match, source_exact, dest_exact = c.is_able_to_convert_detailed(strict=self.strict,
+                                                                                from_type=from_type,
+                                                                                to_type=to_type)
                 if match:
                     if not is_any_type(to_type):
                         if dest_exact:
                             # we dont care if source is exact or approximate as long as dest is exact
-                            matching_dest_exact.append(p)
+                            matching_dest_exact.append(c)
                         else:
                             # this means that dest is approximate.
-                            matching_dest_approx.append(p)
+                            matching_dest_approx.append(c)
                     else:
                         # we only want to keep the generic ones, and they have already been added
                         pass
@@ -1095,7 +1157,7 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
         if initial_converters_to_register is not None:
             self.register_converters(initial_converters_to_register)
 
-    def find_all_matching_parsers(self, strict: bool, desired_type: Type[Any] = None, required_ext: str = None) \
+    def find_all_matching_parsers(self, strict: bool, desired_type: Type[Any] = JOKER, required_ext: str = JOKER) \
         -> Tuple[Tuple[List[Parser], List[Parser], List[Parser]],
                  List[Parser], List[Parser], List[Parser]]:
         """
@@ -1108,6 +1170,9 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
         :return: match=(matching_parsers_generic, matching_parsers_approx, matching_parsers_exact),
                  no_type_match_but_ext_match, no_ext_match_but_type_match, no_match
         """
+        # transform any 'Any' type requirement into the official class for that
+        desired_type = get_validated_type(desired_type, 'desired_type', enforce_not_joker=False)
+
         # (1) call the super method to find all parsers
         matching, no_type_match_but_ext_match, no_ext_match_but_type_match, no_match = \
             super(ParserRegistryWithConverters, self).find_all_matching_parsers(strict=self.is_strict,
@@ -1116,7 +1181,7 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
         # these are ordered with 'preferred last'
         matching_p_generic, matching_p_approx, matching_p_exact = matching
 
-        if desired_type is None:
+        if desired_type is JOKER:
             # then we want to try to append every possible converter chain, even if we have already found an exact match
             # (exact match will probably contain all parsers in that case?...)
             parsers_to_complete_with_converters = no_type_match_but_ext_match + matching_p_generic + matching_p_approx \
@@ -1188,6 +1253,7 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
                                           matching_c_approx_to_type, matching_c_exact_to_type):
         """
         Internal method to create parsing chains made of a parser and converters from the provided lists.
+        Once again a JOKER for a type means 'joker' here.
 
         :param parser:
         :param parser_supported_type:
@@ -1202,55 +1268,75 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
         matching_p_approx, matching_p_approx_with_approx_chain,\
         matching_p_exact, matching_p_exact_with_approx_chain = [], [], [], [], [], []
 
+        # first transform any 'Any' type requirement into the official class for that
+        desired_type = get_validated_type(desired_type, 'desired_type', enforce_not_joker=False)
+
         # ---- Generic converters - only if the parsed type is not already 'any'
         if not is_any_type(parser_supported_type):
-            for converter in matching_c_generic_to_type:
+            for cv in matching_c_generic_to_type:
                 # if the converter can attach to this parser, we have a matching parser !
+
                 # --start from strict
-                if converter.is_able_to_convert(True, from_type=parser_supported_type, to_type=desired_type)[0]:
-                    if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
-                        chain = ParsingChain(parser, converter, strict=True,
+                if cv.is_able_to_convert(strict=True,
+                                         from_type=parser_supported_type,
+                                         to_type=desired_type):
+                    if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
+                        chain = ParsingChain(parser, cv, strict=True,
                                              base_parser_chosen_dest_type=parser_supported_type)
                         # insert it at the beginning since it should have less priority
                         matching_p_generic.append(chain)
-                elif (not self.strict) and converter.is_able_to_convert(False, from_type=parser_supported_type,
-                                                                        to_type=desired_type)[0]:
-                    if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
-                        chain = ParsingChain(parser, converter, strict=False,
+
+                # --then non-strict
+                elif (not self.strict) \
+                        and cv.is_able_to_convert(strict=False,
+                                                  from_type=parser_supported_type,
+                                                  to_type=desired_type):
+                    if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
+                        chain = ParsingChain(parser, cv, strict=False,
                                              base_parser_chosen_dest_type=parser_supported_type)
                         # insert it at the beginning since it should have less priority
                         matching_p_generic_with_approx_chain.append(chain)
 
         # ---- Approx to_type
-        for converter in matching_c_approx_to_type:
+        for cv in matching_c_approx_to_type:
             # if the converter can attach to this parser, we have a matching parser !
-            if converter.is_able_to_convert(True, from_type=parser_supported_type, to_type=desired_type)[0]:
-                if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
-                    chain = ParsingChain(parser, converter, strict=True,
+            # -- start from strict
+            if cv.is_able_to_convert(strict=True,
+                                     from_type=parser_supported_type,
+                                     to_type=desired_type):
+                if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
+                    chain = ParsingChain(parser, cv, strict=True,
                                          base_parser_chosen_dest_type=parser_supported_type)
                     # insert it at the beginning since it should have less priority
                     matching_p_approx.append(chain)
-            elif (not self.strict) and converter.is_able_to_convert(False, from_type=parser_supported_type,
-                                                                    to_type=desired_type)[0]:
-                if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
-                    chain = ParsingChain(parser, converter, strict=False,
+            # then non-strict
+            elif (not self.strict) \
+                    and cv.is_able_to_convert(strict=False,
+                                              from_type=parser_supported_type,
+                                              to_type=desired_type):
+                if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
+                    chain = ParsingChain(parser, cv, strict=False,
                                          base_parser_chosen_dest_type=parser_supported_type)
                     # insert it at the beginning since it should have less priority
                     matching_p_approx_with_approx_chain.append(chain)
 
         # ---- Exact to_type
-        for converter in matching_c_exact_to_type:
+        for cv in matching_c_exact_to_type:
             # if the converter can attach to this parser, we have a matching parser !
-            if converter.is_able_to_convert(True, from_type=parser_supported_type, to_type=desired_type)[0]:
-                if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
-                    chain = ParsingChain(parser, converter, strict=True,
+            if cv.is_able_to_convert(strict=True,
+                                     from_type=parser_supported_type,
+                                     to_type=desired_type):
+                if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
+                    chain = ParsingChain(parser, cv, strict=True,
                                          base_parser_chosen_dest_type=parser_supported_type)
                     # insert it at the beginning since it should have less priority
                     matching_p_exact.append(chain)
-            elif (not self.strict) and converter.is_able_to_convert(False, from_type=parser_supported_type,
-                                                                    to_type=desired_type)[0]:
-                if ParsingChain.are_worth_chaining(parser, parser_supported_type, converter):
-                    chain = ParsingChain(parser, converter, strict=False,
+            elif (not self.strict) \
+                    and cv.is_able_to_convert(strict=False,
+                                              from_type=parser_supported_type,
+                                              to_type=desired_type):
+                if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
+                    chain = ParsingChain(parser, cv, strict=False,
                                          base_parser_chosen_dest_type=parser_supported_type)
                     # insert it at the beginning since it should have less priority
                     matching_p_exact_with_approx_chain.append(chain)

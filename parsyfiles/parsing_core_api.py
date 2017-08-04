@@ -3,7 +3,7 @@ from logging import Logger
 from typing import TypeVar, Generic, Type, Callable, Dict, Any, Set, Tuple, List
 
 from parsyfiles.converting_core import get_validated_types, S, Converter, get_options_for_id, is_any_type, \
-    is_any_type_set
+    is_any_type_set, JOKER
 from parsyfiles.filesystem_mapping import EXT_SEPARATOR, MULTIFILE_EXT, PersistedObject
 from parsyfiles.type_inspection_tools import get_pretty_type_str, robust_isinstance
 from parsyfiles.var_checker import check_var
@@ -116,35 +116,39 @@ class _BaseParserDeclarationForRegistries(object):
     def is_generic(self):
         return is_any_type_set(self.supported_types)
 
-    def is_able_to_parse(self, desired_type: Type[Any], desired_ext: str, strict: bool) -> Tuple[bool, bool]:
+    def is_able_to_parse(self, desired_type: Type[Any], desired_ext: str, strict: bool) -> bool:
+        return self.is_able_to_parse_detailed(desired_type=desired_type, desired_ext=desired_ext, strict=strict)[0]
+
+    def is_able_to_parse_detailed(self, desired_type: Type[Any], desired_ext: str, strict: bool) -> Tuple[bool, bool]:
         """
         Utility method to check if a parser is able to parse a given type, either in
         * strict mode (desired_type must be one of the supported ones, or the parser should be generic)
         * inference mode (non-strict) : desired_type may be a parent class of one the parser is able to produce
 
-        :param desired_type: the type of the object that should be parsed, or None to denote all types (joker)
-        :param desired_ext: the file extension that should be parsed, or None to denote all extensions (joker)
+        :param desired_type: the type of the object that should be parsed,
+        :param desired_ext: the file extension that should be parsed
         :param strict: a boolean indicating whether to evaluate in strict mode or not
         :return: a first boolean indicating if there was a match, and a second boolean indicating if that match was
         strict (None if no match)
         """
+
         # (1) first handle the easy joker+joker case
-        if desired_ext is None and desired_type is None:
+        if desired_ext is JOKER and desired_type is JOKER:
             return True, None
 
-        # (2) ext is not a joker : we can quickly check if it is supported
-        if desired_ext is not None:
+        # (2) if ext is not a joker we can quickly check if it is supported
+        if desired_ext is not JOKER:
             check_var(desired_ext, var_types=str, var_name='desired_ext')
             if desired_ext not in self.supported_exts:
                 # ** no match on extension - no need to go further
                 return False, None
 
-        # (3) type=joker and ext is supported => easy
-        if desired_type is None:
-            # ** only extension match is required - ok.
-            return True, None
+            # (3) if type=joker and ext is supported => easy
+            if desired_type is JOKER:
+                # ** only extension match is required - ok.
+                return True, None
 
-        # (4) at this point, ext is supported and type is not joker. Check type match
+        # (4) at this point, ext is JOKER OR supported and type is not JOKER. Check type match
         check_var(desired_type, var_types=type, var_name='desired_type_of_output')
         check_var(strict, var_types=bool, var_name='strict')
 

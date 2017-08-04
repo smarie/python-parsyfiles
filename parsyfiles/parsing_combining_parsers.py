@@ -1,12 +1,12 @@
 import traceback
 from io import StringIO, TextIOBase
-from logging import Logger
+from logging import Logger, DEBUG
 from typing import Type, Dict, Any, List
 
 from parsyfiles.converting_core import Converter, T, S, ConversionChain, AnyObject
 from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_core import AnyParser
-from parsyfiles.parsing_core_api import get_parsing_plan_log_str, Parser, ParsingPlan
+from parsyfiles.parsing_core_api import get_parsing_plan_log_str, Parser, ParsingPlan, ParsingException
 from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
 
@@ -56,7 +56,7 @@ def print_error_to_io_stream(err: Exception, io: TextIOBase, print_big_traceback
     io.writelines('  ' + str(err.__class__.__name__) + ' : ' + str(err))
 
 
-class CascadeError(Exception):
+class CascadeError(ParsingException):
     """
     Raised whenever parsing failed for all parsers in a CascadingParser. This object provides an overview of errors
     caught in the multiple parsers
@@ -327,6 +327,7 @@ class CascadingParser(DelegatingParser):
                         # -- remember the error in order to create a CascadeError at the end in case of failure of all
                         self.parsing_plan_creation_errors[p] = e
 
+            # no more parsers to try...
             if already_caught_execution_errors is None:
                 raise CascadeError.create_for_parsing_plan_creation(self.parser, self,
                                                                     self.parsing_plan_creation_errors)
@@ -355,6 +356,8 @@ class CascadingParser(DelegatingParser):
                         # -- log the error
                         msg = StringIO()
                         print_error_to_io_stream(e, msg, print_big_traceback=False)
+                        if not logger.isEnabledFor(DEBUG):
+                            logger.warning(str(self.active_parsing_plan))
                         logger.warning('  !! Caught error during execution !!')
                         logger.warning(msg.getvalue())
                         # print('----- WARNING: Caught error during execution : ')
@@ -386,7 +389,7 @@ class CascadingParser(DelegatingParser):
         :return:
         """
         # build the parsing plan
-        logger.info(get_parsing_plan_log_str(filesystem_object, desired_type, self))
+        logger.debug(get_parsing_plan_log_str(filesystem_object, desired_type, self))
         return CascadingParser.CascadingParsingPlan(desired_type, filesystem_object, self, self._parsers_list,
                                                     logger=logger)
 
@@ -437,7 +440,7 @@ class ParsingChain(AnyParser):
 
         # set the converter
         check_var(converter, var_types=Converter, var_name='converter')
-        if not converter.is_able_to_convert(strict=strict, from_type=parser_out_type, to_type=None):
+        if not converter.is_able_to_convert(strict=strict, from_type=parser_out_type, to_type=converter.to_type):
             raise ValueError('Cannot chain this parser and this converter : types are not consistent')
 
         self._converter = converter

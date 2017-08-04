@@ -1,4 +1,4 @@
-from collections import Mapping, ItemsView, ValuesView, MutableSet, MutableSequence, Sequence
+from collections import Mapping, ItemsView, ValuesView, MutableSet, MutableSequence, Sequence, OrderedDict
 from io import TextIOBase
 from logging import Logger
 from typing import Dict, Any, List, Union, Type, Set, Tuple, Callable, AbstractSet
@@ -224,7 +224,7 @@ class LazyDictionary(dict):
         :param loading_method:
         """
         # initialize the inner dictionary
-        self.inner_dict = dict()
+        self.inner_dict = OrderedDict()
         self.inner_dict_readonly_wrapper = LazyDictionary.ReadOnlyDictProxy(self.inner_dict)
 
         # store the list of loadable keys
@@ -248,7 +248,7 @@ class LazyDictionary(dict):
         return self.lazyloadable_keys.__contains__(item)
 
     def keys(self):
-        return set(self.lazyloadable_keys)
+        return OrderedDict.fromkeys(self.lazyloadable_keys).keys()
 
     def get(self, key, default=None):
         try:
@@ -257,17 +257,23 @@ class LazyDictionary(dict):
             return default
 
     def __getitem__(self, name):
+        """
+        Implementation of the "lazyness" / cache mechanism
+        :param name:
+        :return:
+        """
         if name in self.inner_dict.keys():
-            # return the cached value
+            # already retrieved: return the cached value
             return self.inner_dict[name]
+
         elif name in self.lazyloadable_keys:
-            # load the value
+            # not yet retrieved: load the value
             val = self.loading_method(name)
             # remember it for next time
             self.inner_dict[name] = val
             return val
         else:
-            # as usual
+            # unknown key: error as usual
             raise KeyError(name)
 
     def __len__(self):
@@ -350,7 +356,7 @@ class MultifileCollectionParser(MultiFileParser):
             subtypes = [subtypes] * n_children
 
         # -- for each child create a plan with the appropriate parser
-        children_plan = dict()
+        children_plan = OrderedDict()
         # use sorting for reproducible results in case of multiple errors
         for (child_name, child_fileobject), child_typ in zip(sorted(obj_on_fs.get_multifile_children().items()),
                                                            subtypes):
@@ -408,8 +414,8 @@ class MultifileCollectionParser(MultiFileParser):
         if lazy_parsing:
             # build a lazy dictionary
             results = LazyDictionary(sorted(list(parsing_plan_for_children.keys())),
-                                 loading_method=lambda x: parsing_plan_for_children[x].execute(logger, options))
-            logger.info('Assembling a ' + get_pretty_type_str(desired_type) + ' from all children of ' + str(obj)
+                                     loading_method=lambda x: parsing_plan_for_children[x].execute(logger, options))
+            logger.debug('Assembling a ' + get_pretty_type_str(desired_type) + ' from all children of ' + str(obj)
                         + ' (lazy parsing: children will be parsed when used) ')
 
         elif background_parsing:
@@ -418,14 +424,14 @@ class MultifileCollectionParser(MultiFileParser):
 
         else:
             # Parse right now
-            results = {}
+            results = OrderedDict()
 
             # parse all children according to their plan
             # -- use key-based sorting on children to lead to reproducible results
             # (in case of multiple errors, the same error will show up first everytime)
             for child_name, child_plan in sorted(parsing_plan_for_children.items()):
                 results[child_name] = child_plan.execute(logger, options)
-            logger.info('Assembling a ' + get_pretty_type_str(desired_type) + ' from all parsed children of '
+            logger.debug('Assembling a ' + get_pretty_type_str(desired_type) + ' from all parsed children of '
                         + str(obj))
 
         if issubclass(desired_type, list):

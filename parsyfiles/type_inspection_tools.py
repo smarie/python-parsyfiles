@@ -1,7 +1,19 @@
 from inspect import getmembers, signature, _empty, Parameter
-from typing import Type, Any, Tuple, List, Set, Dict, Mapping, Iterable
+from typing import Type, Any, Tuple, List, Set, Dict, Mapping, Iterable, MutableMapping, TypeVar
 
 from parsyfiles.var_checker import check_var
+from collections import OrderedDict
+
+KT = TypeVar('KT')  # Key type.
+VT = TypeVar('VT')  # Value type.
+
+
+class OrderedDictType(OrderedDict, MutableMapping[KT, VT], extra=OrderedDict):
+    """ Unfortunately this type does not exist in typing module so we define it here """
+    __slots__ = ()
+
+    def __new__(cls, *args, **kwds):
+        raise TypeError("Type OrderedDictType cannot be instantiated; use OrderedDict() instead")
 
 
 def robust_isinstance(inst, typ):
@@ -197,11 +209,15 @@ def _get_constructor_signature(item_type):
     :param item_type:
     :return:
     """
-    constructors = [f[1] for f in getmembers(item_type) if f[0] is '__init__']
-    if len(constructors) is not 1:
-        raise ValueError('Several constructors were found for class <' + get_pretty_type_str(item_type) + '>')
-    # extract constructor
-    constructor = constructors[0]
+    # --too slow
+    # constructors = [f[1] for f in getmembers(item_type) if f[0] is '__init__']
+    # if len(constructors) is not 1:
+    #     raise ValueError('Several constructors were found for class <' + get_pretty_type_str(item_type) + '>')
+    # # extract constructor
+    # constructor = constructors[0]
+    # --faster
+    constructor = item_type.__init__
+
     s = signature(constructor)
     return s
 

@@ -24,6 +24,14 @@ def get_default_np_parsers():
 
 
 def can_convert(strict: bool, from_type: Type[S], to_type: Type[T]):
+    """
+    None should be treated as a Joker here (but we know that never from_type and to_type will be None at the same time)
+
+    :param strict:
+    :param from_type:
+    :param to_type:
+    :return:
+    """
     if (to_type is not None) and (to_type not in (all_primitive_types + all_np_primitive_types)):
         return False
     else:
@@ -32,6 +40,7 @@ def can_convert(strict: bool, from_type: Type[S], to_type: Type[T]):
 
 def get_default_np_converters():
     # for each type create a converter
-    return [ConverterFunction(from_type=t, to_type=AnyObject, conversion_method=np_primitive_to_anything_by_constructor_call,
+    return [ConverterFunction(from_type=t, to_type=AnyObject,
+                              conversion_method=np_primitive_to_anything_by_constructor_call,
                               is_able_to_convert_func=can_convert,
                               custom_name='construct_from_' + t.__name__) for t in all_np_primitive_types]

@@ -7,6 +7,11 @@ from parsyfiles.type_inspection_tools import get_pretty_type_str
 from parsyfiles.var_checker import check_var
 
 
+JOKER = '*J*'
+""" A joker to be used when users query for capabilities. We used to use None but this was too confusing for code 
+readability """
+
+
 class AnyObject(object):
     """Helper class alias for 'Any', see method is_any_type below"""
     pass
@@ -57,7 +62,7 @@ def get_validated_types(object_types: Set[Type], set_name: str) -> Set[Type]:
         return res
 
 
-def get_validated_type(object_type: Type[Any], name: str, enforce_not_none:bool = True) -> Type[Any]:
+def get_validated_type(object_type: Type[Any], name: str, enforce_not_joker:bool = True) -> Type[Any]:
     """
     Utility to validate a type :
     * None is not allowed,
@@ -65,14 +70,19 @@ def get_validated_type(object_type: Type[Any], name: str, enforce_not_none:bool 
 
     :param object_type: the type to validate
     :param name: a name used in exceptions if any
-    :param enforce_not_none: a boolean, set to False to tolerate None types
+    :param enforce_not_joker: a boolean, set to False to tolerate JOKER types
     :return: the fixed type
     """
     if object_type is object or object_type is Any or object_type is AnyObject:
         return AnyObject
     else:
-        # note: we dont check var earlier, since 'typing.Any' is now not a subclass of type anymore
-        check_var(object_type, var_types=type, var_name=name, enforce_not_none=enforce_not_none)
+        if object_type is JOKER:
+            # optionally check if JOKER is allowed
+            if enforce_not_joker:
+                raise ValueError('JOKER is not allowed for object_type')
+        else:
+            # note: we dont check var earlier, since 'typing.Any' is not a subclass of type anymore
+            check_var(object_type, var_types=type, var_name=name)
         return object_type
 
 
@@ -103,7 +113,7 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         :param to_type: the destination type, or AnyObject (for generic converters)
         :param is_able_to_convert_func: an optional function taking a desired object type as an input and outputting a
         boolean. It will be called in 'is_able_to_convert'. This allows implementors to reject some conversions even if
-        they are compliant with their declared 'to_type'.
+        they are compliant with their declared 'to_type'. Implementors should handle a 'None' value as a joker
         :param can_chain: a boolean (default True) indicating if other converters can be appended at the end of this
         converter to create a chain. Dont change this except if it really can never make sense.
         """
@@ -118,6 +128,17 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         # --conversion function
         check_var(is_able_to_convert_func, var_types=Callable, var_name='is_able_to_convert_func',
                   enforce_not_none=False)
+        if is_able_to_convert_func is not None:
+            # sanity check : check that conversion function handles jokers properly
+            try:
+                res = is_able_to_convert_func(True, from_type=None, to_type=None)
+                if not res:
+                    raise ValueError('Conversion function ' + str(is_able_to_convert_func) + ' can not be registered '
+                                     'since it does not handle the JOKER (None) cases correctly')
+            except Exception as e:
+                raise ValueError('Error while registering conversion function ' + str(is_able_to_convert_func)
+                                 + ': ' + str(e)).with_traceback(e.__traceback__)
+
         self.is_able_to_convert_func = is_able_to_convert_func
 
         # -- can chain
@@ -151,10 +172,13 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         """
         return self.get_id_for_options() + ': No declared option'
 
-    def is_able_to_convert(self, strict: bool, from_type: Type[Any], to_type: Type[Any]) \
+    def is_able_to_convert(self, strict: bool, from_type: Type[Any], to_type: Type[Any]) -> bool:
+        return self.is_able_to_convert_detailed(strict=strict, from_type=from_type, to_type=to_type)[0]
+
+    def is_able_to_convert_detailed(self, strict: bool, from_type: Type[Any], to_type: Type[Any]) \
             -> Tuple[bool, bool, bool]:
         """
-        Utility method to check if a parser is able to parse a given type, either in
+        Utility method to check if a parser is able to convert a given type to the given type, either in
         * strict mode : provided_type and desired_type must be equal to this converter's from_type and to_type
         respectively (or the to_type does not match but this converter is generic
         * inference mode (non-strict) : provided_type may be a subclass of from_type, and to_type may be a subclass
@@ -169,16 +193,30 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         :return: a tuple of 3 booleans : (does match?, strict source match? (None if no match), strict dest match?
         (None if no match))
         """
-        check_var(strict, var_types=bool, var_name='strict')
+        # (1) first handle the easy joker+joker case
+        if from_type is JOKER and to_type is JOKER:
+            return True, None, None
+
+        # Don't validate types -- this is called too often at the initial RootParser instance creation time,
+        # and this is quite 'internal' so the risk is very low
+        #
+        # check_var(strict, var_types=bool, var_name='strict')
+        # if from_type is not JOKER:
+        #     check_var(from_type, var_types=type, var_name='from_type')
+        # if to_type is not JOKER:
+        #     check_var(to_type, var_types=type, var_name='to_type')
 
         # -- first call custom checker if provided
-        if self.is_able_to_convert_func is not None and not self.is_able_to_convert_func(strict, from_type, to_type):
-            return False, None, None
+        if self.is_able_to_convert_func is not None:
+            if not self.is_able_to_convert_func(strict,
+                                                from_type=None if from_type is JOKER else from_type ,
+                                                to_type=None if to_type is JOKER else to_type):
+                return False, None, None
 
         # -- from_type strict match
-        if from_type is None or from_type is self.from_type or is_any_type(from_type):
+        if (from_type is JOKER) or (from_type is self.from_type) or is_any_type(from_type):
             # -- check to type strict
-            if to_type is None or self.is_generic() or (to_type is self.to_type):
+            if (to_type is JOKER) or self.is_generic() or (to_type is self.to_type):
                 return True, True, True  # strict to_type match
             # -- check to type non-strict
             elif (not strict) and issubclass(self.to_type, to_type):
@@ -187,7 +225,7 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         # -- from_type non-strict match
         elif (not strict) and issubclass(from_type, self.from_type):
             # -- check to type strict
-            if to_type is None or self.is_generic() or (to_type is self.to_type):
+            if (to_type is JOKER) or self.is_generic() or (to_type is self.to_type):
                 return True, False, True  # exact to_type match
             # -- check to type non-strict
             elif (not strict) and issubclass(self.to_type, to_type):
@@ -223,6 +261,12 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
                 or issubclass(left_converter.from_type, right_converter.from_type):
             # Not interesting : the outcome of the chain would be not better than one of the converters alone
             return False
+
+        # Note: we dont say that chaining a generic converter with a converter is useless. Indeed it might unlock some
+        # capabilities for the user (new file extensions, etc.) that would not be available with the generic parser
+        # targetting to_type alone. For example parsing object A from its constructor then converting A to B might
+        # sometimes be interesting, rather than parsing B from its constructor
+
         else:
             # interesting
             return True
@@ -242,7 +286,12 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         :param strict: boolean to
         :return:
         """
-        return self.is_able_to_convert(strict, from_type=left_converter.to_type, to_type=None)[0]
+        is_able_to_take_input = self.is_able_to_convert(strict, from_type=left_converter.to_type, to_type=JOKER)
+        if left_converter.is_generic():
+            return is_able_to_take_input \
+                   and left_converter.is_able_to_convert(strict, from_type=JOKER, to_type=self.from_type)
+        else:
+            return is_able_to_take_input
 
     def get_id_for_options(self):
         """
@@ -262,8 +311,14 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         """
         return get_options_for_id(options, self.get_id_for_options())
 
-    @abstractmethod
     def convert(self, desired_type: Type[T], source_obj: S, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
+        if self.is_able_to_convert(False, from_type=type(source_obj), to_type=desired_type):
+            return self._convert(desired_type, source_obj, logger, options)
+        else:
+            raise ConversionException.create_not_able_to_convert(source_obj, self, desired_type)
+
+    @abstractmethod
+    def _convert(self, desired_type: Type[T], source_obj: S, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
         Implementing classes should implement this method to perform the conversion itself
 
@@ -275,6 +330,41 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
         :return:
         """
         pass
+
+
+class ConversionException(Exception):
+    """
+    Raised whenever parsing fails
+    """
+
+    def __init__(self, contents):
+        """
+        We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+        That's why we have a helper static method create_not_able_to_convert()
+
+        :param contents:
+        """
+        super(ConversionException, self).__init__(contents)
+
+    @staticmethod
+    def create_not_able_to_convert(source: S, converter: Converter, desired_type: Type[T]):
+        """
+        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+
+        :param source:
+        :param converter:
+        :param desired_type:
+        :return:
+        """
+        base_msg = 'Converter ' + str(converter) + ' is not able to ingest source value \'' + str(source) + '\''\
+                   ' of type \'' + get_pretty_type_str(type(source)) + '\' and/or convert it to type \'' \
+                   + get_pretty_type_str(desired_type) + '\'.'
+        base_msg += ' This can happen in a chain when the previous step in the chain is generic and actually produced '\
+                    ' an output of the wrong type/content'
+
+        return ConversionException(base_msg)
 
 
 def get_options_for_id(options: Dict[str, Dict[str, Any]], identifier: str):
@@ -356,7 +446,7 @@ class ConverterFunction(Converter[S, T]):
         example if the same function is used in several converters
         :param is_able_to_convert_func: an optional function taking a desired object type as an input and outputting a
         boolean. It will be called in 'is_able_to_convert'. This allows implementors to reject some conversions even if
-        they are compliant with their declared 'to_type'.
+        they are compliant with their declared 'to_type'. Implementors should handle a 'None' value as a joker
         :param can_chain: a boolean (default True) indicating if other converters can be appended at the end of this
         converter to create a chain. Dont change this except if it really can never make sense.
         :param function_args: kwargs that will be passed to the function at every call
@@ -411,7 +501,7 @@ class ConverterFunction(Converter[S, T]):
         return self.get_id_for_options() + ': ' \
                + 'No declared option' if self._option_hints_func is None else self._option_hints_func()
 
-    def convert(self, desired_type: Type[T], source_obj: S, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
+    def _convert(self, desired_type: Type[T], source_obj: S, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
         Delegates to the user-provided method. Passes the appropriate part of the options according to the
         function name.
@@ -469,7 +559,7 @@ class ConversionChain(Converter[S, T]):
         if len(initial_converters) > 1:
             self.add_conversion_steps(initial_converters[1:], inplace=True)
 
-    def is_able_to_convert(self, strict: bool, from_type: Type[Any], to_type: Type[Any]):
+    def is_able_to_convert_detailed(self, strict: bool, from_type: Type[Any], to_type: Type[Any]):
         """
         Overrides the parent method to delegate left check to the first (left) converter of the chain and right check
         to the last (right) converter of the chain. This includes custom checking if they have any...
@@ -481,14 +571,13 @@ class ConversionChain(Converter[S, T]):
         :return:
         """
         # check if first and last converters are happy
-        if not self._converters_list[0].is_able_to_convert(strict, from_type, None)[0]:
+        if not self._converters_list[0].is_able_to_convert(strict, from_type=from_type, to_type=JOKER):
             return False, None, None
-        elif not self._converters_list[-1].is_able_to_convert(strict, None, to_type)[0]:
+        elif not self._converters_list[-1].is_able_to_convert(strict, from_type=JOKER, to_type=to_type):
             return False, None, None
         else:
-            # behave as usual. This is probably useless if the converters dont forget to call their super() method,
-            # but lets be sure.
-            return super(ConversionChain, self).is_able_to_convert(strict, from_type, to_type)
+            # behave as usual. This is probably useless but lets be sure.
+            return super(ConversionChain, self).is_able_to_convert_detailed(strict, from_type, to_type)
 
     def __getattr__(self, item):
         # Redirect anything that is not implemented here to the base parser.
@@ -577,11 +666,11 @@ class ConversionChain(Converter[S, T]):
         :return: None or a copy with the converter added
         """
         # it the current chain is generic, raise an error
-        if self.is_generic():
-            raise ValueError('Cannot chain this converter chain to something else : it is already generic !')
+        if self.is_generic() and converter.is_generic():
+            raise ValueError('Cannot chain this generic converter chain to the provided converter : it is generic too!')
 
         # if the current chain is able to transform its input into a valid input for the new converter
-        elif self.is_able_to_convert(self.strict, to_type=converter.from_type, from_type=None)[0]:
+        elif converter.can_be_appended_to(self, self.strict):
             if inplace:
                 self._converters_list.append(converter)
                 # update the current destination type
@@ -630,11 +719,10 @@ class ConversionChain(Converter[S, T]):
         :return: None or a copy with the converter added
         """
         # it the added converter is generic, raise an error
-        if converter.is_generic():
+        if converter.is_generic() and self.is_generic():
             raise ValueError('Cannot add this converter at the beginning of this chain : it is already generic !')
 
-        # if the current chain is able to transform its input into a valid input for the new converter
-        elif converter.is_able_to_convert(self.strict, from_type=converter.from_type, to_type=None)[0]:
+        elif self.can_be_appended_to(converter, self.strict):
             if inplace:
                 self._converters_list.insert(0, converter)
                 # update the current source type
@@ -660,7 +748,7 @@ class ConversionChain(Converter[S, T]):
         """
         return '\n'.join([converter.options_hints() for converter in self._converters_list]) + '\n'
 
-    def convert(self, desired_type: Type[T], obj: S, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
+    def _convert(self, desired_type: Type[T], obj: S, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
         """
         Apply the converters of the chain in order to produce the desired result. Only the last converter will see the
         'desired type', the others will be asked to produce their declared to_type.
