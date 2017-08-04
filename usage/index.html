@@ -1,0 +1,1683 @@
+
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <meta http-equiv="x-ua-compatible" content="ie=edge">
+      
+        <meta name="description" content="A short description of my project">
+      
+      
+      
+      
+        <link rel="shortcut icon" href="../assets/images/favicon.png">
+      
+      <meta name="generator" content="mkdocs-0.16.3, mkdocs-material-1.8.0">
+    
+    
+      
+        <title>Usage - python-parsyfiles</title>
+      
+    
+    
+      <script src="../assets/javascripts/modernizr-1df76c4e58.js"></script>
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/application-bfecc7305d.css">
+      
+    
+    
+      
+        
+        
+        
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Roboto+Mono">
+        <style>body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}</style>
+      
+      <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    
+    
+    
+  </head>
+  
+  
+  
+  
+    <body>
+  
+    <svg class="md-svg">
+      <defs>
+        
+        
+          <svg xmlns="http://www.w3.org/2000/svg" width="416" height="448" viewBox="0 0 416 448" id="github"><path fill="currentColor" d="M160 304q0 10-3.125 20.5t-10.75 19T128 352t-18.125-8.5-10.75-19T96 304t3.125-20.5 10.75-19T128 256t18.125 8.5 10.75 19T160 304zm160 0q0 10-3.125 20.5t-10.75 19T288 352t-18.125-8.5-10.75-19T256 304t3.125-20.5 10.75-19T288 256t18.125 8.5 10.75 19T320 304zm40 0q0-30-17.25-51T296 232q-10.25 0-48.75 5.25Q229.5 240 208 240t-39.25-2.75Q130.75 232 120 232q-29.5 0-46.75 21T56 304q0 22 8 38.375t20.25 25.75 30.5 15 35 7.375 37.25 1.75h42q20.5 0 37.25-1.75t35-7.375 30.5-15 20.25-25.75T360 304zm56-44q0 51.75-15.25 82.75-9.5 19.25-26.375 33.25t-35.25 21.5-42.5 11.875-42.875 5.5T212 416q-19.5 0-35.5-.75t-36.875-3.125-38.125-7.5-34.25-12.875T37 371.5t-21.5-28.75Q0 312 0 260q0-59.25 34-99-6.75-20.5-6.75-42.5 0-29 12.75-54.5 27 0 47.5 9.875t47.25 30.875Q171.5 96 212 96q37 0 70 8 26.25-20.5 46.75-30.25T376 64q12.75 25.5 12.75 54.5 0 21.75-6.75 42 34 40 34 99.5z"/></svg>
+        
+      </defs>
+    </svg>
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="drawer">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search">
+    <label class="md-overlay" data-md-component="overlay" for="drawer"></label>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid">
+    <div class="md-flex">
+      <div class="md-flex__cell md-flex__cell--shrink">
+        
+          <a href=".." title="python-parsyfiles" class="md-icon md-icon--home md-header-nav__button">
+          </a>
+        
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <label class="md-icon md-icon--menu md-header-nav__button" for="drawer"></label>
+      </div>
+      <div class="md-flex__cell md-flex__cell--stretch">
+        <span class="md-flex__ellipsis md-header-nav__title">
+          
+            
+              
+            
+            Usage
+          
+        </span>
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        
+          <label class="md-icon md-icon--search md-header-nav__button" for="search"></label>
+          
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="search"></label>
+  <div class="md-search__inner">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" required placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="query">
+      <label class="md-icon md-search__icon" for="search"></label>
+      <button type="reset" class="md-icon md-search__icon" data-md-component="reset">close</button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="result" data-md-lang-search="" data-md-lang-tokenizer="[\s\-]+">
+          <div class="md-search-result__meta" data-md-lang-result-none="No matching documents" data-md-lang-result-one="1 matching document" data-md-lang-result-other="# matching documents">
+            Type to start searching
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+        
+      </div>
+      
+        <div class="md-flex__cell md-flex__cell--shrink">
+          <div class="md-header-nav__source">
+            
+
+
+  
+
+
+  <a href="https://github.com/smarie/python-parsyfiles" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      GitHub
+    </div>
+  </a>
+
+          </div>
+        </div>
+      
+    </div>
+  </nav>
+</header>
+    
+    <div class="md-container">
+      
+      
+      <main class="md-main">
+        <div class="md-main__inner md-grid" data-md-component="container">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" data-md-level="0">
+  <label class="md-nav__title md-nav__title--site" for="drawer">
+    
+      <i class="md-icon md-icon--home md-nav__button"></i>
+    
+    python-parsyfiles
+  </label>
+  
+    <div class="md-nav__source">
+      
+
+
+  
+
+
+  <a href="https://github.com/smarie/python-parsyfiles" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      GitHub
+    </div>
+  </a>
+
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href=".." title="Home" class="md-nav__link">
+      Home
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="toc">
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="toc">
+        Usage
+      </label>
+    
+    <a href="./" title="Usage" class="md-nav__link md-nav__link--active">
+      Usage
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary">
+  
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installing" title="Installing" class="md-nav__link">
+    Installing
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#basic-usage" title="Basic Usage" class="md-nav__link">
+    Basic Usage
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parsing-one-file" title="Parsing one file" class="md-nav__link">
+    Parsing one file
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#log-levels" title="Log levels" class="md-nav__link">
+    Log levels
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-1-parsing-collections-of-known-types" title="Part 1 - Parsing collections of known types" class="md-nav__link">
+    Part 1 - Parsing collections of known types
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-example-parsing-a-list-of-dataframe" title="(a) Example: parsing a list of DataFrame" class="md-nav__link">
+    (a) Example: parsing a list of DataFrame
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-understanding-the-log-output" title="(b) Understanding the log output" class="md-nav__link">
+    (b) Understanding the log output
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-parsing-a-single-file-only" title="(c) Parsing a single file only" class="md-nav__link">
+    (c) Parsing a single file only
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-default-collection-type-and-other-supported-types" title="(d) Default collection type and other supported types" class="md-nav__link">
+    (d) Default collection type and other supported types
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-2-simple-user-defined-types" title="Part 2 - Simple user-defined types" class="md-nav__link">
+    Part 2 - Simple user-defined types
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-example-parsing-a-collection-of-test-cases" title="(a) Example: parsing a collection of test cases" class="md-nav__link">
+    (a) Example: parsing a collection of test cases
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-under-the-hood-why-does-it-work-even-on-ambiguous-files" title="(b) Under the hood : why does it work, even on ambiguous files?" class="md-nav__link">
+    (b) Under the hood : why does it work, even on ambiguous files?
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#solved-difficulty-1-several-formatsparsers-for-the-same-file-extension" title="Solved Difficulty 1 - Several formats/parsers for the same file extension" class="md-nav__link">
+    Solved Difficulty 1 - Several formats/parsers for the same file extension
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#solved-difficulty-2-generic-parsers" title="Solved Difficulty 2 - Generic parsers" class="md-nav__link">
+    Solved Difficulty 2 - Generic parsers
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#understanding-the-inference-logic-in-which-order-are-the-parsers-tried" title="Understanding the inference logic - in which order are the parsers tried ?" class="md-nav__link">
+    Understanding the inference logic - in which order are the parsers tried ?
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-3-multifile-objects-combining-several-parsers" title="Part 3 - Multifile objects: combining several parsers" class="md-nav__link">
+    Part 3 - Multifile objects: combining several parsers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-4-advanced-topics" title="Part 4 - Advanced topics" class="md-nav__link">
+    Part 4 - Advanced topics
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-lazy-parsing" title="(a) Lazy parsing" class="md-nav__link">
+    (a) Lazy parsing
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-passing-options-to-existing-parsers" title="(b) Passing options to existing parsers" class="md-nav__link">
+    (b) Passing options to existing parsers
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-parsing-subclasses-of-existing-types-registering-converters" title="(c) Parsing subclasses of existing types - registering converters" class="md-nav__link">
+    (c) Parsing subclasses of existing types - registering converters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-registering-a-new-parser" title="(d) Registering a new parser" class="md-nav__link">
+    (d) Registering a new parser
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#e-contract-validation-for-parsed-objects-combo-with-classtools-autocode-and-attrs" title="(e) Contract validation for parsed objects : combo with classtools-autocode and attrs" class="md-nav__link">
+    (e) Contract validation for parsed objects : combo with classtools-autocode and attrs
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#classtools-autocode-example" title="classtools-autocode example" class="md-nav__link">
+    classtools-autocode example
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#attrs-example" title="attrs example" class="md-nav__link">
+    attrs example
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#e-file-mappings-wrappedflat-and-encoding" title="(e) File mappings: Wrapped/Flat and encoding" class="md-nav__link">
+    (e) File mappings: Wrapped/Flat and encoding
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f-recursivity-multifile-children-of-multifile-objects" title="(f) Recursivity: Multifile children of Multifile objects" class="md-nav__link">
+    (f) Recursivity: Multifile children of Multifile objects
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-recursivity-in-flat-mode" title="Example recursivity in flat mode" class="md-nav__link">
+    Example recursivity in flat mode
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-recursivity-in-wrapped-mode" title="Example recursivity in wrapped mode" class="md-nav__link">
+    Example recursivity in wrapped mode
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g-diversity-of-formats-supported-dataframes-revisited" title="(g) Diversity of formats supported: DataFrames - revisited" class="md-nav__link">
+    (g) Diversity of formats supported: DataFrames - revisited
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+      
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../known_formats_reference/" title="Known Formats Reference" class="md-nav__link">
+      Known Formats Reference
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary">
+  
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installing" title="Installing" class="md-nav__link">
+    Installing
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#basic-usage" title="Basic Usage" class="md-nav__link">
+    Basic Usage
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parsing-one-file" title="Parsing one file" class="md-nav__link">
+    Parsing one file
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#log-levels" title="Log levels" class="md-nav__link">
+    Log levels
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-1-parsing-collections-of-known-types" title="Part 1 - Parsing collections of known types" class="md-nav__link">
+    Part 1 - Parsing collections of known types
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-example-parsing-a-list-of-dataframe" title="(a) Example: parsing a list of DataFrame" class="md-nav__link">
+    (a) Example: parsing a list of DataFrame
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-understanding-the-log-output" title="(b) Understanding the log output" class="md-nav__link">
+    (b) Understanding the log output
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-parsing-a-single-file-only" title="(c) Parsing a single file only" class="md-nav__link">
+    (c) Parsing a single file only
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-default-collection-type-and-other-supported-types" title="(d) Default collection type and other supported types" class="md-nav__link">
+    (d) Default collection type and other supported types
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-2-simple-user-defined-types" title="Part 2 - Simple user-defined types" class="md-nav__link">
+    Part 2 - Simple user-defined types
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-example-parsing-a-collection-of-test-cases" title="(a) Example: parsing a collection of test cases" class="md-nav__link">
+    (a) Example: parsing a collection of test cases
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-under-the-hood-why-does-it-work-even-on-ambiguous-files" title="(b) Under the hood : why does it work, even on ambiguous files?" class="md-nav__link">
+    (b) Under the hood : why does it work, even on ambiguous files?
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#solved-difficulty-1-several-formatsparsers-for-the-same-file-extension" title="Solved Difficulty 1 - Several formats/parsers for the same file extension" class="md-nav__link">
+    Solved Difficulty 1 - Several formats/parsers for the same file extension
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#solved-difficulty-2-generic-parsers" title="Solved Difficulty 2 - Generic parsers" class="md-nav__link">
+    Solved Difficulty 2 - Generic parsers
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#understanding-the-inference-logic-in-which-order-are-the-parsers-tried" title="Understanding the inference logic - in which order are the parsers tried ?" class="md-nav__link">
+    Understanding the inference logic - in which order are the parsers tried ?
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-3-multifile-objects-combining-several-parsers" title="Part 3 - Multifile objects: combining several parsers" class="md-nav__link">
+    Part 3 - Multifile objects: combining several parsers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#part-4-advanced-topics" title="Part 4 - Advanced topics" class="md-nav__link">
+    Part 4 - Advanced topics
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-lazy-parsing" title="(a) Lazy parsing" class="md-nav__link">
+    (a) Lazy parsing
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-passing-options-to-existing-parsers" title="(b) Passing options to existing parsers" class="md-nav__link">
+    (b) Passing options to existing parsers
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-parsing-subclasses-of-existing-types-registering-converters" title="(c) Parsing subclasses of existing types - registering converters" class="md-nav__link">
+    (c) Parsing subclasses of existing types - registering converters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-registering-a-new-parser" title="(d) Registering a new parser" class="md-nav__link">
+    (d) Registering a new parser
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#e-contract-validation-for-parsed-objects-combo-with-classtools-autocode-and-attrs" title="(e) Contract validation for parsed objects : combo with classtools-autocode and attrs" class="md-nav__link">
+    (e) Contract validation for parsed objects : combo with classtools-autocode and attrs
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#classtools-autocode-example" title="classtools-autocode example" class="md-nav__link">
+    classtools-autocode example
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#attrs-example" title="attrs example" class="md-nav__link">
+    attrs example
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#e-file-mappings-wrappedflat-and-encoding" title="(e) File mappings: Wrapped/Flat and encoding" class="md-nav__link">
+    (e) File mappings: Wrapped/Flat and encoding
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f-recursivity-multifile-children-of-multifile-objects" title="(f) Recursivity: Multifile children of Multifile objects" class="md-nav__link">
+    (f) Recursivity: Multifile children of Multifile objects
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-recursivity-in-flat-mode" title="Example recursivity in flat mode" class="md-nav__link">
+    Example recursivity in flat mode
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-recursivity-in-wrapped-mode" title="Example recursivity in wrapped mode" class="md-nav__link">
+    Example recursivity in wrapped mode
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g-diversity-of-formats-supported-dataframes-revisited" title="(g) Diversity of formats supported: DataFrames - revisited" class="md-nav__link">
+    (g) Diversity of formats supported: DataFrames - revisited
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+      
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/smarie/python-parsyfiles/edit/master/docs/usage.md" title="Edit this page" class="md-icon md-content__icon">edit</a>
+                
+                
+                  <h1>Usage</h1>
+                
+                <h2 id="installing">Installing<a class="headerlink" href="#installing" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span>&gt; pip install parsyfiles
+</pre></div>
+
+
+<h2 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
+<h3 id="parsing-one-file">Parsing one file<a class="headerlink" href="#parsing-one-file" title="Permanent link">&para;</a></h3>
+<p>Let's parse a single file, </p>
+<h3 id="log-levels">Log levels<a class="headerlink" href="#log-levels" title="Permanent link">&para;</a></h3>
+<p>This is how you change the module default logging level : </p>
+<div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;parsyfiles&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Otherwise you may also wish to provide your own logger:</p>
+<div class="codehilite"><pre><span></span><span class="n">daemon</span> <span class="o">=</span> <span class="n">ObjectDaemonProxy</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">logger</span> <span class="o">=</span> <span class="n">MyLogger</span><span class="p">())</span>
+</pre></div>
+
+
+<h2 id="part-1-parsing-collections-of-known-types">Part 1 - Parsing collections of known types<a class="headerlink" href="#part-1-parsing-collections-of-known-types" title="Permanent link">&para;</a></h2>
+<h3 id="a-example-parsing-a-list-of-dataframe">(a) Example: parsing a list of DataFrame<a class="headerlink" href="#a-example-parsing-a-list-of-dataframe" title="Permanent link">&para;</a></h3>
+<p>The most simple case of all: you wish to parse a collection of files that all have the same type, and for which a parser is already registered. For example your wish to parse a list of <code>DataFrame</code> for a data folder that looks like this:</p>
+<div class="codehilite"><pre><span></span>./demo/simple_collection
+├── a.csv
+├── b.txt
+├── c.xls
+├── d.xlsx
+└── e.xlsm
+</pre></div>
+
+
+<p><em>Note: you may find this example data folder in the <a href="https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/smarie/python-parsyfiles/tree/master/parsyfiles/test_data/demo/simple_collection">project sources</a></em></p>
+<p>Parsing all of these dataframes is straightforward:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">parse_collection</span><span class="p">,</span> <span class="n">pprint_out</span>
+<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+
+<span class="n">dfs</span> <span class="o">=</span> <span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;./data/simple_collection&#39;</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">)</span>
+<span class="n">pprint_out</span><span class="p">(</span><span class="n">dfs</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Here is the result</p>
+<div class="codehilite"><pre><span></span>**** Starting to parse  collection of &lt;DataFrame&gt; at location ./demo/simple_collection ****
+Checking all files under ./demo/simple_collection
+./demo/simple_collection (multifile)
+./demo/simple_collection\a (singlefile, .csv)
+(...)
+./demo/simple_collection\e (singlefile, .xlsm)
+File checks done
+
+Building a parsing plan to parse ./demo/simple_collection (multifile) into a Dict[str, DataFrame]
+./demo/simple_collection (multifile) &gt; Dict[str, DataFrame] ------- using Multifile Dict parser (based on &#39;parsyfiles defaults&#39; to find the parser for each item)
+./demo/simple_collection\a (singlefile, .csv) &gt; DataFrame ------- using &lt;read_df_or_series_from_csv(stream mode)&gt;
+(...)
+./demo/simple_collection\e (singlefile, .xlsm) &gt; DataFrame ------- using &lt;read_dataframe_from_xls(file mode)&gt;
+Parsing Plan created successfully
+
+Executing Parsing Plan for ./demo/simple_collection (multifile) &gt; Dict[str, DataFrame] ------- using Multifile Dict parser (based on &#39;parsyfiles defaults&#39; to find the parser for each item)
+Parsing ./demo/simple_collection (multifile) &gt; Dict[str, DataFrame] ------- using Multifile Dict parser (based on &#39;parsyfiles defaults&#39; to find the parser for each item)
+Parsing ./demo/simple_collection\a (singlefile, .csv) &gt; DataFrame ------- using &lt;read_df_or_series_from_csv(stream mode)&gt;
+--&gt; Successfully parsed a DataFrame from ./demo/simple_collection\a
+(...)
+Parsing ./demo/simple_collection\e (singlefile, .xlsm) &gt; DataFrame ------- using &lt;read_dataframe_from_xls(file mode)&gt;
+--&gt; Successfully parsed a DataFrame from ./demo/simple_collection\e
+Assembling all parsed child items into a Dict[str, DataFrame] to build ./demo/simple_collection (multifile)
+--&gt; Successfully parsed a Dict[str, DataFrame] from ./demo/simple_collection
+Completed parsing successfully
+
+{&#39;a&#39;:    a  b  c  d
+      0  1  2  3  4,
+ &#39;b&#39;:    a  b  c  d
+      0  1  2  3  4,
+ &#39;c&#39;:    c   5
+      0  d   8
+      1  e  12
+      2  f   3,
+ &#39;d&#39;:    c   5
+      0  d   8
+      1  e  12
+      2  f   3,
+ &#39;e&#39;:    c   5
+      0  d   8
+      1  e  12
+      2  f   3}
+</pre></div>
+
+
+<p><em>Note: the above capture was slightly 'improved' for readability, because unfortunately pprint does not display dictionaries of dataframes as nicely as this.</em></p>
+<h3 id="b-understanding-the-log-output">(b) Understanding the log output<a class="headerlink" href="#b-understanding-the-log-output" title="Permanent link">&para;</a></h3>
+<p>By default the library uses a <code>Logger</code> that has an additional handler to print to <code>stdout</code>. If you do not want to see all these messages printed to the console, or if you want to use a different logging configuration, you may provide a custom logger to the function:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
+<span class="n">dfs</span> <span class="o">=</span> <span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;./demo/simple_collection&#39;</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;my_logger&#39;</span><span class="p">))</span>
+</pre></div>
+
+
+<p>In the log output you see a couple hints on how the parsing framework works:</p>
+<ul>
+<li>
+<p>first it recursively <strong>checks your folder</strong> to check that it is entirely compliant with the file mapping format. That is the log section beginning with "<code>Checking all files under ./demo/simple_collection</code>". If the same item appears twice (e.g. <code>a.csv</code> and <code>a.txt</code>)  it will throw an error at this stage (an <code>ObjectPresentMultipleTimesOnFileSystemError</code>).</p>
+</li>
+<li>
+<p>then it recursively <strong>creates a parsing plan</strong> that is able to produce an object the required type. That's the section beginning with "<code>Building a parsing plan to parse ./demo/simple_collection (multifile) into a Dict[str, DataFrame]</code>". Here you may note that by default, a collection of items is actually parsed as an object of type dictionary, where the key is the name of the file without extension, and the value is the object that is parsed from the file. If at this stage it does not find a way to parse a given file into the required object type, it will fail. For example if you add a file in the folder, named <code>unknown_ext_for_dataframe.ukn</code>, you will get an error (a <code>NoParserFoundForObjectExt</code>).</p>
+</li>
+<li>
+<p>finally it <strong>executes the parsing plan</strong>. That's the section beginning with "<code>Executing Parsing Plan for ./demo/simple_collection (multifile) &gt; Dict[str, DataFrame] (...)</code>".</p>
+</li>
+</ul>
+<p>It is important to understand these 3 log sections, since the main issue with complex frameworks is debugging when something unexpected happens :-).</p>
+<h3 id="c-parsing-a-single-file-only">(c) Parsing a single file only<a class="headerlink" href="#c-parsing-a-single-file-only" title="Permanent link">&para;</a></h3>
+<p>The following code may be used to parse a single file explicitly:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+<span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">parse_item</span>
+<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;./demo/simple_collection/c&#39;</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">)</span>
+<span class="n">pprint</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Important : note that the file extension does not appear in the argument of the <code>parse_item</code> function. </p>
+<h3 id="d-default-collection-type-and-other-supported-types">(d) Default collection type and other supported types<a class="headerlink" href="#d-default-collection-type-and-other-supported-types" title="Permanent link">&para;</a></h3>
+<p>You might have noticed that the demonstrated collection example returned a <code>dict</code> of dataframes, not a <code>list</code>. This is the default behaviour of the <code>parse_collection</code> method - it has the advantage of not making any assumption on the sorting order. </p>
+<p>Behind the scenes, <code>parse_collection</code> redirects to the <code>parse_item</code> command. So the following code leads to the exact same results:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">parse_item</span>
+<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;./demo/simple_collection/c&#39;</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">])</span>
+</pre></div>
+
+
+<p>The <code>typing</code> module is used here to entirely specify the type of item that you want to parse (<code>Dict[str, DataFrame]</code>). The parsed item will  be a dictionary with string keys (the file names) and DataFrame values (the parsed file contents).</p>
+<p>You may parse a <code>list</code>, a <code>set</code>, or a <code>tuple</code> exactly the same way, using the corresponding <code>typing</code> class: </p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">parse_item</span>
+<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="n">dfl</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;./demo/simple_collection&#39;</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">DataFrame</span><span class="p">])</span>
+<span class="c1"># dfs = parse_item(&#39;./demo/simple_collection&#39;, Set[DataFrame])</span>
+<span class="n">dft</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;./demo/simple_collection&#39;</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">])</span>
+</pre></div>
+
+
+<p>For <code>List</code> and <code>Tuple</code> the implied order is alphabetical on the file names (similar to using <code>sorted()</code> on the items of the dictionary).
+Note that <code>DataFrame</code> objects are not mutable, so in this particular case the collection cannot be parsed as a <code>Set</code>.</p>
+<p>Finally, note that it is not possible to mix collection and non-collection items together (for example, <code>Union[int, List[int]]</code> is not supported).</p>
+<h2 id="part-2-simple-user-defined-types">Part 2 - Simple user-defined types<a class="headerlink" href="#part-2-simple-user-defined-types" title="Permanent link">&para;</a></h2>
+<h3 id="a-example-parsing-a-collection-of-test-cases">(a) Example: parsing a collection of test cases<a class="headerlink" href="#a-example-parsing-a-collection-of-test-cases" title="Permanent link">&para;</a></h3>
+<p>Suppose that you want to test the following <code>exec_op</code> function, and you want to read your test datasets from a bunch of files.</p>
+<div class="codehilite"><pre><span></span><span class="k">def</span> <span class="nf">exec_op</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="ow">is</span> <span class="s1">&#39;+&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span><span class="o">+</span><span class="n">y</span>
+    <span class="k">elif</span> <span class="n">op</span> <span class="ow">is</span> <span class="s1">&#39;-&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span><span class="o">-</span><span class="n">y</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Unsupported operation : </span><span class="se">\&#39;</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">op</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Each test dataset could be represented as an object, containing the inputs and expected outputs for <code>exec_op</code>. For example:</p>
+<div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">ExecOpTest</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">expected_result</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">=</span> <span class="n">op</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expected_result</span> <span class="o">=</span> <span class="n">expected_result</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; =? &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expected_result</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Obviously this class is not known by the <code>parsyfiles</code> framework: there is no registered parser for the <code>ExecOpTest</code> type. However the type is fairly simple, so it can actually fit into a dictionary containing the values for <code>x</code>, <code>y</code>, <code>op</code>, and <code>expected_results</code>. <code>parsyfiles</code> knows a couple ways to parse dictionaries, using python standard libraries:</p>
+<ul>
+<li>From a <code>.cfg</code> or <code>.ini</code> file using the <code>configparser</code> module</li>
+<li>From a <code>.json</code> file using the <code>json</code> module</li>
+<li>From a <code>.properties</code> or <code>.txt</code> file using the <code>jprops</code> module</li>
+<li>From a <code>.yaml</code> or <code>.yml</code> file using the <code>yaml</code> module</li>
+<li>From a <code>.csv</code>, <code>.txt</code>, <code>.xls</code>, <code>.xlsx</code>, <code>.xlsm</code> file using the <code>pandas</code> module</li>
+<li>etc.</li>
+</ul>
+<p>It also knows how to convert a dictionary into an object, as long as the object constructor contains the right information about expected types. For example in the example above, the constructor has explicit PEP484 annotations <code>x: float, y: float, op: str, expected_result: float</code>.</p>
+<p>So let's try to parse instances of <code>ExecOpTest</code> from various files. Our test data folder looks like this (available in the <a href="https://github.com/smarie/python-simple-file-collection-parsing-framework/tree/master/parsyfiles/test_data">project sources</a>):</p>
+<div class="codehilite"><pre><span></span>./demo/simple_objects
+├── test_diff_1.cfg
+├── test_diff_2.ini
+├── test_diff_3_csv_format.txt
+├── test_sum_1.json
+├── test_sum_2.properties
+├── test_sum_3_properties_format.txt
+├── test_sum_4.yaml
+├── test_sum_5.xls
+├── test_sum_6.xlsx
+└── test_sum_7.xlsm
+</pre></div>
+
+
+<p>As usual, we tell the framework that we want to parse a collection of objects of type <code>ExecOpTest</code>:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+<span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">parse_collection</span>
+
+<span class="n">sf_tests</span> <span class="o">=</span> <span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;./demo/simple_objects&#39;</span><span class="p">,</span> <span class="n">ExecOpTest</span><span class="p">)</span>
+<span class="n">pprint</span><span class="p">(</span><span class="n">sf_tests</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Here is the result:</p>
+<div class="codehilite"><pre><span></span>**** Starting to parse  collection of &lt;ExecOpTest&gt; at location ./demo/simple_objects ****
+Checking all files under ./demo/simple_objects
+(...)
+File checks done
+
+Building a parsing plan to parse ./demo/simple_objects (multifile) into a Dict[str, ExecOpTest]
+(...)
+Parsing Plan created successfully
+
+Executing Parsing Plan for ./demo/simple_objects (multifile) &gt; Dict[str, ExecOpTest] ------- using Multifile Dict parser (based on &#39;parsyfiles defaults&#39; to find the parser for each item)
+(...)
+--&gt; Successfully parsed a Dict[str, ExecOpTest] from ./demo/simple_objects
+Completed parsing successfully
+
+{&#39;test_diff_1&#39;: 1.0 - 1.0 =? 0.0,
+ &#39;test_diff_2&#39;: 0.0 - 1.0 =? -1.0,
+ &#39;test_diff_3_csv_format&#39;: 5.0 - 4.0 =? 1.0,
+ &#39;test_diff_4_csv_format2&#39;: 4.0 - 4.0 =? 0.0,
+ &#39;test_sum_1&#39;: 1.0 + 2.0 =? 3.0,
+ &#39;test_sum_2&#39;: 0.0 + 1.0 =? 1.0,
+ &#39;test_sum_3_properties_format&#39;: 1.0 + 1.0 =? 2.0,
+ &#39;test_sum_4&#39;: 2.0 + 5.0 =? 7.0,
+ &#39;test_sum_5&#39;: 56.0 + 12.0 =? 68.0,
+ &#39;test_sum_6&#39;: 56.0 + 13.0 =? 69.0,
+ &#39;test_sum_7&#39;: 56.0 + 14.0 =? 70.0}
+</pre></div>
+
+
+<h3 id="b-under-the-hood-why-does-it-work-even-on-ambiguous-files">(b) Under the hood : why does it work, even on ambiguous files?<a class="headerlink" href="#b-under-the-hood-why-does-it-work-even-on-ambiguous-files" title="Permanent link">&para;</a></h3>
+<p>In the example above, three files were actually quite difficult to parse into a <code>dict</code> before being converted to an <code>ExecOpTest</code>: <code>test_diff_3_csv_format.txt</code>, <code>test_diff_4_csv_format2.txt</code> and <code>test_sum_4.yaml</code>. Let's look at both cases in details.</p>
+<h4 id="solved-difficulty-1-several-formatsparsers-for-the-same-file-extension">Solved Difficulty 1 - Several formats/parsers for the same file extension<a class="headerlink" href="#solved-difficulty-1-several-formatsparsers-for-the-same-file-extension" title="Permanent link">&para;</a></h4>
+<p><code>test_diff_3_csv_format.txt</code> and <code>test_diff_4_csv_format2.txt</code> are both  .txt file that contains csv-format data. But </p>
+<ul>
+<li>there are several way to write a dictionary in a csv format (one row of header + one row of values, or one column of names + one column of values).</li>
+<li>.txt files may also contain many other formats such as for example, the 'properties' format. </li>
+</ul>
+<p>How does the framework manage to parse these files ? Lets look at the log output for <code>test_diff_3_csv_format.txt</code>:</p>
+<div class="codehilite"><pre><span></span>Parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) &gt; ExecOpTest ------- using $&lt;read_dict_from_properties&gt; =&gt; &lt;dict_to_object&gt;$
+  !! Caught error during execution !!
+  File &quot;C:\W_dev\_pycharm_workspace\python-parsyfiles\parsyfiles\support_for_objects.py&quot;, line 273, in dict_to_object
+    attr_name)
+  ParsingException : Error while parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) as a ExecOpTest with parser &#39;$&lt;read_dict_from_properties&gt; =&gt; &lt;dict_to_object&gt;$&#39; using options=({&#39;MultifileCollectionParser&#39;: {&#39;lazy_parsing&#39;: False}}) : caught 
+  InvalidAttributeNameForConstructorError : Cannot parse object of type &lt;ExecOpTest&gt; using the provided configuration file: configuration contains a property name (&#39;5,4,-,1&#39;)that is not an attribute of the object constructor. &lt;ExecOpTest&gt; constructor attributes are : [&#39;y&#39;, &#39;x&#39;, &#39;expected_result&#39;, &#39;op&#39;]
+
+Rebuilding local parsing plan with next candidate parser: $&lt;read_str_from_txt&gt; =&gt; &lt;base64_ascii_str_pickle_to_object&gt;$
+./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) &gt; ExecOpTest ------- using $&lt;read_str_from_txt&gt; =&gt; &lt;base64_ascii_str_pickle_to_object&gt;$
+Parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) &gt; ExecOpTest ------- using $&lt;read_str_from_txt&gt; =&gt; &lt;base64_ascii_str_pickle_to_object&gt;$
+  !! Caught error during execution !!
+  File &quot;C:\Anaconda3\envs\azuremlbricks\lib\base64.py&quot;, line 88, in b64decode
+    return binascii.a2b_base64(s)
+  ParsingException : Error while parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) as a ExecOpTest with parser &#39;$&lt;read_str_from_txt&gt; =&gt; &lt;base64_ascii_str_pickle_to_object&gt;$&#39; using options=({&#39;MultifileCollectionParser&#39;: {&#39;lazy_parsing&#39;: False}}) : caught 
+  Error : Incorrect padding
+
+Rebuilding local parsing plan with next candidate parser: $&lt;read_str_from_txt&gt; =&gt; &lt;constructor_with_str_arg&gt;$
+./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) &gt; ExecOpTest ------- using $&lt;read_str_from_txt&gt; =&gt; &lt;constructor_with_str_arg&gt;$
+Parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) &gt; ExecOpTest ------- using $&lt;read_str_from_txt&gt; =&gt; &lt;constructor_with_str_arg&gt;$
+  !! Caught error during execution !!
+  File &quot;C:\W_dev\_pycharm_workspace\python-parsyfiles\parsyfiles\support_for_primitive_types.py&quot;, line 98, in constructor_with_str_arg
+    return desired_type(source)
+  ParsingException : Error while parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) as a ExecOpTest with parser &#39;$&lt;read_str_from_txt&gt; =&gt; &lt;constructor_with_str_arg&gt;$&#39; using options=({&#39;MultifileCollectionParser&#39;: {&#39;lazy_parsing&#39;: False}}) : caught 
+  CaughtTypeError : Caught TypeError while calling conversion function &#39;constructor_with_str_arg&#39;. Note that the conversion function signature should be &#39;def my_convert_fun(desired_type: Type[T], source: S, logger: Logger, **kwargs) -&gt; T&#39; (unpacked options mode - default) or def my_convert_fun(desired_type: Type[T], source: S, logger: Logger, options: Dict[str, Dict[str, Any]]) -&gt; T (unpack_options = False).Caught error message is : TypeError : __init__() missing 3 required positional arguments: &#39;y&#39;, &#39;op&#39;, and &#39;expected_result&#39;
+
+Rebuilding local parsing plan with next candidate parser: $&lt;read_df_or_series_from_csv&gt; =&gt; &lt;single_row_or_col_df_to_dict&gt; -&gt; &lt;dict_to_object&gt;$
+./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) &gt; ExecOpTest ------- using $&lt;read_df_or_series_from_csv&gt; =&gt; &lt;single_row_or_col_df_to_dict&gt; -&gt; &lt;dict_to_object&gt;$
+Parsing ./demo/simple_objects\test_diff_3_csv_format (singlefile, .txt) &gt; ExecOpTest ------- using $&lt;read_df_or_series_from_csv&gt; =&gt; &lt;single_row_or_col_df_to_dict&gt; -&gt; &lt;dict_to_object&gt;$
+--&gt; Successfully parsed a ExecOpTest from ./demo/simple_objects\test_diff_3_csv_format
+</pre></div>
+
+
+<p>You can see from the logs that the framework successively tries several ways to parse this file :</p>
+<ul>
+<li><code>$&lt;read_dict_from_properties&gt; =&gt; &lt;dict_to_object&gt;$</code>: the txt file is read in the 'properties' format (using <code>jprops</code>) into a dictionary, and then the dictionary is converted to a <code>ExecOpTest</code> object. <em>This fails.</em></li>
+<li><code>$&lt;read_str_from_txt&gt; =&gt; &lt;base64_ascii_str_pickle_to_object&gt;$</code> : the txt file is read as a string, and then the string is interpreted as a base64-encoded pickle <code>ExecOpTest</code> object (!). <em>This fails.</em></li>
+<li><code>$&lt;read_str_from_txt&gt; =&gt; &lt;constructor_with_str_arg&gt;$</code>: the txt file is read as a string, and then the constructor of <code>ExecOpTest</code> is called with that string as unique argument. <em>This fails again.</em></li>
+<li><code>$&lt;read_df_or_series_from_csv&gt; =&gt; &lt;single_row_or_col_df_to_dict&gt; -&gt; &lt;dict_to_object&gt;$</code>: the txt file is read as a csv into a DataFrame, then the DataFrame is converted to a dictionary, and finally the dictionary is converted into a <code>ExecOpTest</code> object. <em>This finally succeeds</em>.</li>
+</ul>
+<p>The same goes for the other file <code>test_diff_4_csv_format2.txt</code>. </p>
+<h4 id="solved-difficulty-2-generic-parsers">Solved Difficulty 2 - Generic parsers<a class="headerlink" href="#solved-difficulty-2-generic-parsers" title="Permanent link">&para;</a></h4>
+<p>For <code>test_sum_4.yaml</code>, the difficulty is that yaml format may contain a dictionary directly, but is also able to contain any typed object thanks to the YAML <code>object</code> directive. Therefore it could contain a <code>ExecOpTest</code>.</p>
+<p>The parsing logs are the following:</p>
+<div class="codehilite"><pre><span></span>Parsing ./demo/simple_objects\test_sum_4 (singlefile, .yaml) &gt; ExecOpTest ------- using &lt;read_object_from_yaml&gt;
+  !! Caught error during execution !!
+  File &quot;C:\W_dev\_pycharm_workspace\python-parsyfiles\parsyfiles\parsing_core_api.py&quot;, line 403, in execute
+    res, options)
+  ParsingException : Error while parsing ./demo/simple_objects\test_sum_4 (singlefile, .yaml) as a &lt;class &#39;test_parsyfiles.DemoTests.test_simple_objects.&lt;locals&gt;.ExecOpTest&#39;&gt; with parser &#39;&lt;read_object_from_yaml&gt;&#39; using options=({&#39;MultifileCollectionParser&#39;: {&#39;lazy_parsing&#39;: False}}) : 
+      parser returned {&#39;y&#39;: 5, &#39;x&#39;: 2, &#39;op&#39;: &#39;+&#39;, &#39;expected_result&#39;: 7} of type &lt;class &#39;dict&#39;&gt; which is not an instance of &lt;class &#39;test_parsyfiles.DemoTests.test_simple_objects.&lt;locals&gt;.ExecOpTest&#39;&gt;
+
+Rebuilding local parsing plan with next candidate parser: $&lt;read_collection_from_yaml&gt; =&gt; &lt;dict_to_object&gt;$
+./demo/simple_objects\test_sum_4 (singlefile, .yaml) &gt; ExecOpTest ------- using $&lt;read_collection_from_yaml&gt; =&gt; &lt;dict_to_object&gt;$
+Parsing ./demo/simple_objects\test_sum_4 (singlefile, .yaml) &gt; ExecOpTest ------- using $&lt;read_collection_from_yaml&gt; =&gt; &lt;dict_to_object&gt;$
+--&gt; Successfully parsed a ExecOpTest from ./demo/simple_objects\test_sum_4
+</pre></div>
+
+
+<p>You can see from the logs that the framework successively tries several ways to parse this file :</p>
+<ul>
+<li>
+<p><code>&lt;read_object_from_yaml&gt;</code>: the file is read according to the yaml format, as an <code>ExecOpTest</code> object directly. This fails.</p>
+</li>
+<li>
+<p><code>$&lt;read_collection_from_yaml&gt; =&gt; &lt;dict_to_object&gt;$</code>: the file is read according to the yaml format, as a dictionary. Then this dictionary is converted into a <code>ExecOpTest</code> object. <strong>This succeeds</strong></p>
+</li>
+</ul>
+<h4 id="understanding-the-inference-logic-in-which-order-are-the-parsers-tried">Understanding the inference logic - in which order are the parsers tried ?<a class="headerlink" href="#understanding-the-inference-logic-in-which-order-are-the-parsers-tried" title="Permanent link">&para;</a></h4>
+<p>These example show how <code>parsyfiles</code> intelligently combines all registered parsers and converters to create parsing chains that make sense. These parsing chains are tried <strong>in order</strong> until a solution is found. Note that the order is deterministic:</p>
+<ul>
+<li>
+<p>First all <strong>exact match</strong> parsers. This includes combinations of {parser + converter chain} that lead to an exact match, sorted by converter chain size: first the small conversion chains, last the large conversion chains.</p>
+</li>
+<li>
+<p>Then all <strong>approximative match</strong> parsers. This is similar to the "exact match" except that these are parsers able to parse a <strong>subclass</strong> of what you're asking for.</p>
+</li>
+<li>
+<p>Finally all <strong>generic</strong> parsers. This includes combinations of {parser + converter chain} that end with a generic converter (for example the "dict to object" converter seen in the example above)</p>
+</li>
+</ul>
+<p>In order to know in advance which file extensions and formats the framework will be able to parse, you may wish to use the following command to ask the framework:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">RootParser</span>
+<span class="n">RootParser</span><span class="p">()</span><span class="o">.</span><span class="n">print_capabilities_for_type</span><span class="p">(</span><span class="n">typ</span><span class="o">=</span><span class="n">ExecOpTest</span><span class="p">)</span>
+</pre></div>
+
+
+<p>The result is a dictionary where each entry is a file extension:</p>
+<div class="codehilite"><pre><span></span>{&#39;.cfg&#39;: {&#39;1_exact_match&#39;: [],
+          &#39;2_approx_match&#39;: [],
+          &#39;3_generic&#39;: [$&lt;read_config&gt; =&gt; &lt;merge_all_config_sections_into_a_single_dict&gt; -&gt; &lt;dict_to_object&gt;$,
+                        $&lt;read_config&gt; =&gt; &lt;config_to_dict_of_dict&gt; -&gt; &lt;dict_of_dict_to_object&gt;$,
+                        $&lt;read_config&gt; =&gt; &lt;config_to_dict_of_dict&gt; -&gt; &lt;dict_to_object&gt;$]},
+ &#39;.csv&#39;: {&#39;1_exact_match&#39;: [],
+          &#39;2_approx_match&#39;: [],
+          &#39;3_generic&#39;: [$&lt;read_df_or_series_from_csv&gt; =&gt; &lt;single_row_or_col_df_to_dict&gt; -&gt; &lt;dict_to_object&gt;$]},
+ &#39;.ini&#39;: {&#39;1_exact_match&#39;: [],
+          &#39;2_approx_match&#39;: [],
+          &#39;3_generic&#39;: [$&lt;read_config&gt; =&gt; &lt;merge_all_config_sections_into_a_single_dict&gt; -&gt; &lt;dict_to_object&gt;$,
+                        $&lt;read_config&gt; =&gt; &lt;config_to_dict_of_dict&gt; -&gt; &lt;dict_of_dict_to_object&gt;$,
+                        $&lt;read_config&gt; =&gt; &lt;config_to_dict_of_dict&gt; -&gt; &lt;dict_to_object&gt;$]},
+ &#39;.json&#39;: {&#39;1_exact_match&#39;: [],
+           &#39;2_approx_match&#39;: [],
+           &#39;3_generic&#39;: [$&lt;read_dict_or_list_from_json&gt; =&gt; &lt;dict_to_object&gt;$]},
+ &#39;.properties&#39;: {&#39;1_exact_match&#39;: [],
+                 &#39;2_approx_match&#39;: [],
+                 &#39;3_generic&#39;: [$&lt;read_dict_from_properties&gt; =&gt; &lt;dict_to_object&gt;$]},
+ &#39;.pyc&#39;: {&#39;1_exact_match&#39;: [],
+          &#39;2_approx_match&#39;: [],
+          &#39;3_generic&#39;: [&lt;read_object_from_pickle&gt;]},
+ &#39;.txt&#39;: {&#39;1_exact_match&#39;: [],
+          &#39;2_approx_match&#39;: [],
+          &#39;3_generic&#39;: [$&lt;read_dict_from_properties&gt; =&gt; &lt;dict_to_object&gt;$,
+                        $&lt;read_str_from_txt&gt; =&gt; &lt;base64_ascii_str_pickle_to_object&gt;$,
+                        $&lt;read_str_from_txt&gt; =&gt; &lt;constructor_with_str_arg&gt;$,
+                        $&lt;read_df_or_series_from_csv&gt; =&gt; &lt;single_row_or_col_df_to_dict&gt; -&gt; &lt;dict_to_object&gt;$]},
+ &#39;.xls&#39;: {&#39;1_exact_match&#39;: [],
+          &#39;2_approx_match&#39;: [],
+          &#39;3_generic&#39;: [$&lt;read_dataframe_from_xls&gt; =&gt; &lt;single_row_or_col_df_to_dict&gt; -&gt; &lt;dict_to_object&gt;$]},
+ &#39;.xlsm&#39;: {&#39;1_exact_match&#39;: [],
+           &#39;2_approx_match&#39;: [],
+           &#39;3_generic&#39;: [$&lt;read_dataframe_from_xls&gt; =&gt; &lt;single_row_or_col_df_to_dict&gt; -&gt; &lt;dict_to_object&gt;$]},
+ &#39;.xlsx&#39;: {&#39;1_exact_match&#39;: [],
+           &#39;2_approx_match&#39;: [],
+           &#39;3_generic&#39;: [$&lt;read_dataframe_from_xls&gt; =&gt; &lt;single_row_or_col_df_to_dict&gt; -&gt; &lt;dict_to_object&gt;$]},
+ &#39;.yaml&#39;: {&#39;1_exact_match&#39;: [],
+           &#39;2_approx_match&#39;: [],
+           &#39;3_generic&#39;: [&lt;read_object_from_yaml&gt;,
+                         $&lt;read_collection_from_yaml&gt; =&gt; &lt;dict_to_object&gt;$]},
+ &#39;.yml&#39;: {&#39;1_exact_match&#39;: [],
+          &#39;2_approx_match&#39;: [],
+          &#39;3_generic&#39;: [&lt;read_object_from_yaml&gt;,
+                        $&lt;read_collection_from_yaml&gt; =&gt; &lt;dict_to_object&gt;$]},
+ &#39;&lt;multifile&gt;&#39;: {&#39;1_exact_match&#39;: [],
+                 &#39;2_approx_match&#39;: [],
+                 &#39;3_generic&#39;: [Multifile Object parser (parsyfiles defaults)]}}
+</pre></div>
+
+
+<p>Looking at the entries for <code>.txt</code> and <code>.yaml</code>, we can find back the ordered list of parsers that were automatically tried in the above examples.</p>
+<h2 id="part-3-multifile-objects-combining-several-parsers">Part 3 - Multifile objects: combining several parsers<a class="headerlink" href="#part-3-multifile-objects-combining-several-parsers" title="Permanent link">&para;</a></h2>
+<p>This <strong>'the'</strong> typical use case for this library. Suppose that you want to test the following <code>exec_op_series</code> function, that uses complex types <code>Series</code> and <code>AlgoConf</code> as inputs and <code>AlgoResults</code> as output:</p>
+<div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">AlgoConf</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">foo_param</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">bar_param</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">foo_param</span> <span class="o">=</span> <span class="n">foo_param</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bar_param</span> <span class="o">=</span> <span class="n">bar_param</span>
+
+<span class="k">class</span> <span class="nc">AlgoResults</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">score</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">perf</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">score</span> <span class="o">=</span> <span class="n">score</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">perf</span> <span class="o">=</span> <span class="n">perf</span>
+
+<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">Series</span>
+<span class="k">def</span> <span class="nf">exec_op_series</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Series</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">AlgoConf</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AlgoResults</span><span class="p">:</span>
+    <span class="c1"># ... intelligent stuff here...</span>
+    <span class="k">pass</span>
+</pre></div>
+
+
+<p>Similar to what we've done in previous chapter, each test dataset can be represented as an object, containing the inputs and expected outputs. For example with this class:</p>
+<div class="codehilite"><pre><span></span><span class="k">class</span> <span class="nc">ExecOpSeriesTest</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">Series</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">AlgoConf</span><span class="p">,</span> <span class="n">expected_results</span><span class="p">:</span> <span class="n">AlgoResults</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expected_results</span> <span class="o">=</span> <span class="n">expected_results</span>
+</pre></div>
+
+
+<p>Our test data folder look like this : </p>
+<div class="codehilite"><pre><span></span>./demo/complex_objects
+├── case1
+│   ├── expected_results.txt
+│   ├── x.csv
+│   └── y.txt
+└── case2
+    ├── expected_results.txt
+    ├── x.csv
+    └── y.txt
+</pre></div>
+
+
+<p>You may notice that in this case, we chose to represent each instance of <code>ExecOpSeriesTest</code> as a folder. This makes them 'multifile'. The default multifile object parser in the framework will try to parse each attribute of the constructor as an independent file in the folder. </p>
+<p>The code for parsing remains the same - we tell the framework that we want to parse a collection of objects of type <code>ExecOpSeriesTest</code>. The rest is handled automatically by the framework:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+<span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">parse_collection</span>
+
+<span class="n">mf_tests</span> <span class="o">=</span> <span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;./demo/complex_objects&#39;</span><span class="p">,</span> <span class="n">ExecOpSeriesTest</span><span class="p">)</span>
+<span class="n">pprint</span><span class="p">(</span><span class="n">mf_tests</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Here are the results :</p>
+<div class="codehilite"><pre><span></span>**** Starting to parse  collection of &lt;ExecOpSeriesTest&gt; at location ./demo/complex_objects ****
+Checking all files under ./demo/complex_objects
+./demo/complex_objects (multifile)
+(...)
+File checks done
+
+Building a parsing plan to parse ./demo/complex_objects (multifile) into a Dict[str, ExecOpSeriesTest]
+(...)
+Parsing Plan created successfully
+
+Executing Parsing Plan for ./demo/complex_objects (multifile) &gt; Dict[str, ExecOpSeriesTest] ------- using Multifile Collection parser (parsyfiles defaults)
+(...)
+--&gt; Successfully parsed a Dict[str, ExecOpSeriesTest] from ./demo/complex_objects
+Completed parsing successfully
+
+{&#39;case1&#39;: &lt;ExecOpSeriesTest object at 0x00000000087DDF98&gt;,
+ &#39;case2&#39;: &lt;ExecOpSeriesTest object at 0x000000000737FBE0&gt;}
+</pre></div>
+
+
+<p>Note that multifile objects and singlefile objects may coexist in the same folder, and that parsing is recursive - meaning that multifile objects or collections may contain multifile children as well.</p>
+<h2 id="part-4-advanced-topics">Part 4 - Advanced topics<a class="headerlink" href="#part-4-advanced-topics" title="Permanent link">&para;</a></h2>
+<p>The <code>parse_collection</code> and <code>parse_item</code> that we have used in most examples are actually just helper methods to build a parser registry (<code>RootParser()</code>) and use it. Most of the advanced topics below use this object directly.</p>
+<h3 id="a-lazy-parsing">(a) Lazy parsing<a class="headerlink" href="#a-lazy-parsing" title="Permanent link">&para;</a></h3>
+<p>The multifile collection parser included in the library provides an option to return a lazy collection instead of a standard <code>set</code>, <code>list</code>, <code>dict</code> or <code>tuple</code>. This collection will trigger parsing of each element only when that element is required. In addition to better controlling the parsing time, this feature is especially useful if you want to parse the most items possible, even if one item in the list fails parsing. </p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+<span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">parse_collection</span>
+<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+
+<span class="n">dfs</span> <span class="o">=</span> <span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;./demo/simple_collection&#39;</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">lazy_mfcollection_parsing</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;dfs length : &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dfs</span><span class="p">)))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;dfs keys : &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">dfs</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Is b in dfs : &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="s1">&#39;b&#39;</span> <span class="ow">in</span> <span class="n">dfs</span><span class="p">))</span>
+<span class="n">pprint</span><span class="p">(</span><span class="n">dfs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;b&#39;</span><span class="p">))</span>
+</pre></div>
+
+
+<p>The result log shows that <code>parse_collection</code> returned without parsing, and that parsing is executed when item <code>'b'</code> is read from the dictionary:</p>
+<div class="codehilite"><pre><span></span>Executing Parsing Plan for ./demo/simple_collection (multifile) &gt; Dict[str, DataFrame] ------- using Multifile Collection parser (parsyfiles defaults)
+Parsing ./demo/simple_collection (multifile) &gt; Dict[str, DataFrame] ------- using Multifile Collection parser (parsyfiles defaults)
+Assembling a Dict[str, DataFrame] from all children of ./demo/simple_collection (multifile) (lazy parsing: children will be parsed when used) 
+--&gt; Successfully parsed a Dict[str, DataFrame] from ./demo/simple_collection
+Completed parsing successfully
+
+dfs length : 5
+dfs keys : {&#39;a&#39;, &#39;e&#39;, &#39;d&#39;, &#39;c&#39;, &#39;b&#39;}
+Is b in dfs : True
+Executing Parsing Plan for ./demo/simple_collection\b (singlefile, .txt) &gt; DataFrame ------- using &lt;read_df_or_series_from_csv&gt;
+Parsing ./demo/simple_collection\b (singlefile, .txt) &gt; DataFrame ------- using &lt;read_df_or_series_from_csv&gt;
+--&gt; Successfully parsed a DataFrame from ./demo/simple_collection\b
+Completed parsing successfully
+   a  b  c  d
+0  1  2  3  4
+</pre></div>
+
+
+<h3 id="b-passing-options-to-existing-parsers">(b) Passing options to existing parsers<a class="headerlink" href="#b-passing-options-to-existing-parsers" title="Permanent link">&para;</a></h3>
+<p>Parsers and converters support options. In order to know which options are available for a specific parser, the best is to identify it and ask it. For example if you want to know what are the options available for the parsers reading <code>DataFrame</code> objects :</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+<span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">RootParser</span>
+
+<span class="c1"># create a root parser</span>
+<span class="n">parser</span> <span class="o">=</span> <span class="n">RootParser</span><span class="p">()</span>
+
+<span class="c1"># retrieve the parsers of interest</span>
+<span class="n">parsers</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">get_capabilities_for_type</span><span class="p">(</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">strict_type_matching</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="n">df_csv_parser</span> <span class="o">=</span> <span class="n">parsers</span><span class="p">[</span><span class="s1">&#39;.csv&#39;</span><span class="p">][</span><span class="s1">&#39;1_exact_match&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">p_id_csv</span> <span class="o">=</span> <span class="n">df_csv_parser</span><span class="o">.</span><span class="n">get_id_for_options</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Parser id for csv is : &#39;</span> <span class="o">+</span> <span class="n">p_id_csv</span> <span class="o">+</span> <span class="s1">&#39;, implementing function is &#39;</span> <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="n">df_csv_parser</span><span class="o">.</span><span class="n">_parser_func</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39; * &#39;</span> <span class="o">+</span> <span class="n">df_csv_parser</span><span class="o">.</span><span class="n">options_hints</span><span class="p">())</span>
+<span class="n">df_xls_parser</span> <span class="o">=</span> <span class="n">parsers</span><span class="p">[</span><span class="s1">&#39;.xls&#39;</span><span class="p">][</span><span class="s1">&#39;1_exact_match&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">p_id_xls</span> <span class="o">=</span> <span class="n">df_xls_parser</span><span class="o">.</span><span class="n">get_id_for_options</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;Parser id for csv is : &#39;</span> <span class="o">+</span> <span class="n">p_id_xls</span> <span class="o">+</span> <span class="s1">&#39;, implementing function is &#39;</span> <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="n">df_xls_parser</span><span class="o">.</span><span class="n">_parser_func</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39; * &#39;</span> <span class="o">+</span> <span class="n">df_xls_parser</span><span class="o">.</span><span class="n">options_hints</span><span class="p">())</span>
+</pre></div>
+
+
+<p>The result is:</p>
+<div class="codehilite"><pre><span></span>Parser id for csv is : read_df_or_series_from_csv, implementing function is &lt;function read_df_or_series_from_csv at 0x0000000007391378&gt;
+ * read_df_or_series_from_csv: all options from read_csv are supported, see http://pandas.pydata.org/pandas-docs/stable/generated/pandas.read_csv.html
+Parser id for csv is : read_dataframe_from_xls, implementing function is &lt;function read_dataframe_from_xls at 0x0000000007391158&gt;
+ * read_dataframe_from_xls: all options from read_excel are supported, see http://pandas.pydata.org/pandas-docs/stable/generated/pandas.read_excel.html
+</pre></div>
+
+
+<p>Then you may set the options accordingly on the root parser before calling it</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">create_parser_options</span><span class="p">,</span> <span class="n">add_parser_options</span>
+
+<span class="c1"># configure the DataFrame parsers to automatically parse dates and use the first column as index</span>
+<span class="n">opts</span> <span class="o">=</span> <span class="n">create_parser_options</span><span class="p">()</span>
+<span class="n">opts</span> <span class="o">=</span> <span class="n">add_parser_options</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="s1">&#39;read_df_or_series_from_csv&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;parse_dates&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s1">&#39;index_col&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+<span class="n">opts</span> <span class="o">=</span> <span class="n">add_parser_options</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="s1">&#39;read_dataframe_from_xls&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;index_col&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+
+<span class="n">dfs</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;./test_data/demo/ts_collection&#39;</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">opts</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">dfs</span><span class="p">)</span>
+</pre></div>
+
+
+<p>Results:</p>
+<div class="codehilite"><pre><span></span>{&#39;a&#39;:                    a  b  c  d
+    time                           
+    2015-08-28 23:30:00  1  2  3  4
+    2015-08-29 00:00:00  1  2  3  5, 
+ &#39;c&#39;:           a  b
+    date            
+    2015-01-01  1  2
+    2015-01-02  4  3, 
+ &#39;b&#39;:                    a  b  c  d
+    time                           
+    2015-08-28 23:30:00  1  2  3  4
+    2015-08-29 00:00:00  1  2  3  5}
+</pre></div>
+
+
+<h3 id="c-parsing-subclasses-of-existing-types-registering-converters">(c) Parsing subclasses of existing types - registering converters<a class="headerlink" href="#c-parsing-subclasses-of-existing-types-registering-converters" title="Permanent link">&para;</a></h3>
+<p>Imagine that you want to parse a subtype of something the framework already knows to parse. For example a <code>TimeSeries</code> class of your own, that extends <code>DataFrame</code>:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">DatetimeIndex</span>
+
+<span class="k">class</span> <span class="nc">TimeSeries</span><span class="p">(</span><span class="n">DataFrame</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A dummy timeseries class that extends DataFrame</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor from a DataFrame. The DataFrame index should be an instance of DatetimeIndex</span>
+<span class="sd">        :param df:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">DatetimeIndex</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tz</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="n">tz</span><span class="o">=</span><span class="s1">&#39;UTC&#39;</span><span class="p">)</span><span class="c1"># use the UTC hypothesis in absence of other hints</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_df</span> <span class="o">=</span> <span class="n">df</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Error creating TimeSeries from DataFrame: provided DataFrame does not have a &#39;</span>
+                             <span class="s1">&#39;valid DatetimeIndex&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+        <span class="c1"># Redirects anything that is not implemented here to the base dataframe.</span>
+        <span class="c1"># this is called only if the attribute was not found the usual way</span>
+
+        <span class="c1"># easy version of the dynamic proxy just to save time :)</span>
+        <span class="c1"># see http://code.activestate.com/recipes/496741-object-proxying/ for &quot;the answer&quot;</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;_df&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">item</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1"> object has no attribute </span><span class="se">\&#39;</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">item</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">,</span> <span class="n">join</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">filter_func</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">raise_conflict</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; For some reason this method was abstract in DataFrame so we have to implement it &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_df</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">join</span><span class="o">=</span><span class="n">join</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">,</span> <span class="n">filter_func</span><span class="o">=</span><span class="n">filter_func</span><span class="p">,</span>
+                               <span class="n">raise_conflict</span><span class="o">=</span><span class="n">raise_conflict</span><span class="p">)</span>
+</pre></div>
+
+
+<p>It is relatively easy to write a converter between a <code>DataFrame</code> and a <code>TimeSeries</code>. <code>parsyfiles</code> provides classes that you should use to define your converters, for example here <code>ConverterFunction</code>, that takes as argument a conversion method with a specific signature - hence the extra unused arguments in <code>df_to_ts</code>:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Type</span>
+<span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">Logger</span>
+<span class="kn">from</span> <span class="nn">parsyfiles.converting_core</span> <span class="kn">import</span> <span class="n">ConverterFunction</span>
+
+<span class="k">def</span> <span class="nf">df_to_ts</span><span class="p">(</span><span class="n">desired_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">TimeSeries</span><span class="p">],</span> <span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">logger</span><span class="p">:</span> <span class="n">Logger</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TimeSeries</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot; Converter from DataFrame to TimeSeries &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+<span class="n">my_converter</span> <span class="o">=</span> <span class="n">ConverterFunction</span><span class="p">(</span><span class="n">from_type</span><span class="o">=</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">to_type</span><span class="o">=</span><span class="n">TimeSeries</span><span class="p">,</span> <span class="n">conversion_method</span><span class="o">=</span><span class="n">df_to_ts</span><span class="p">)</span>
+</pre></div>
+
+
+<p>You have to create the parser manually in order to register your converter:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">RootParser</span><span class="p">,</span> <span class="n">create_parser_options</span><span class="p">,</span> <span class="n">add_parser_options</span>
+
+<span class="c1"># create a parser</span>
+<span class="n">parser</span> <span class="o">=</span> <span class="n">RootParser</span><span class="p">(</span><span class="s1">&#39;parsyfiles with timeseries&#39;</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">register_converter</span><span class="p">(</span><span class="n">my_converter</span><span class="p">)</span>
+</pre></div>
+
+
+<p>In some cases you may wish to change the underlying parsers options. This is possible provided that you know the identifier of the parser you wish to configure (typically it is the one appearing in the logs):</p>
+<div class="codehilite"><pre><span></span><span class="c1"># configure the DataFrame parsers to read the first column as an datetime index</span>
+<span class="n">opts</span> <span class="o">=</span> <span class="n">create_parser_options</span><span class="p">()</span>
+<span class="n">opts</span> <span class="o">=</span> <span class="n">add_parser_options</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="s1">&#39;read_df_or_series_from_csv&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;parse_dates&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s1">&#39;index_col&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+<span class="n">opts</span> <span class="o">=</span> <span class="n">add_parser_options</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="s1">&#39;read_dataframe_from_xls&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;index_col&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+</pre></div>
+
+
+<p>Finally, parsing is done the same way than before:</p>
+<div class="codehilite"><pre><span></span><span class="n">dfs</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;./test_data/demo/ts_collection&#39;</span><span class="p">,</span> <span class="n">TimeSeries</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">opts</span><span class="p">)</span>
+</pre></div>
+
+
+<p><em>Note: you might have noticed that <code>TimeSeries</code> is a dynamic proxy. The <code>TimeSeries</code> class extends the <code>DataFrame</code> class, but delegates everything to the underlying <code>DataFrame</code> implementation provided in the constructor. This pattern is a good way to create specialized versions of generic objects created by your favourite parsers. For example two <code>DataFrame</code> might represent a training set, and a prediction table. Both objects, although similar (both are tables with rows and columns), might have very different contents (column names, column types, number of rows, etc.). We can make this fundamental difference appear at parsing level, by creating two classes.</em></p>
+<h3 id="d-registering-a-new-parser">(d) Registering a new parser<a class="headerlink" href="#d-registering-a-new-parser" title="Permanent link">&para;</a></h3>
+<p>Parsyfiles offers several ways to register a parser. Here is a simple example, where we register a basic 'singlefile' xml parser:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Type</span>
+<span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">RootParser</span>
+<span class="kn">from</span> <span class="nn">parsyfiles.parsing_core</span> <span class="kn">import</span> <span class="n">SingleFileParserFunction</span><span class="p">,</span> <span class="n">T</span>
+<span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">Logger</span>
+<span class="kn">from</span> <span class="nn">xml.etree.ElementTree</span> <span class="kn">import</span> <span class="n">ElementTree</span><span class="p">,</span> <span class="n">parse</span><span class="p">,</span> <span class="n">tostring</span>
+
+<span class="k">def</span> <span class="nf">read_xml</span><span class="p">(</span><span class="n">desired_type</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">T</span><span class="p">],</span> <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">encoding</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+             <span class="n">logger</span><span class="p">:</span> <span class="n">Logger</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Opens an XML file and returns the tree parsed from it as an ElementTree.</span>
+
+<span class="sd">    :param desired_type:</span>
+<span class="sd">    :param file_path:</span>
+<span class="sd">    :param encoding:</span>
+<span class="sd">    :param logger:</span>
+<span class="sd">    :param kwargs:</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">parse</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+<span class="n">my_parser</span> <span class="o">=</span> <span class="n">SingleFileParserFunction</span><span class="p">(</span><span class="n">parser_function</span><span class="o">=</span><span class="n">read_xml</span><span class="p">,</span>
+                                     <span class="n">streaming_mode</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                                     <span class="n">supported_exts</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;.xml&#39;</span><span class="p">},</span>
+                                     <span class="n">supported_types</span><span class="o">=</span><span class="p">{</span><span class="n">ElementTree</span><span class="p">})</span>
+
+<span class="n">parser</span> <span class="o">=</span> <span class="n">RootParser</span><span class="p">(</span><span class="s1">&#39;parsyfiles with timeseries&#39;</span><span class="p">)</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">register_parser</span><span class="p">(</span><span class="n">my_parser</span><span class="p">)</span>
+<span class="n">xmls</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;./test_data/demo/xml_collection&#39;</span><span class="p">,</span> <span class="n">ElementTree</span><span class="p">)</span>
+<span class="k">print</span><span class="p">({</span><span class="n">name</span><span class="p">:</span> <span class="n">tostring</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">getroot</span><span class="p">())</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">xmls</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+</pre></div>
+
+
+<p>For more examples on how the parser API can be used, please have a look at the <a href="https://github.com/smarie/python-simple-file-collection-parsing-framework/tree/master/parsyfiles/plugins_base">core</a> and <a href="https://github.com/smarie/python-simple-file-collection-parsing-framework/tree/master/parsyfiles/plugins_optional">optional</a> plugins.</p>
+<h3 id="e-contract-validation-for-parsed-objects-combo-with-classtools-autocode-and-attrs">(e) Contract validation for parsed objects : combo with classtools-autocode and attrs<a class="headerlink" href="#e-contract-validation-for-parsed-objects-combo-with-classtools-autocode-and-attrs" title="Permanent link">&para;</a></h3>
+<p>Users may wish to use <a href="https://github.com/smarie/python-classtools-autocode">classtools_autocode</a> or <a href="https://attrs.readthedocs.io/en/stable/">attrs</a> in order to create very compact classes representing their objects while at the same time ensuring that parsed data is valid according to some contract. Parsyfiles is totally compliant with such classes, as shown in the examples below</p>
+<h4 id="classtools-autocode-example">classtools-autocode example<a class="headerlink" href="#classtools-autocode-example" title="Permanent link">&para;</a></h4>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">classtools_autocode</span> <span class="kn">import</span> <span class="n">autoprops</span><span class="p">,</span> <span class="n">autoargs</span>
+<span class="kn">from</span> <span class="nn">contracts</span> <span class="kn">import</span> <span class="n">contract</span><span class="p">,</span> <span class="n">new_contract</span>
+
+<span class="c1"># custom PyContract used in the class</span>
+<span class="n">new_contract</span><span class="p">(</span><span class="s1">&#39;allowed_op&#39;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;+&#39;</span><span class="p">,</span><span class="s1">&#39;*&#39;</span><span class="p">})</span>
+
+<span class="nd">@autoprops</span>
+<span class="k">class</span> <span class="nc">ExecOpTest</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="nd">@autoargs</span>
+    <span class="nd">@contract</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s1">&#39;int|float&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;int|float&#39;</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="s1">&#39;str,allowed_op&#39;</span><span class="p">,</span> <span class="n">expected_result</span><span class="o">=</span><span class="s1">&#39;int|float&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">expected_result</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__repr__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; =? &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expected_result</span><span class="p">)</span>
+
+<span class="n">sf_tests</span> <span class="o">=</span> <span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;./demo/simple_objects&#39;</span><span class="p">,</span> <span class="n">ExecOpTest</span><span class="p">)</span>
+</pre></div>
+
+
+<p>The above code has a contract associated to <code>allowed_op</code> that checks that it must be in <code>{'+','*'}</code>. When <code>'-'</code> is found in a test file, it fails:</p>
+<div class="codehilite"><pre><span></span>ParsingException : Error <span class="k">while</span> parsing ./demo/simple_objects<span class="se">\t</span>est_diff_1 <span class="o">(</span>singlefile, .cfg<span class="o">)</span> as a ExecOpTest with parser <span class="s1">&#39;$&lt;read_config&gt; =&gt; &lt;merge_all_config_sections_into_a_single_dict&gt; -&gt; &lt;dict_to_object&gt;$&#39;</span> using <span class="nv">options</span><span class="o">=({</span><span class="s1">&#39;MultifileCollectionParser&#39;</span>: <span class="o">{</span><span class="s1">&#39;lazy_parsing&#39;</span>: False<span class="o">}})</span> : caught 
+ObjectInstantiationException : Error <span class="k">while</span> building object of <span class="nb">type</span> &lt;ExecOpTest&gt; using its constructor and parsed contents : <span class="o">{</span><span class="s1">&#39;y&#39;</span>: <span class="m">1</span>.0, <span class="s1">&#39;x&#39;</span>: <span class="m">1</span>.0, <span class="s1">&#39;expected_result&#39;</span>: <span class="m">0</span>.0, <span class="s1">&#39;op&#39;</span>: <span class="s1">&#39;-&#39;</span><span class="o">}</span> : 
+&lt;class <span class="s1">&#39;contracts.interface.ContractNotRespected&#39;</span>&gt; Breach <span class="k">for</span> argument <span class="s1">&#39;op&#39;</span> to ExecOpTest:generated_setter_fun<span class="o">()</span>.
+Value does not pass criteria of &lt;lambda&gt;<span class="o">()()</span> <span class="o">(</span>module: test_parsyfiles<span class="o">)</span>.
+checking: callable<span class="o">()</span>       <span class="k">for</span> value: Instance of &lt;class <span class="s1">&#39;str&#39;</span>&gt;: <span class="s1">&#39;-&#39;</span>   
+checking: allowed_op       <span class="k">for</span> value: Instance of &lt;class <span class="s1">&#39;str&#39;</span>&gt;: <span class="s1">&#39;-&#39;</span>   
+checking: str,allowed_op   <span class="k">for</span> value: Instance of &lt;class <span class="s1">&#39;str&#39;</span>&gt;: <span class="s1">&#39;-&#39;</span>   
+</pre></div>
+
+
+<h4 id="attrs-example">attrs example<a class="headerlink" href="#attrs-example" title="Permanent link">&para;</a></h4>
+<p>In order for parsyfiles to find the required type for each attribute declared using <code>attrs</code>, you will have to use <code>attr.validators.instance_of</code>. However, since you may wish to also implement some custom validation logic, we provide (until it is offically added in <code>attrs</code>) a chaining operator. The code below shows how to create a similar example than the previous one:</p>
+<div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">attr</span>
+<span class="kn">from</span> <span class="nn">attr.validators</span> <span class="kn">import</span> <span class="n">instance_of</span>
+<span class="kn">from</span> <span class="nn">parsyfiles.plugins_optional.support_for_attrs</span> <span class="kn">import</span> <span class="n">chain</span>
+
+<span class="c1"># custom contract used in the class</span>
+<span class="k">def</span> <span class="nf">validate_op</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">attribute</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="n">allowed</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;+&#39;</span><span class="p">,</span><span class="s1">&#39;*&#39;</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">allowed</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1">op</span><span class="se">\&#39;</span><span class="s1"> has to be a string, in &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">allowed</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;!&#39;</span><span class="p">)</span>
+
+<span class="nd">@attr.s</span>
+<span class="k">class</span> <span class="nc">ExecOpTest</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">convert</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">validator</span><span class="o">=</span><span class="n">instance_of</span><span class="p">(</span><span class="nb">float</span><span class="p">))</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">convert</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">validator</span><span class="o">=</span><span class="n">instance_of</span><span class="p">(</span><span class="nb">float</span><span class="p">))</span>
+    <span class="c1"># we use the &#39;chain&#39; validator here to keep using instance_of</span>
+    <span class="n">op</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">convert</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">validator</span><span class="o">=</span><span class="n">chain</span><span class="p">(</span><span class="n">instance_of</span><span class="p">(</span><span class="nb">str</span><span class="p">),</span> <span class="n">validate_op</span><span class="p">))</span>
+    <span class="n">expected_result</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">ib</span><span class="p">(</span><span class="n">convert</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">validator</span><span class="o">=</span><span class="n">instance_of</span><span class="p">(</span><span class="nb">float</span><span class="p">))</span>
+
+<span class="c1"># with self.assertRaises(ParsingException):</span>
+<span class="n">sf_tests</span> <span class="o">=</span> <span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;./test_data/demo/simple_objects&#39;</span><span class="p">,</span> <span class="n">ExecOpTest</span><span class="p">)</span>
+</pre></div>
+
+
+<p>When <code>'-'</code> is found in a test file, it also fails with a nice error message:</p>
+<div class="codehilite"><pre><span></span>ParsingException : Error <span class="k">while</span> parsing ./test_data/demo/simple_objects<span class="se">\t</span>est_diff_1 <span class="o">(</span>singlefile, .cfg<span class="o">)</span> as a ExecOpTest with parser <span class="s1">&#39;$&lt;read_config&gt; =&gt; &lt;merge_all_config_sections_into_a_single_dict&gt; -&gt; &lt;dict_to_object&gt;$&#39;</span> using <span class="nv">options</span><span class="o">=({</span><span class="s1">&#39;MultifileCollectionParser&#39;</span>: <span class="o">{</span><span class="s1">&#39;lazy_parsing&#39;</span>: False<span class="o">}})</span> : caught 
+ObjectInstantiationException : Error <span class="k">while</span> building object of <span class="nb">type</span> &lt;ExecOpTest&gt; using its constructor and parsed contents : <span class="o">{</span><span class="s1">&#39;y&#39;</span>: <span class="m">1</span>.0, <span class="s1">&#39;x&#39;</span>: <span class="m">1</span>.0, <span class="s1">&#39;expected_result&#39;</span>: <span class="m">0</span>.0, <span class="s1">&#39;op&#39;</span>: <span class="s1">&#39;-&#39;</span><span class="o">}</span> : 
+&lt;class <span class="s1">&#39;ValueError&#39;</span>&gt; <span class="s1">&#39;op&#39;</span> has to be a string, in <span class="o">{</span><span class="s1">&#39;*&#39;</span>, <span class="s1">&#39;+&#39;</span><span class="o">}</span>!
+</pre></div>
+
+
+<p>Note: unfortunately, as of today (version 16.3), <code>attrs</code> does not validate attribute contents when fields are later modified on the object directly. A pull request is ongoing.</p>
+<h3 id="e-file-mappings-wrappedflat-and-encoding">(e) File mappings: Wrapped/Flat and encoding<a class="headerlink" href="#e-file-mappings-wrappedflat-and-encoding" title="Permanent link">&para;</a></h3>
+<p>In <a href="#3--multifile-objects-combining-several-parsers">3- Multifile objects: combining several parsers</a> we used folders to encapsulate objects. In previous examples we also used the root folder to encapsulate the main item collection. This default setting is known as 'Wrapped' mode and correspond behind the scenes to a <code>WrappedFileMappingConfiguration</code> being used, with default python encoding. </p>
+<p>Alternatively you may wish to use flat mode. In this case the folder structure should be flat, as shown below. Item names and field names are separated by a configurable character string. For example to parse the same example as in <a href="#3--multifile-objects-combining-several-parsers">3- Multifile objects: combining several parsers</a> but with the following flat tree structure:</p>
+<div class="codehilite"><pre><span></span>.
+├── case1--expected_results.txt
+├── case1--x.csv
+├── case1--y.txt
+├── case2--expected_results.txt
+├── case2--x.csv
+└── case2--y.txt
+</pre></div>
+
+
+<p>you'll need to call</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">FlatFileMappingConfiguration</span>
+<span class="n">dfs</span> <span class="o">=</span> <span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;./demo/complex_objects_flat&#39;</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">file_mapping_conf</span><span class="o">=</span><span class="n">FlatFileMappingConfiguration</span><span class="p">())</span>
+</pre></div>
+
+
+<p>Note that <code>FlatFileMappingConfiguration</code> may be configured to use another separator sequence than <code>'--'</code> by passing it to the constructor: e.g. <code>FlatFileMappingConfiguration(separator='_')</code>. A dot <code>'.'</code> may be safely used as a separator too.</p>
+<p>Finally you may change the file encoding used by both file mapping configurations : <code>WrappedFileMappingConfiguration(encoding='utf-16')</code> <code>FlatFileMappingConfiguration(encoding='utf-16')</code>.</p>
+<h3 id="f-recursivity-multifile-children-of-multifile-objects">(f) Recursivity: Multifile children of Multifile objects<a class="headerlink" href="#f-recursivity-multifile-children-of-multifile-objects" title="Permanent link">&para;</a></h3>
+<p>As said earlier in this tutorial, parsyfiles is able to parse multifile recursively, for example multifile collections of multifile objects, multifile objects containing attributes, etc.</p>
+<h4 id="example-recursivity-in-flat-mode">Example recursivity in flat mode<a class="headerlink" href="#example-recursivity-in-flat-mode" title="Permanent link">&para;</a></h4>
+<div class="codehilite"><pre><span></span>./custom_old_demo_flat_coll
+├── case1--input_a.txt
+├── case1--input_b.txt
+├── case1--output.txt
+├── case2--input_a.txt
+├── case2--input_b.txt
+├── case2--options.txt
+├── case2--output.txt
+├── case3--input_a.txt
+├── case3--input_b.txt
+├── case3--input_c--keyA--item1.txt
+├── case3--input_c--keyA--item2.txt
+├── case3--input_c--keyB--item1.txt
+├── case3--options.cfg
+└── case3--output.txt
+</pre></div>
+
+
+<h4 id="example-recursivity-in-wrapped-mode">Example recursivity in wrapped mode<a class="headerlink" href="#example-recursivity-in-wrapped-mode" title="Permanent link">&para;</a></h4>
+<div class="codehilite"><pre><span></span>./custom_old_demo_coll
+├── case1
+│   ├── input_a.txt
+│   ├── input_b.txt
+│   └── output.txt
+├── case2
+│   ├── input_a.txt
+│   ├── input_b.txt
+│   ├── options.txt
+│   └── output.txt
+└── case3
+    ├── input_a.txt
+    ├── input_b.txt
+    ├── input_c
+    │   ├── keyA
+    │   │   ├── item1.txt
+    │   │   └── item2.txt
+    │   └── keyB
+    │       └── item1.txt
+    ├── options.cfg
+    └── output.txt
+</pre></div>
+
+
+<h3 id="g-diversity-of-formats-supported-dataframes-revisited">(g) Diversity of formats supported: DataFrames - revisited<a class="headerlink" href="#g-diversity-of-formats-supported-dataframes-revisited" title="Permanent link">&para;</a></h3>
+<p>Now that we've seen that parsyfiles is able to combine parsers and converters, we can try to parse <code>DataFrame</code> objects from many more sources:</p>
+<div class="codehilite"><pre><span></span>./demo/simple_collection_dataframe_inference
+├── a.csv
+├── b.txt
+├── c.xls
+├── d.xlsx
+├── s_b64_pickle.txt
+├── t_pickle.pyc
+├── u.json
+├── v_properties.txt
+├── w.properties
+├── x.yaml
+├── y.cfg
+└── z.ini
+</pre></div>
+
+
+<p><em>Note: once again you may find this example data folder in the <a href="https://github.com/smarie/python-simple-file-collection-parsing-framework/tree/master/parsyfiles/test_data">project sources</a></em></p>
+<p>The code is the same:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+<span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">parse_collection</span>
+<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+
+<span class="n">dfs</span> <span class="o">=</span> <span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;./demo/simple_collection_dataframe_inference&#39;</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">)</span>
+<span class="n">pprint</span><span class="p">(</span><span class="n">dfs</span><span class="p">)</span>
+</pre></div>
+
+
+<p>And here is the result</p>
+<div class="codehilite"><pre><span></span>TODO
+</pre></div>
+                
+                  
+                
+              
+              
+                
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid">
+        
+          <a href=".." title="Home" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-flex__cell md-flex__cell--shrink">
+              <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
+            </div>
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+              <span class="md-flex__ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Home
+              </span>
+            </div>
+          </a>
+        
+        
+          <a href="../known_formats_reference/" title="Known Formats Reference" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+              <span class="md-flex__ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Known Formats Reference
+              </span>
+            </div>
+            <div class="md-flex__cell md-flex__cell--shrink">
+              <i class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        powered by
+        <a href="http://www.mkdocs.org" title="MkDocs">MkDocs</a>
+        and
+        <a href="http://squidfunk.github.io/mkdocs-material/" title="Material for MkDocs">
+          Material for MkDocs</a>
+      </div>
+      
+        
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../assets/javascripts/application-1d6ee6ee6c.js"></script>
+      
+      
+      <script>app.initialize({url:{base:".."}})</script>
+      
+    
+    
+      
+    
+  </body>
+</html>

@@ -1,0 +1,547 @@
+
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <meta http-equiv="x-ua-compatible" content="ie=edge">
+      
+        <meta name="description" content="A short description of my project">
+      
+      
+      
+      
+        <link rel="shortcut icon" href="./assets/images/favicon.png">
+      
+      <meta name="generator" content="mkdocs-0.16.3, mkdocs-material-1.8.0">
+    
+    
+      
+        <title>python-parsyfiles</title>
+      
+    
+    
+      <script src="./assets/javascripts/modernizr-1df76c4e58.js"></script>
+    
+    
+      <link rel="stylesheet" href="./assets/stylesheets/application-bfecc7305d.css">
+      
+    
+    
+      
+        
+        
+        
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Roboto+Mono">
+        <style>body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}</style>
+      
+      <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    
+    
+    
+  </head>
+  
+  
+  
+  
+    <body>
+  
+    <svg class="md-svg">
+      <defs>
+        
+        
+          <svg xmlns="http://www.w3.org/2000/svg" width="416" height="448" viewBox="0 0 416 448" id="github"><path fill="currentColor" d="M160 304q0 10-3.125 20.5t-10.75 19T128 352t-18.125-8.5-10.75-19T96 304t3.125-20.5 10.75-19T128 256t18.125 8.5 10.75 19T160 304zm160 0q0 10-3.125 20.5t-10.75 19T288 352t-18.125-8.5-10.75-19T256 304t3.125-20.5 10.75-19T288 256t18.125 8.5 10.75 19T320 304zm40 0q0-30-17.25-51T296 232q-10.25 0-48.75 5.25Q229.5 240 208 240t-39.25-2.75Q130.75 232 120 232q-29.5 0-46.75 21T56 304q0 22 8 38.375t20.25 25.75 30.5 15 35 7.375 37.25 1.75h42q20.5 0 37.25-1.75t35-7.375 30.5-15 20.25-25.75T360 304zm56-44q0 51.75-15.25 82.75-9.5 19.25-26.375 33.25t-35.25 21.5-42.5 11.875-42.875 5.5T212 416q-19.5 0-35.5-.75t-36.875-3.125-38.125-7.5-34.25-12.875T37 371.5t-21.5-28.75Q0 312 0 260q0-59.25 34-99-6.75-20.5-6.75-42.5 0-29 12.75-54.5 27 0 47.5 9.875t47.25 30.875Q171.5 96 212 96q37 0 70 8 26.25-20.5 46.75-30.25T376 64q12.75 25.5 12.75 54.5 0 21.75-6.75 42 34 40 34 99.5z"/></svg>
+        
+      </defs>
+    </svg>
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="drawer">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search">
+    <label class="md-overlay" data-md-component="overlay" for="drawer"></label>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid">
+    <div class="md-flex">
+      <div class="md-flex__cell md-flex__cell--shrink">
+        
+          <a href="." title="python-parsyfiles" class="md-icon md-icon--home md-header-nav__button">
+          </a>
+        
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <label class="md-icon md-icon--menu md-header-nav__button" for="drawer"></label>
+      </div>
+      <div class="md-flex__cell md-flex__cell--stretch">
+        <span class="md-flex__ellipsis md-header-nav__title">
+          
+            
+              
+            
+            Home
+          
+        </span>
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        
+          <label class="md-icon md-icon--search md-header-nav__button" for="search"></label>
+          
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="search"></label>
+  <div class="md-search__inner">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" required placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="query">
+      <label class="md-icon md-search__icon" for="search"></label>
+      <button type="reset" class="md-icon md-search__icon" data-md-component="reset">close</button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="result" data-md-lang-search="" data-md-lang-tokenizer="[\s\-]+">
+          <div class="md-search-result__meta" data-md-lang-result-none="No matching documents" data-md-lang-result-one="1 matching document" data-md-lang-result-other="# matching documents">
+            Type to start searching
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+        
+      </div>
+      
+        <div class="md-flex__cell md-flex__cell--shrink">
+          <div class="md-header-nav__source">
+            
+
+
+  
+
+
+  <a href="https://github.com/smarie/python-parsyfiles" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      GitHub
+    </div>
+  </a>
+
+          </div>
+        </div>
+      
+    </div>
+  </nav>
+</header>
+    
+    <div class="md-container">
+      
+      
+      <main class="md-main">
+        <div class="md-main__inner md-grid" data-md-component="container">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" data-md-level="0">
+  <label class="md-nav__title md-nav__title--site" for="drawer">
+    
+      <i class="md-icon md-icon--home md-nav__button"></i>
+    
+    python-parsyfiles
+  </label>
+  
+    <div class="md-nav__source">
+      
+
+
+  
+
+
+  <a href="https://github.com/smarie/python-parsyfiles" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      GitHub
+    </div>
+  </a>
+
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="toc">
+        Home
+      </label>
+    
+    <a href="." title="Home" class="md-nav__link md-nav__link--active">
+      Home
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#main-use-cases" title="Main use cases" class="md-nav__link">
+    Main use cases
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-parse-dictionaries-and-simple-objects-from-various-formats" title="1 - Parse dictionaries and simple objects from various formats" class="md-nav__link">
+    1 - Parse dictionaries and simple objects from various formats
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-parse-objects-from-multiple-files-collections-and-complex-objects" title="2 - Parse objects from multiple files: collections and complex objects" class="md-nav__link">
+    2 - Parse objects from multiple files: collections and complex objects
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-parse-test-cases" title="3 - Parse test cases" class="md-nav__link">
+    3 - Parse test cases
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#main-features" title="Main features" class="md-nav__link">
+    Main features
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" title="See Also" class="md-nav__link">
+    See Also
+  </a>
+  
+</li>
+      
+      
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="usage/" title="Usage" class="md-nav__link">
+      Usage
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="known_formats_reference/" title="Known Formats Reference" class="md-nav__link">
+      Known Formats Reference
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#main-use-cases" title="Main use cases" class="md-nav__link">
+    Main use cases
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-parse-dictionaries-and-simple-objects-from-various-formats" title="1 - Parse dictionaries and simple objects from various formats" class="md-nav__link">
+    1 - Parse dictionaries and simple objects from various formats
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-parse-objects-from-multiple-files-collections-and-complex-objects" title="2 - Parse objects from multiple files: collections and complex objects" class="md-nav__link">
+    2 - Parse objects from multiple files: collections and complex objects
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-parse-test-cases" title="3 - Parse test cases" class="md-nav__link">
+    3 - Parse test cases
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#main-features" title="Main features" class="md-nav__link">
+    Main features
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" title="See Also" class="md-nav__link">
+    See Also
+  </a>
+  
+</li>
+      
+      
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/smarie/python-parsyfiles/edit/master/docs/index.md" title="Edit this page" class="md-icon md-content__icon">edit</a>
+                
+                
+                <h1 id="python-simple-file-collection-parsing-framework-parsyfiles">python simple file collection parsing framework (parsyfiles)<a class="headerlink" href="#python-simple-file-collection-parsing-framework-parsyfiles" title="Permanent link">&para;</a></h1>
+<p><em>Read files as objects, even if several parsers and converters are needed.</em></p>
+<p><a href="https://travis-ci.org/smarie/python-parsyfiles"><img alt="Build Status" src="https://travis-ci.org/smarie/python-parsyfiles.svg?branch=master" /></a> <a href="https://smarie.github.io/python-parsyfiles/junit/report.html"><img alt="Tests Status" src="https://smarie.github.io/python-parsyfiles/junit/junit-badge.svg?dummy=8484744" /></a> <a href="https://codecov.io/gh/smarie/python-parsyfiles"><img alt="codecov" src="https://codecov.io/gh/smarie/python-parsyfiles/branch/master/graph/badge.svg" /></a> <a href="https://smarie.github.io/python-parsyfiles/"><img alt="Documentation" src="https://img.shields.io/badge/docs-latest-blue.svg" /></a> <a href="https://pypi.python.org/pypi/parsyfiles/"><img alt="PyPI" src="https://img.shields.io/badge/PyPI-parsyfiles-blue.svg" /></a></p>
+<p><code>parsyfiles</code> is a declarative framework able to combine many popular python parsers (<code>json</code>, <code>jprops</code>, <code>yaml</code>, <code>pickle</code>, <code>pandas</code>...) with  user-defined ones, in order to easily read objects from files. It is able to read an object even if the object's content comes from several files requiring several parsers. This is typically useful to read test data where you want to combine datasets, parameters, expected results and more. </p>
+<p>It is extremely easy to add a parser in <code>parsyfiles</code> if your favourite parser is missing. Even better: if you just need to parse a derived type of a type that can already be parsed, you may simply need to register a type <code>Converter</code>, the framework will automatically link it to all compliant parsers for you. </p>
+<h2 id="main-use-cases">Main use cases<a class="headerlink" href="#main-use-cases" title="Permanent link">&para;</a></h2>
+<h3 id="1-parse-dictionaries-and-simple-objects-from-various-formats">1 - Parse dictionaries and simple objects from various formats<a class="headerlink" href="#1-parse-dictionaries-and-simple-objects-from-various-formats" title="Permanent link">&para;</a></h3>
+<p>The following files</p>
+<div class="codehilite"><pre><span></span>.json             .properties       .cfg         .csv         .yaml
+---------------   ---------------   ----------   ----------   ----------
+<span class="o">{</span>                                   <span class="o">[</span>main<span class="o">]</span>                    
+  <span class="s2">&quot;age&quot;</span>: <span class="m">1</span>         <span class="nv">age</span><span class="o">=</span><span class="m">1</span>            <span class="nv">age</span><span class="o">=</span><span class="m">1</span>        age, name    age: <span class="m">1</span>
+  <span class="s2">&quot;name&quot;</span>: <span class="s2">&quot;foo&quot;</span>    <span class="nv">name</span><span class="o">=</span>foo         <span class="nv">name</span><span class="o">=</span>foo     <span class="m">1</span>, foo       name: foo
+<span class="o">}</span>                                                             
+</pre></div>
+
+
+<p>may all be parsed into a <code>dict</code> using </p>
+<div class="codehilite"><pre><span></span><span class="n">dct</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;&lt;file_path_without_ext&gt;&#39;</span><span class="p">,</span> <span class="n">Dict</span><span class="p">)</span>
+</pre></div>
+
+
+<p>and into a <code>MySimpleObject</code> with constructor <code>__init__(age: int, name: str)</code> using</p>
+<div class="codehilite"><pre><span></span><span class="n">smpl</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;&lt;file_path_without_ext&gt;&#39;</span><span class="p">,</span> <span class="n">MySimpleObject</span><span class="p">)</span>
+</pre></div>
+
+
+<h3 id="2-parse-objects-from-multiple-files-collections-and-complex-objects">2 - Parse objects from multiple files: collections and complex objects<a class="headerlink" href="#2-parse-objects-from-multiple-files-collections-and-complex-objects" title="Permanent link">&para;</a></h3>
+<p>If you already know how to parse the various files you need one by one, you might still wish to define higher-lever container objects made of several files/folders and potentially requiring to combine several parsers. For example objects made of several <code>DataFrame</code> each stored in a <code>.csv</code> (timeseries + descriptive data), combinations of csv and xml/json files, configuration files, pickle files, etc.</p>
+<p>Here is how you parse a collection of simple files into a dictionary of <code>MySimpleObject</code>:</p>
+<div class="codehilite"><pre><span></span><span class="n">dct</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;&lt;folder_path&gt;&#39;</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MySimpleObject</span><span class="p">])</span>
+</pre></div>
+
+
+<p>And here is how you parse a <code>MyComplexObject</code> with constructor <code>__init__(foo: Dict, bar: MySimpleObject)</code> from a folder containing <code>foo.json</code> and <code>bar.properties</code>:</p>
+<div class="codehilite"><pre><span></span><span class="n">cplx</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;&lt;folder_path&gt;&#39;</span><span class="p">,</span> <span class="n">MyComplexObject</span><span class="p">)</span>
+</pre></div>
+
+
+<h3 id="3-parse-test-cases">3 - Parse test cases<a class="headerlink" href="#3-parse-test-cases" title="Permanent link">&para;</a></h3>
+<p>A typical use case for this library is to define your test cases as objects. These objects will typically contain fields such as test inputs and test expected outcomes. Here is an example with <code>py.test</code>:</p>
+<div class="codehilite"><pre><span></span><span class="c1"># The function that we want to test</span>
+<span class="k">def</span> <span class="nf">exec_op</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">eval</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="n">op</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+
+<span class="c1"># Define what is a test case for exec_op</span>
+<span class="k">class</span> <span class="nc">ExecOpTest</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">expected_result</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">=</span> <span class="n">op</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expected_result</span> <span class="o">=</span> <span class="n">expected_result</span>
+
+<span class="c1"># Parse the collection of tests, in lazy mode (parsing will happen at get)</span>
+<span class="n">cases</span> <span class="o">=</span> <span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;&lt;folder_path&gt;&#39;</span><span class="p">,</span> <span class="n">ExecOpTest</span><span class="p">,</span> 
+                         <span class="n">lazy_mfcollection_parsing</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="c1"># Execute the test in py.test</span>
+<span class="nd">@pytest.mark.parametrize</span><span class="p">(</span><span class="s2">&quot;case_name&quot;</span><span class="p">,</span> <span class="n">cases</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+<span class="k">def</span> <span class="nf">test_simple_objects</span><span class="p">(</span><span class="n">case_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="c1"># lazy-load case data (so that one parsing error doesn&#39;t make all tests fail)</span>
+    <span class="n">case</span> <span class="o">=</span> <span class="n">cases</span><span class="p">[</span><span class="n">case_name</span><span class="p">]</span>
+    <span class="c1"># test that exec_op works on that case</span>
+    <span class="k">assert</span> <span class="n">exec_op</span><span class="p">(</span><span class="n">case</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">case</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">case</span><span class="o">.</span><span class="n">op</span><span class="p">)</span> <span class="o">==</span> <span class="n">case</span><span class="o">.</span><span class="n">expected_result</span>
+</pre></div>
+
+
+<h2 id="main-features">Main features<a class="headerlink" href="#main-features" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Declarative (class-based)</strong>: you <em>first</em> define the objects to parse - by creating or importing their class -, <em>then</em> you use <code>parse_item</code> or <code>parse_collection</code> on the appropriate folder or file path. </li>
+<li><strong>Simple objects out-of-the-box</strong>: if you're interested in parsing singlefile objects only requiring simple types in their constructor, then the framework is <em>already</em> able to parse them, for many singlefile formats (json, properties, txt, csv, yaml and more.).</li>
+<li><strong>Multifile collections out-of-the-box</strong>: the framework is able to parse collections of objects, each represented by a file. Parsing may optionally be done in a lazy fashion (each item is only read if needed).</li>
+<li><strong>Serialization</strong>: pickle files (.pyc) are supported too. Base64-encoded pickle objects can also be included in any simple file content.</li>
+<li><strong>Multiparser</strong>: the library will use the best parser adapted to each file format and desired type. At the time of writing the library:<ul>
+<li>knows <strong>44</strong> ways to parse a file</li>
+<li>is able to parse <strong>15</strong> object types (including <em>'AnyObject'</em> for generic parsers). See <a href="./known_formats_reference/">Known Formats Reference</a> section.</li>
+<li>from <strong>13</strong> file extensions</li>
+</ul>
+</li>
+<li><strong>Multifile+Multiparser objects</strong>: You may therefore parse complex objects requiring a combination of several parsers to be built from several files. The framework will introspect the object constructor in order to know the list of required attributes to parse as well as their their type, and if they are mandatory or optional.</li>
+<li><strong>Recursive</strong>: attributes may themselves be collections or complex types.</li>
+<li>Supports <strong>two main file mapping flavours for Multifile objects</strong>: the library comes with two ways to organize multifile objects such as collections: <em>wrapped</em> (each multifile object is a folder), or <em>flat</em> (all files are in the same folder, files belonging to the same multifile object have the same prefix)</li>
+</ul>
+<p>In addition the library is</p>
+<ul>
+<li><strong>Extensible</strong>. You may register any number of additional file parsers, or type converters, or both. When registering a parser you just have to declare the object types that it can parse, <em>and</em> the file extensions it can read. The same goes for converters: you declare the object type it can read, and the object type it can convert to. </li>
+<li><strong>Intelligent</strong> Since several parsers may be registered for the same file extension, and more generally several parsing chains (parser + converters) may be eligible to a given task, the library has a built-in set of rules to select the relevant parsing chains and test them in most plausible order. This provides you with several ways to parse the same object. This might be useful for example if some of your data comes from nominal tests, some other from field tests, some other from web service calls, etc. You don't need anymore to convert all of these to the same format before using it.</li>
+<li><strong>No annotations required</strong>: as opposed to some data binding frameworks, this library is meant to parse object types that may already exist, and potentially only for tests. Therefore the framework does not require annotations on the type if there is there is a registered way to parse it. However if you wish to build higher-level objects encapsulating the result of several parsers, then PEP484 type hints are required. But that's probably less a problem since these objects are yours (they are part of your tests for example) </li>
+</ul>
+<p><em>Note on the Intelligence/Speed tradeoff:</em>
+This framework contains a bit of nontrivial logic in order to transparently infer which parser and conversion chain to use, and even in some cases to try several alternatives in order to guess what was your intent. This makes it quite powerful but will certainly be slower and more memory-consuming than writing a dedicated parser tailored for your specific case. However if you are looking for a tool to speedup your development so that you may focus on what's important (your business logic, algorithm implementation, test logic, etc) then have a try, it might do the job.</p>
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li>
+<p>Check <a href="https://github.com/webmaven/python-parsing-tools">here</a> for other parsers in Python, that you might wish to register as unitary parsers to perform specific file format parsing (binary, json, custom...) for some of your objects.</p>
+</li>
+<li>
+<p>Do you like this library ? You might also like <a href="https://github.com/smarie?utf8=%E2%9C%93&amp;tab=repositories&amp;q=&amp;type=&amp;language=python">these</a> </p>
+</li>
+<li>
+<p>This <a href="https://cattrs.readthedocs.io/en/latest/readme.html">cattrs</a> project seems to have related interests, to check. </p>
+</li>
+</ul>
+                
+                  
+                
+              
+              
+                
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid">
+        
+        
+          <a href="usage/" title="Usage" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+              <span class="md-flex__ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Usage
+              </span>
+            </div>
+            <div class="md-flex__cell md-flex__cell--shrink">
+              <i class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        powered by
+        <a href="http://www.mkdocs.org" title="MkDocs">MkDocs</a>
+        and
+        <a href="http://squidfunk.github.io/mkdocs-material/" title="Material for MkDocs">
+          Material for MkDocs</a>
+      </div>
+      
+        
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="./assets/javascripts/application-1d6ee6ee6c.js"></script>
+      
+      
+      <script>app.initialize({url:{base:"."}})</script>
+      
+    
+    
+      
+    
+  </body>
+</html>
