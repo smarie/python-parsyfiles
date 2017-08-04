@@ -152,13 +152,13 @@ class DemoTests(TestCase):
         :return:
         """
         from pandas import DataFrame
-        dfl = parse_item(fix_path('./test_data/demo/simple_collection'), List[DataFrame], logger=getLogger())
+        dfl = parse_item(fix_path('./test_data/demo/simple_collection'), List[DataFrame])
         pprint(dfl)
         # dataframe objects are not mutable > can't be hashed and therefore no set can be built
         #dfs = parse_item('./test_data/demo/simple_collection', Set[DataFrame], logger=getLogger())
         #pprint(dfs)
-        dft = parse_item(fix_path('./test_data/demo/simple_collection'), Tuple[DataFrame, DataFrame, DataFrame, DataFrame, DataFrame],
-                         logger=getLogger())
+        dft = parse_item(fix_path('./test_data/demo/simple_collection'),
+                         Tuple[DataFrame, DataFrame, DataFrame, DataFrame, DataFrame])
         pprint(dft)
 
     def test_simple_collection_nologs(self):
@@ -186,27 +186,38 @@ class DemoTests(TestCase):
         :return:
         """
         from pandas import DataFrame
-        dfs = parse_collection(fix_path('./test_data/demo/simple_collection'), DataFrame, lazy_mfcollection_parsing=True)
+        dfs = parse_collection(fix_path('./test_data/demo/simple_collection'), DataFrame,
+                               lazy_mfcollection_parsing=True)
+
         # check len
-        self.assertEquals(len(dfs), 5)
+        assert len(dfs) == 5
         print('dfs length : ' + str(len(dfs)))
+
         # check keys
-        self.assertEquals(dfs.keys(), {'a','b','c','d','e'})
+        assert dfs.keys() == {'a','b','c','d','e'}
+        # assert that they are sorted
+        assert list(dfs.keys()) == list(sorted(dfs.keys()))
         print('dfs keys : ' + str(dfs.keys()))
+
         # check contains
         self.assertTrue('b' in dfs)
         print('Is b in dfs : ' + str('b' in dfs))
+
         # check iter
         self.assertEquals({key for key in dfs}, {'a', 'b', 'c', 'd', 'e'})
+
         # check get
         self.assertIsNotNone(dfs.get('b'))
         pprint(dfs.get('b'))
+
         # check values
         for value in dfs.values():
             print(value)
+
         # check items
         for key, value in dfs.items():
             print(value)
+
         # finally print
         pprint(dfs)
 
@@ -244,7 +255,13 @@ class DemoTests(TestCase):
         # e = parse_item('./test_data/objects/test_diff_1', ExecOpTest)
         # pprint(e)
 
-        # parse all of them
+        # parse all of them as dicts
+        sf_tests_dct = parse_collection(fix_path('./test_data/demo/simple_objects'), Dict)
+
+        # assert that they are sorted
+        assert list(sf_tests_dct.keys()) == list(sorted(sf_tests_dct.keys()))
+
+        # parse all of them as objects
         sf_tests = parse_collection(fix_path('./test_data/demo/simple_objects'), ExecOpTest)
         pprint(sf_tests)
 
@@ -257,7 +274,7 @@ class DemoTests(TestCase):
         :return:
         """
 
-        from classtools_autocode import autoprops, autoargs
+        from autoclass import autoprops, autoargs
         from contracts import contract, new_contract
 
         # custom contract used in the class
