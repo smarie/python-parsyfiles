@@ -14,7 +14,7 @@ INSTALL_REQUIRES = []
 DEPENDENCY_LINKS = []
 SETUP_REQUIRES = ['pytest-runner', 'setuptools_scm', 'pypandoc', 'pandoc', 'docutils']
 TESTS_REQUIRE = ['pytest', 'pytest-logging', 'pytest-cov', 'numpy', 'pandas', 'jprops', 'pyyaml', 'xlrd', 'autoclass',
-                 'pycontracts']
+                 'pycontracts', 'attr', 'enforce']
 EXTRAS_REQUIRE = {'xls_parser': ['xlrd'],
                   'numpy_parser': ['numpy'],
                   'pandas_parser': ['numpy', 'pandas'],

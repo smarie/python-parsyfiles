@@ -6,5 +6,7 @@ pyyaml
 xlrd
 autoclass
 pycontracts
+attr
+enforce
 pytest
 pytest-logging
