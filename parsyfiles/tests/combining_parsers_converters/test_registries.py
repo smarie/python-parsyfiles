@@ -214,18 +214,18 @@ class TestParserRegistry(TestCase):
         parsers_generic_bothfile = [any_parser_bothfile]
 
         self.all_parsers_generic = self.all_parsers_generic.union(set(parsers_generic_singlefile)) \
-                                                            .union(set(parsers_generic_multifile)) \
-                                                            .union(set(parsers_generic_bothfile))
+                                                           .union(set(parsers_generic_multifile)) \
+                                                           .union(set(parsers_generic_bothfile))
 
         self.all_parsers_lists = [parsers_specific_singlefile_onetype,
-                             parsers_specific_singlefile_severaltypes,
-                             parsers_specific_multifile_onetype,
-                             parsers_specific_multifile_severaltypes,
-                             parsers_specific_bothfile_onetype,
-                             parsers_specific_bothfile_severaltypes,
-                             parsers_generic_singlefile,
-                             parsers_generic_multifile,
-                             parsers_generic_bothfile]
+                                  parsers_specific_singlefile_severaltypes,
+                                  parsers_specific_multifile_onetype,
+                                  parsers_specific_multifile_severaltypes,
+                                  parsers_specific_bothfile_onetype,
+                                  parsers_specific_bothfile_severaltypes,
+                                  parsers_generic_singlefile,
+                                  parsers_generic_multifile,
+                                  parsers_generic_bothfile]
 
         self.all_parsers = {A: self.all_parsers_for_a,
                             B: self.all_parsers_for_b,
@@ -283,9 +283,13 @@ class TestParserRegistry(TestCase):
                     matching, no_type_match_but_ext_match, no_ext_match_but_type_match, no_match \
                         = r.find_all_matching_parsers(strict, desired_type=typ, required_ext=ext)
                     matching_parsers = matching[0] + matching[1] + matching[2]
-                    tst = capabilities_by_ext[ext][typ]['1_exact_match'] \
-                          + capabilities_by_ext[ext][typ]['2_approx_match']\
-                          + capabilities_by_ext[ext][typ]['3_generic']
+                    tst = []
+                    if '1_exact_match' in capabilities_by_ext[ext][typ].keys():
+                        tst = tst + capabilities_by_ext[ext][typ]['1_exact_match']
+                    if '2_approx_match' in capabilities_by_ext[ext][typ].keys():
+                        tst = tst + capabilities_by_ext[ext][typ]['2_approx_match']
+                    if '3_generic' in capabilities_by_ext[ext][typ].keys():
+                        tst = tst + capabilities_by_ext[ext][typ]['3_generic']
                     self.assertEquals(tst, list(reversed(matching_parsers)))
 
     def test_d_correct_parsers_in_order_strict(self):
