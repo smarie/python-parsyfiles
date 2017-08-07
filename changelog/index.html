@@ -1,0 +1,545 @@
+
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <meta http-equiv="x-ua-compatible" content="ie=edge">
+      
+        <meta name="description" content="A short description of my project">
+      
+      
+      
+      
+        <link rel="shortcut icon" href="../assets/images/favicon.png">
+      
+      <meta name="generator" content="mkdocs-0.16.3, mkdocs-material-1.8.0">
+    
+    
+      
+        <title>Changelog - python-parsyfiles</title>
+      
+    
+    
+      <script src="../assets/javascripts/modernizr-1df76c4e58.js"></script>
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/application-bfecc7305d.css">
+      
+    
+    
+      
+        
+        
+        
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Roboto+Mono">
+        <style>body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}</style>
+      
+      <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    
+    
+    
+  </head>
+  
+  
+  
+  
+    <body>
+  
+    <svg class="md-svg">
+      <defs>
+        
+        
+          <svg xmlns="http://www.w3.org/2000/svg" width="416" height="448" viewBox="0 0 416 448" id="github"><path fill="currentColor" d="M160 304q0 10-3.125 20.5t-10.75 19T128 352t-18.125-8.5-10.75-19T96 304t3.125-20.5 10.75-19T128 256t18.125 8.5 10.75 19T160 304zm160 0q0 10-3.125 20.5t-10.75 19T288 352t-18.125-8.5-10.75-19T256 304t3.125-20.5 10.75-19T288 256t18.125 8.5 10.75 19T320 304zm40 0q0-30-17.25-51T296 232q-10.25 0-48.75 5.25Q229.5 240 208 240t-39.25-2.75Q130.75 232 120 232q-29.5 0-46.75 21T56 304q0 22 8 38.375t20.25 25.75 30.5 15 35 7.375 37.25 1.75h42q20.5 0 37.25-1.75t35-7.375 30.5-15 20.25-25.75T360 304zm56-44q0 51.75-15.25 82.75-9.5 19.25-26.375 33.25t-35.25 21.5-42.5 11.875-42.875 5.5T212 416q-19.5 0-35.5-.75t-36.875-3.125-38.125-7.5-34.25-12.875T37 371.5t-21.5-28.75Q0 312 0 260q0-59.25 34-99-6.75-20.5-6.75-42.5 0-29 12.75-54.5 27 0 47.5 9.875t47.25 30.875Q171.5 96 212 96q37 0 70 8 26.25-20.5 46.75-30.25T376 64q12.75 25.5 12.75 54.5 0 21.75-6.75 42 34 40 34 99.5z"/></svg>
+        
+      </defs>
+    </svg>
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="drawer">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search">
+    <label class="md-overlay" data-md-component="overlay" for="drawer"></label>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid">
+    <div class="md-flex">
+      <div class="md-flex__cell md-flex__cell--shrink">
+        
+          <a href=".." title="python-parsyfiles" class="md-icon md-icon--home md-header-nav__button">
+          </a>
+        
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <label class="md-icon md-icon--menu md-header-nav__button" for="drawer"></label>
+      </div>
+      <div class="md-flex__cell md-flex__cell--stretch">
+        <span class="md-flex__ellipsis md-header-nav__title">
+          
+            
+              
+            
+            Changelog
+          
+        </span>
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        
+          <label class="md-icon md-icon--search md-header-nav__button" for="search"></label>
+          
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="search"></label>
+  <div class="md-search__inner">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" required placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="query">
+      <label class="md-icon md-search__icon" for="search"></label>
+      <button type="reset" class="md-icon md-search__icon" data-md-component="reset">close</button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="result" data-md-lang-search="" data-md-lang-tokenizer="[\s\-]+">
+          <div class="md-search-result__meta" data-md-lang-result-none="No matching documents" data-md-lang-result-one="1 matching document" data-md-lang-result-other="# matching documents">
+            Type to start searching
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+        
+      </div>
+      
+        <div class="md-flex__cell md-flex__cell--shrink">
+          <div class="md-header-nav__source">
+            
+
+
+  
+
+
+  <a href="https://github.com/smarie/python-parsyfiles" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      GitHub
+    </div>
+  </a>
+
+          </div>
+        </div>
+      
+    </div>
+  </nav>
+</header>
+    
+    <div class="md-container">
+      
+      
+      <main class="md-main">
+        <div class="md-main__inner md-grid" data-md-component="container">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" data-md-level="0">
+  <label class="md-nav__title md-nav__title--site" for="drawer">
+    
+      <i class="md-icon md-icon--home md-nav__button"></i>
+    
+    python-parsyfiles
+  </label>
+  
+    <div class="md-nav__source">
+      
+
+
+  
+
+
+  <a href="https://github.com/smarie/python-parsyfiles" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      GitHub
+    </div>
+  </a>
+
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href=".." title="Home" class="md-nav__link">
+      Home
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../usage/" title="Usage" class="md-nav__link">
+      Usage
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../known_formats_reference/" title="Known Formats Reference" class="md-nav__link">
+      Known Formats Reference
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="toc">
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="toc">
+        Changelog
+      </label>
+    
+    <a href="./" title="Changelog" class="md-nav__link md-nav__link--active">
+      Changelog
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary">
+  
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#changelog" title="Changelog" class="md-nav__link">
+    Changelog
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#230-several-major-improvements-and-travis-integration" title="2.3.0 Several major improvements and Travis integration" class="md-nav__link">
+    2.3.0 Several major improvements and Travis integration
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#220-new-chaining-capabilities-and-bugfixes" title="2.2.0 - New chaining capabilities and bugfixes" class="md-nav__link">
+    2.2.0 - New chaining capabilities and bugfixes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#210-minor-improvements" title="2.1.0 - Minor improvements" class="md-nav__link">
+    2.1.0 - Minor improvements
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#202-minor-setuppy-and-doc-edits" title="2.0.2 - Minor setup.py and doc edits" class="md-nav__link">
+    2.0.2 - Minor setup.py and doc edits
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#201-minor-setuppy-and-doc-edits" title="2.0.1 - Minor setup.py and doc edits" class="md-nav__link">
+    2.0.1 - Minor setup.py and doc edits
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#200-new-name-parsyfiles-major-refactoring-support-for-converters-support-for-simple-objects" title="2.0.0 - New name 'parsyfiles', Major refactoring, Support for converters, Support for simple objects" class="md-nav__link">
+    2.0.0 - New name 'parsyfiles', Major refactoring, Support for converters, Support for simple objects
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#101-first-public-working-version-of-sficopaf-simple-file-collections-parsing-framework" title="1.0.1 - First public working version of 'sficopaf' (Simple File Collections Parsing Framework)" class="md-nav__link">
+    1.0.1 - First public working version of 'sficopaf' (Simple File Collections Parsing Framework)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+      
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary">
+  
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#changelog" title="Changelog" class="md-nav__link">
+    Changelog
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#230-several-major-improvements-and-travis-integration" title="2.3.0 Several major improvements and Travis integration" class="md-nav__link">
+    2.3.0 Several major improvements and Travis integration
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#220-new-chaining-capabilities-and-bugfixes" title="2.2.0 - New chaining capabilities and bugfixes" class="md-nav__link">
+    2.2.0 - New chaining capabilities and bugfixes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#210-minor-improvements" title="2.1.0 - Minor improvements" class="md-nav__link">
+    2.1.0 - Minor improvements
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#202-minor-setuppy-and-doc-edits" title="2.0.2 - Minor setup.py and doc edits" class="md-nav__link">
+    2.0.2 - Minor setup.py and doc edits
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#201-minor-setuppy-and-doc-edits" title="2.0.1 - Minor setup.py and doc edits" class="md-nav__link">
+    2.0.1 - Minor setup.py and doc edits
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#200-new-name-parsyfiles-major-refactoring-support-for-converters-support-for-simple-objects" title="2.0.0 - New name 'parsyfiles', Major refactoring, Support for converters, Support for simple objects" class="md-nav__link">
+    2.0.0 - New name 'parsyfiles', Major refactoring, Support for converters, Support for simple objects
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#101-first-public-working-version-of-sficopaf-simple-file-collections-parsing-framework" title="1.0.1 - First public working version of 'sficopaf' (Simple File Collections Parsing Framework)" class="md-nav__link">
+    1.0.1 - First public working version of 'sficopaf' (Simple File Collections Parsing Framework)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+      
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/smarie/python-parsyfiles/edit/master/docs/changelog.md" title="Edit this page" class="md-icon md-content__icon">edit</a>
+                
+                
+                  <h1>Changelog</h1>
+                
+                <h2 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h2>
+<h3 id="230-several-major-improvements-and-travis-integration">2.3.0 Several major improvements and Travis integration<a class="headerlink" href="#230-several-major-improvements-and-travis-integration" title="Permanent link">&para;</a></h3>
+<p>Improved verbosity, quality of parser and converter combinations, performance, sorted collections</p>
+<p><strong>PARSER/CONVERTER COMBINATION ENGINE</strong></p>
+<ul>
+<li>replaced <code>None</code> with an explicit <code>JOKER</code> for all 'find' parsers/converters methods. Added sanity check at parser registration time: check that parser handles <code>JOKER</code> properly</li>
+<li>split <code>is_able_to_parse</code> and <code>is_able_to_parse_detailed</code> (and the same for convert) so that the first returns a single boolean while the second returns a tuple. This fixed a number of bugs with parser/converter chain generation</li>
+<li>fixed bug with generic parsers by now using the same piece of code than others for registration</li>
+<li>generic parsers and converters are now allowed to chain with other converters. <code>is_able_to_convert</code> is therefore now called at runtime on the value generated because it could not fit the required input of the next element</li>
+<li>fixed a few errors in the plugins so that their chaining is correct</li>
+</ul>
+<p><strong>API</strong></p>
+<ul>
+<li>better error message when the provided location has an extension</li>
+<li>better separation of logging messages between info and debug</li>
+<li>created a true base <code>ConversionException</code></li>
+<li>added package-level methods to access capabilities easily</li>
+<li><code>get_capabilities...</code> methods now do not return some keys when they are empty: the result is more compact to read</li>
+<li>Added <code>OrderedDict</code> so that parsing collections now returns a sorted <code>list/set/dict/tuple</code></li>
+</ul>
+<p><strong>PERFORMANCE</strong></p>
+<ul>
+<li>Big performance improvement for <code>_get_constructor_signature</code>, thanks to profiling</li>
+<li>Big performance improvement for <code>var_checker</code>, thanks to profiling</li>
+<li>added singleton cached instance for <code>RootParser</code> with default plugins so as not to pay the registration costs several times</li>
+</ul>
+<h3 id="220-new-chaining-capabilities-and-bugfixes">2.2.0 - New chaining capabilities and bugfixes<a class="headerlink" href="#220-new-chaining-capabilities-and-bugfixes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>added new behaviour : genaric parsers can chain with converters. In some cases this may unlock new capabilities (for example parsing object A from its constructor then converting A to B might sometimes be interesting, rather than parsing B from its constructor)</li>
+<li>fixed bug in is_able_to_convert: when from_type was any, the result was False &gt; this was preventing the above use case to execute</li>
+<li>fixed bug with automatic type conversion in collections</li>
+</ul>
+<h3 id="210-minor-improvements">2.1.0 - Minor improvements<a class="headerlink" href="#210-minor-improvements" title="Permanent link">&para;</a></h3>
+<ul>
+<li>improved support for collections by supporting Mappings, Sequences, and AbstractSets instead of Dict, List, and Set</li>
+<li>added automatic conversion of string to numbers and booleans in jprops properties reader</li>
+<li>replaced dict_to_single_row_or_col_df with dict_to_df, able to handle both single-level and multi-level dictionaries</li>
+<li>fixed filesystem mappings : now supporting multifile objects without children (=empty folder or file without extension)</li>
+<li>fixed code for detecting a typing List or Set (was relying on typing.Collection that is not always available)</li>
+</ul>
+<h3 id="202-minor-setuppy-and-doc-edits">2.0.2 - Minor setup.py and doc edits<a class="headerlink" href="#202-minor-setuppy-and-doc-edits" title="Permanent link">&para;</a></h3>
+<h3 id="201-minor-setuppy-and-doc-edits">2.0.1 - Minor setup.py and doc edits<a class="headerlink" href="#201-minor-setuppy-and-doc-edits" title="Permanent link">&para;</a></h3>
+<h3 id="200-new-name-parsyfiles-major-refactoring-support-for-converters-support-for-simple-objects">2.0.0 - New name 'parsyfiles', Major refactoring, Support for converters, Support for simple objects<a class="headerlink" href="#200-new-name-parsyfiles-major-refactoring-support-for-converters-support-for-simple-objects" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Two new main functions <code>parse_item</code> and <code>parse_collection</code> at module level</li>
+<li>Custom parsers for MULTIFILE may now be registered (since a multifile parser is now a parser like all others)</li>
+<li>Added the concept of converters and conversion chains. A converter registry has an "intelligent" logic to infer what type of converters to chain in order to create value (preventing useless conversion chains, cycles, etc.)</li>
+<li>Added support for primitive types, yaml and numpy primitives</li>
+<li>Parsers and converters are defined according to the new object model for collections, objects, dataframes, configparser. (addded/fixed support for json, jprops, pickle, ...). There are now two ways to parse config files: as dictionary of dictionaries, or as a dictionary</li>
+<li>Added the ability to parse collections in 'lazy' mode</li>
+<li>Added support for Tuple and Set for collections</li>
+<li>added automatic conversion of item values for all dict, list, tuple and set parsers/converters</li>
+<li>added a system to pass options to the parsers/converters</li>
+<li>Improved Logging and Error handling to ease debug</li>
+<li>added support for classes written with <code>attrs</code> package</li>
+<li>Major code refactoring :<ul>
+<li>split into several files to separate the concerns : file system / parsing chains / framework / typing and PEP484</li>
+<li>object model for persisted objects, converters, parsers, and parsers/converters registries</li>
+<li>All parsers and converters shipping with the framework are now plugins just as the custom ones : no hardcoded difference. This made the plugin mechanism quite "strange case-proof".</li>
+<li>Added a test file specifically for parser registry</li>
+</ul>
+</li>
+</ul>
+<h3 id="101-first-public-working-version-of-sficopaf-simple-file-collections-parsing-framework">1.0.1 - First public working version of 'sficopaf' (Simple File Collections Parsing Framework)<a class="headerlink" href="#101-first-public-working-version-of-sficopaf-simple-file-collections-parsing-framework" title="Permanent link">&para;</a></h3>
+<p>This first version was mostly function-based and did not provide a way to parse simple objects from dictionaries.</p>
+                
+                  
+                
+              
+              
+                
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid">
+        
+          <a href="../known_formats_reference/" title="Known Formats Reference" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-flex__cell md-flex__cell--shrink">
+              <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
+            </div>
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+              <span class="md-flex__ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Known Formats Reference
+              </span>
+            </div>
+          </a>
+        
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        powered by
+        <a href="http://www.mkdocs.org" title="MkDocs">MkDocs</a>
+        and
+        <a href="http://squidfunk.github.io/mkdocs-material/" title="Material for MkDocs">
+          Material for MkDocs</a>
+      </div>
+      
+        
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../assets/javascripts/application-1d6ee6ee6c.js"></script>
+      
+      
+      <script>app.initialize({url:{base:".."}})</script>
+      
+    
+    
+      
+    
+  </body>
+</html>
