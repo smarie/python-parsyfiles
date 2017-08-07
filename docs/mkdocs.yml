@@ -5,6 +5,8 @@ pages:
     - Home: index.md
     - Usage: usage.md
     - Known Formats Reference: known_formats_reference.md
+    - Changelog: changelog.md
+
 theme: material  # readthedocs  mkdocs
 
 markdown_extensions:
