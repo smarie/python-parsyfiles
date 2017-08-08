@@ -14,7 +14,7 @@
       
         <link rel="shortcut icon" href="./assets/images/favicon.png">
       
-      <meta name="generator" content="mkdocs-0.16.3, mkdocs-material-1.8.0">
+      <meta name="generator" content="mkdocs-0.16.3, mkdocs-material-1.8.1">
     
     
       
@@ -219,22 +219,22 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-parse-dictionaries-and-simple-objects-from-various-formats" title="1 - Parse dictionaries and simple objects from various formats" class="md-nav__link">
-    1 - Parse dictionaries and simple objects from various formats
+  <a href="#1-parsing-dictionaries-and-simple-objects-from-various-formats" title="1 - Parsing dictionaries and simple objects from various formats" class="md-nav__link">
+    1 - Parsing dictionaries and simple objects from various formats
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-parse-objects-from-multiple-files-collections-and-complex-objects" title="2 - Parse objects from multiple files: collections and complex objects" class="md-nav__link">
-    2 - Parse objects from multiple files: collections and complex objects
+  <a href="#2-parsing-objects-from-multiple-files-collections-and-complex-objects" title="2 - Parsing objects from multiple files: collections and complex objects" class="md-nav__link">
+    2 - Parsing objects from multiple files: collections and complex objects
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-parse-test-cases" title="3 - Parse test cases" class="md-nav__link">
-    3 - Parse test cases
+  <a href="#3-parsing-test-cases" title="3 - Parsing test cases" class="md-nav__link">
+    3 - Parsing test cases
   </a>
   
 </li>
@@ -332,22 +332,22 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-parse-dictionaries-and-simple-objects-from-various-formats" title="1 - Parse dictionaries and simple objects from various formats" class="md-nav__link">
-    1 - Parse dictionaries and simple objects from various formats
+  <a href="#1-parsing-dictionaries-and-simple-objects-from-various-formats" title="1 - Parsing dictionaries and simple objects from various formats" class="md-nav__link">
+    1 - Parsing dictionaries and simple objects from various formats
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-parse-objects-from-multiple-files-collections-and-complex-objects" title="2 - Parse objects from multiple files: collections and complex objects" class="md-nav__link">
-    2 - Parse objects from multiple files: collections and complex objects
+  <a href="#2-parsing-objects-from-multiple-files-collections-and-complex-objects" title="2 - Parsing objects from multiple files: collections and complex objects" class="md-nav__link">
+    2 - Parsing objects from multiple files: collections and complex objects
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-parse-test-cases" title="3 - Parse test cases" class="md-nav__link">
-    3 - Parse test cases
+  <a href="#3-parsing-test-cases" title="3 - Parsing test cases" class="md-nav__link">
+    3 - Parsing test cases
   </a>
   
 </li>
@@ -394,7 +394,8 @@
 <p><code>parsyfiles</code> is a declarative framework able to combine many popular python parsers (<code>json</code>, <code>jprops</code>, <code>yaml</code>, <code>pickle</code>, <code>pandas</code>...) with  user-defined ones, in order to easily read objects from files. It is able to read an object even if the object's content comes from several files requiring several parsers. This is typically useful to read test data where you want to combine datasets, parameters, expected results and more. </p>
 <p>It is extremely easy to add a parser in <code>parsyfiles</code> if your favourite parser is missing. Even better: if you just need to parse a derived type of a type that can already be parsed, you may simply need to register a type <code>Converter</code>, the framework will automatically link it to all compliant parsers for you. </p>
 <h2 id="main-use-cases">Main use cases<a class="headerlink" href="#main-use-cases" title="Permanent link">&para;</a></h2>
-<h3 id="1-parse-dictionaries-and-simple-objects-from-various-formats">1 - Parse dictionaries and simple objects from various formats<a class="headerlink" href="#1-parse-dictionaries-and-simple-objects-from-various-formats" title="Permanent link">&para;</a></h3>
+<p>This is just a glance at what you could use parsyfiles for. Check the <a href="./usage/">Usage</a> page for details.</p>
+<h3 id="1-parsing-dictionaries-and-simple-objects-from-various-formats">1 - Parsing dictionaries and simple objects from various formats<a class="headerlink" href="#1-parsing-dictionaries-and-simple-objects-from-various-formats" title="Permanent link">&para;</a></h3>
 <p>The following files</p>
 <div class="codehilite"><pre><span></span>.json             .properties       .cfg         .csv         .yaml
 ---------------   ---------------   ----------   ----------   ----------
@@ -410,15 +411,28 @@
 </pre></div>
 
 
-<p>and into a <code>MySimpleObject</code> with constructor <code>__init__(age: int, name: str)</code> using</p>
+<p>and into a <code>MySimpleObject</code> with constructor <code>__init__(self, age: int, name: str)</code> using</p>
 <div class="codehilite"><pre><span></span><span class="n">smpl</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;&lt;file_path_without_ext&gt;&#39;</span><span class="p">,</span> <span class="n">MySimpleObject</span><span class="p">)</span>
 </pre></div>
 
 
-<h3 id="2-parse-objects-from-multiple-files-collections-and-complex-objects">2 - Parse objects from multiple files: collections and complex objects<a class="headerlink" href="#2-parse-objects-from-multiple-files-collections-and-complex-objects" title="Permanent link">&para;</a></h3>
+<p>Note that you might wish to use <a href="https://github.com/smarie/python-autoclass">autoclass</a> and <a href="https://github.com/RussBaz/enforce">enforce</a> to write compact but yet validated classes. <code>parsyfiles</code> is totally compliant with those:</p>
+<div class="codehilite"><pre><span></span><span class="nd">@runtime_validation</span>
+<span class="nd">@autoprops</span>
+<span class="k">class</span> <span class="nc">MySimpleObject</span><span class="p">:</span>
+    <span class="nd">@validate</span><span class="p">(</span><span class="n">age</span><span class="o">=</span><span class="n">gt</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="n">minlens</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+    <span class="nd">@autoargs</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">age</span><span class="p">:</span> <span class="n">Integral</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">pass</span>
+</pre></div>
+
+
+<h3 id="2-parsing-objects-from-multiple-files-collections-and-complex-objects">2 - Parsing objects from multiple files: collections and complex objects<a class="headerlink" href="#2-parsing-objects-from-multiple-files-collections-and-complex-objects" title="Permanent link">&para;</a></h3>
 <p>If you already know how to parse the various files you need one by one, you might still wish to define higher-lever container objects made of several files/folders and potentially requiring to combine several parsers. For example objects made of several <code>DataFrame</code> each stored in a <code>.csv</code> (timeseries + descriptive data), combinations of csv and xml/json files, configuration files, pickle files, etc.</p>
 <p>Here is how you parse a collection of simple files into a dictionary of <code>MySimpleObject</code>:</p>
-<div class="codehilite"><pre><span></span><span class="n">dct</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;&lt;folder_path&gt;&#39;</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MySimpleObject</span><span class="p">])</span>
+<div class="codehilite"><pre><span></span><span class="n">dct</span> <span class="o">=</span> <span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;&lt;folder_path&gt;&#39;</span><span class="p">,</span> <span class="n">MySimpleObject</span><span class="p">)</span>
+<span class="c1"># or</span>
+<span class="n">dct</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;&lt;folder_path&gt;&#39;</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MySimpleObject</span><span class="p">])</span>
 </pre></div>
 
 
@@ -427,7 +441,7 @@
 </pre></div>
 
 
-<h3 id="3-parse-test-cases">3 - Parse test cases<a class="headerlink" href="#3-parse-test-cases" title="Permanent link">&para;</a></h3>
+<h3 id="3-parsing-test-cases">3 - Parsing test cases<a class="headerlink" href="#3-parsing-test-cases" title="Permanent link">&para;</a></h3>
 <p>A typical use case for this library is to define your test cases as objects. These objects will typically contain fields such as test inputs and test expected outcomes. Here is an example with <code>py.test</code>:</p>
 <div class="codehilite"><pre><span></span><span class="c1"># The function that we want to test</span>
 <span class="k">def</span> <span class="nf">exec_op</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
@@ -546,7 +560,7 @@ This framework contains a bit of nontrivial logic in order to transparently infe
       
     </div>
     
-      <script src="./assets/javascripts/application-1d6ee6ee6c.js"></script>
+      <script src="./assets/javascripts/application-6940329b9f.js"></script>
       
       
       <script>app.initialize({url:{base:"."}})</script>

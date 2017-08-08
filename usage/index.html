@@ -14,7 +14,7 @@
       
         <link rel="shortcut icon" href="../assets/images/favicon.png">
       
-      <meta name="generator" content="mkdocs-0.16.3, mkdocs-material-1.8.0">
+      <meta name="generator" content="mkdocs-0.16.3, mkdocs-material-1.8.1">
     
     
       
@@ -201,6 +201,8 @@
     
     <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="toc">
     
+      
+    
     
       <label class="md-nav__link md-nav__link--active" for="toc">
         Usage
@@ -214,20 +216,15 @@
 <nav class="md-nav md-nav--secondary">
   
   
+    
+  
   
     <label class="md-nav__title" for="toc">Table of contents</label>
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#installing" title="Installing" class="md-nav__link">
-    Installing
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#basic-usage" title="Basic Usage" class="md-nav__link">
-    Basic Usage
+  <a href="#basic" title="Basic" class="md-nav__link">
+    Basic
   </a>
   
     <nav class="md-nav">
@@ -241,219 +238,36 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#never-include-the-file-extension" title="Never include the file extension !" class="md-nav__link">
+    Never include the file extension !
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unsupported-extensions" title="Unsupported extensions" class="md-nav__link">
+    Unsupported extensions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#log-levels" title="Log levels" class="md-nav__link">
     Log levels
   </a>
   
 </li>
         
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#part-1-parsing-collections-of-known-types" title="Part 1 - Parsing collections of known types" class="md-nav__link">
-    Part 1 - Parsing collections of known types
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
           <li class="md-nav__item">
-  <a href="#a-example-parsing-a-list-of-dataframe" title="(a) Example: parsing a list of DataFrame" class="md-nav__link">
-    (a) Example: parsing a list of DataFrame
+  <a href="#understanding-the-debug-level-log-messages" title="Understanding the debug-level Log messages" class="md-nav__link">
+    Understanding the debug-level Log messages
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#b-understanding-the-log-output" title="(b) Understanding the log output" class="md-nav__link">
-    (b) Understanding the log output
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#c-parsing-a-single-file-only" title="(c) Parsing a single file only" class="md-nav__link">
-    (c) Parsing a single file only
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#d-default-collection-type-and-other-supported-types" title="(d) Default collection type and other supported types" class="md-nav__link">
-    (d) Default collection type and other supported types
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#part-2-simple-user-defined-types" title="Part 2 - Simple user-defined types" class="md-nav__link">
-    Part 2 - Simple user-defined types
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#a-example-parsing-a-collection-of-test-cases" title="(a) Example: parsing a collection of test cases" class="md-nav__link">
-    (a) Example: parsing a collection of test cases
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#b-under-the-hood-why-does-it-work-even-on-ambiguous-files" title="(b) Under the hood : why does it work, even on ambiguous files?" class="md-nav__link">
-    (b) Under the hood : why does it work, even on ambiguous files?
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#solved-difficulty-1-several-formatsparsers-for-the-same-file-extension" title="Solved Difficulty 1 - Several formats/parsers for the same file extension" class="md-nav__link">
-    Solved Difficulty 1 - Several formats/parsers for the same file extension
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#solved-difficulty-2-generic-parsers" title="Solved Difficulty 2 - Generic parsers" class="md-nav__link">
-    Solved Difficulty 2 - Generic parsers
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#understanding-the-inference-logic-in-which-order-are-the-parsers-tried" title="Understanding the inference logic - in which order are the parsers tried ?" class="md-nav__link">
-    Understanding the inference logic - in which order are the parsers tried ?
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#part-3-multifile-objects-combining-several-parsers" title="Part 3 - Multifile objects: combining several parsers" class="md-nav__link">
-    Part 3 - Multifile objects: combining several parsers
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#part-4-advanced-topics" title="Part 4 - Advanced topics" class="md-nav__link">
-    Part 4 - Advanced topics
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#a-lazy-parsing" title="(a) Lazy parsing" class="md-nav__link">
-    (a) Lazy parsing
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#b-passing-options-to-existing-parsers" title="(b) Passing options to existing parsers" class="md-nav__link">
-    (b) Passing options to existing parsers
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#c-parsing-subclasses-of-existing-types-registering-converters" title="(c) Parsing subclasses of existing types - registering converters" class="md-nav__link">
-    (c) Parsing subclasses of existing types - registering converters
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#d-registering-a-new-parser" title="(d) Registering a new parser" class="md-nav__link">
-    (d) Registering a new parser
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#e-contract-validation-for-parsed-objects-combo-with-classtools-autocode-and-attrs" title="(e) Contract validation for parsed objects : combo with classtools-autocode and attrs" class="md-nav__link">
-    (e) Contract validation for parsed objects : combo with classtools-autocode and attrs
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#classtools-autocode-example" title="classtools-autocode example" class="md-nav__link">
-    classtools-autocode example
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#attrs-example" title="attrs example" class="md-nav__link">
-    attrs example
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#e-file-mappings-wrappedflat-and-encoding" title="(e) File mappings: Wrapped/Flat and encoding" class="md-nav__link">
-    (e) File mappings: Wrapped/Flat and encoding
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#f-recursivity-multifile-children-of-multifile-objects" title="(f) Recursivity: Multifile children of Multifile objects" class="md-nav__link">
-    (f) Recursivity: Multifile children of Multifile objects
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-recursivity-in-flat-mode" title="Example recursivity in flat mode" class="md-nav__link">
-    Example recursivity in flat mode
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-recursivity-in-wrapped-mode" title="Example recursivity in wrapped mode" class="md-nav__link">
-    Example recursivity in wrapped mode
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#g-diversity-of-formats-supported-dataframes-revisited" title="(g) Diversity of formats supported: DataFrames - revisited" class="md-nav__link">
-    (g) Diversity of formats supported: DataFrames - revisited
+  <a href="#custom-logger" title="Custom logger" class="md-nav__link">
+    Custom logger
   </a>
   
 </li>
@@ -510,20 +324,15 @@
 <nav class="md-nav md-nav--secondary">
   
   
+    
+  
   
     <label class="md-nav__title" for="toc">Table of contents</label>
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#installing" title="Installing" class="md-nav__link">
-    Installing
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#basic-usage" title="Basic Usage" class="md-nav__link">
-    Basic Usage
+  <a href="#basic" title="Basic" class="md-nav__link">
+    Basic
   </a>
   
     <nav class="md-nav">
@@ -537,219 +346,36 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#never-include-the-file-extension" title="Never include the file extension !" class="md-nav__link">
+    Never include the file extension !
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unsupported-extensions" title="Unsupported extensions" class="md-nav__link">
+    Unsupported extensions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#log-levels" title="Log levels" class="md-nav__link">
     Log levels
   </a>
   
 </li>
         
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#part-1-parsing-collections-of-known-types" title="Part 1 - Parsing collections of known types" class="md-nav__link">
-    Part 1 - Parsing collections of known types
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
           <li class="md-nav__item">
-  <a href="#a-example-parsing-a-list-of-dataframe" title="(a) Example: parsing a list of DataFrame" class="md-nav__link">
-    (a) Example: parsing a list of DataFrame
+  <a href="#understanding-the-debug-level-log-messages" title="Understanding the debug-level Log messages" class="md-nav__link">
+    Understanding the debug-level Log messages
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#b-understanding-the-log-output" title="(b) Understanding the log output" class="md-nav__link">
-    (b) Understanding the log output
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#c-parsing-a-single-file-only" title="(c) Parsing a single file only" class="md-nav__link">
-    (c) Parsing a single file only
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#d-default-collection-type-and-other-supported-types" title="(d) Default collection type and other supported types" class="md-nav__link">
-    (d) Default collection type and other supported types
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#part-2-simple-user-defined-types" title="Part 2 - Simple user-defined types" class="md-nav__link">
-    Part 2 - Simple user-defined types
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#a-example-parsing-a-collection-of-test-cases" title="(a) Example: parsing a collection of test cases" class="md-nav__link">
-    (a) Example: parsing a collection of test cases
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#b-under-the-hood-why-does-it-work-even-on-ambiguous-files" title="(b) Under the hood : why does it work, even on ambiguous files?" class="md-nav__link">
-    (b) Under the hood : why does it work, even on ambiguous files?
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#solved-difficulty-1-several-formatsparsers-for-the-same-file-extension" title="Solved Difficulty 1 - Several formats/parsers for the same file extension" class="md-nav__link">
-    Solved Difficulty 1 - Several formats/parsers for the same file extension
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#solved-difficulty-2-generic-parsers" title="Solved Difficulty 2 - Generic parsers" class="md-nav__link">
-    Solved Difficulty 2 - Generic parsers
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#understanding-the-inference-logic-in-which-order-are-the-parsers-tried" title="Understanding the inference logic - in which order are the parsers tried ?" class="md-nav__link">
-    Understanding the inference logic - in which order are the parsers tried ?
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#part-3-multifile-objects-combining-several-parsers" title="Part 3 - Multifile objects: combining several parsers" class="md-nav__link">
-    Part 3 - Multifile objects: combining several parsers
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#part-4-advanced-topics" title="Part 4 - Advanced topics" class="md-nav__link">
-    Part 4 - Advanced topics
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#a-lazy-parsing" title="(a) Lazy parsing" class="md-nav__link">
-    (a) Lazy parsing
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#b-passing-options-to-existing-parsers" title="(b) Passing options to existing parsers" class="md-nav__link">
-    (b) Passing options to existing parsers
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#c-parsing-subclasses-of-existing-types-registering-converters" title="(c) Parsing subclasses of existing types - registering converters" class="md-nav__link">
-    (c) Parsing subclasses of existing types - registering converters
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#d-registering-a-new-parser" title="(d) Registering a new parser" class="md-nav__link">
-    (d) Registering a new parser
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#e-contract-validation-for-parsed-objects-combo-with-classtools-autocode-and-attrs" title="(e) Contract validation for parsed objects : combo with classtools-autocode and attrs" class="md-nav__link">
-    (e) Contract validation for parsed objects : combo with classtools-autocode and attrs
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#classtools-autocode-example" title="classtools-autocode example" class="md-nav__link">
-    classtools-autocode example
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#attrs-example" title="attrs example" class="md-nav__link">
-    attrs example
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#e-file-mappings-wrappedflat-and-encoding" title="(e) File mappings: Wrapped/Flat and encoding" class="md-nav__link">
-    (e) File mappings: Wrapped/Flat and encoding
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#f-recursivity-multifile-children-of-multifile-objects" title="(f) Recursivity: Multifile children of Multifile objects" class="md-nav__link">
-    (f) Recursivity: Multifile children of Multifile objects
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-recursivity-in-flat-mode" title="Example recursivity in flat mode" class="md-nav__link">
-    Example recursivity in flat mode
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-recursivity-in-wrapped-mode" title="Example recursivity in wrapped mode" class="md-nav__link">
-    Example recursivity in wrapped mode
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#g-diversity-of-formats-supported-dataframes-revisited" title="(g) Diversity of formats supported: DataFrames - revisited" class="md-nav__link">
-    (g) Diversity of formats supported: DataFrames - revisited
+  <a href="#custom-logger" title="Custom logger" class="md-nav__link">
+    Custom logger
   </a>
   
 </li>
@@ -776,28 +402,88 @@
                   <a href="https://github.com/smarie/python-parsyfiles/edit/master/docs/usage.md" title="Edit this page" class="md-icon md-content__icon">edit</a>
                 
                 
-                  <h1>Usage</h1>
-                
-                <h2 id="installing">Installing<a class="headerlink" href="#installing" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span>&gt; pip install parsyfiles
+                <h1 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h1>
+<h2 id="basic">Basic<a class="headerlink" href="#basic" title="Permanent link">&para;</a></h2>
+<h3 id="parsing-one-file">Parsing one file<a class="headerlink" href="#parsing-one-file" title="Permanent link">&para;</a></h3>
+<p>Let's parse a single file containing a string: <a href="../demo/a_helloworld/hello_world.txt">hello_world.txt</a>. First right-click on this link and select 'save as' to save the file in your current working directory. Then</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">parsyfiles</span> <span class="kn">import</span> <span class="n">parse_item</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;hello_world&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
 </pre></div>
 
 
-<h2 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
-<h3 id="parsing-one-file">Parsing one file<a class="headerlink" href="#parsing-one-file" title="Permanent link">&para;</a></h3>
-<p>Let's parse a single file, </p>
+<p>yields:</p>
+<div class="codehilite"><pre><span></span>--&gt; Successfully parsed a str from hello_world
+
+hello
+</pre></div>
+
+
+<h3 id="never-include-the-file-extension">Never include the file extension !<a class="headerlink" href="#never-include-the-file-extension" title="Permanent link">&para;</a></h3>
+<p>Note that the file extension should never be included when referencing a file with parsyfiles. This is because objects may be parsed from files or folders:</p>
+<div class="codehilite"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;hello_world.txt&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>  <span class="c1"># ObjectNotFoundOnFileSystemError</span>
+</pre></div>
+
+
+<h3 id="unsupported-extensions">Unsupported extensions<a class="headerlink" href="#unsupported-extensions" title="Permanent link">&para;</a></h3>
+<p>Lets rename our file <code>hello_world.ukn</code> and run the script again. We get a different exception:</p>
+<div class="codehilite"><pre><span></span>parsyfiles.parsing_registries.NoParserFoundForObjectExt: hello_world <span class="o">(</span>singlefile, .ukn<span class="o">)</span> cannot be parsed as a str because no parser supporting that extension <span class="o">(</span>singlefile, .ukn<span class="o">)</span> is registered.
+ If you wish to parse this fileobject in that type, you may replace the file with any of the following extensions currently supported :<span class="o">{</span><span class="s1">&#39;.yml&#39;</span>, <span class="s1">&#39;.yaml&#39;</span>, <span class="s1">&#39;&lt;multifile&gt;&#39;</span>, <span class="s1">&#39;.txt&#39;</span>, <span class="s1">&#39;.pyc&#39;</span><span class="o">}</span> <span class="o">(</span>see get_capabilities_for_type<span class="o">(</span>str, <span class="nv">strict_type_matching</span><span class="o">=</span>False<span class="o">)</span> <span class="k">for</span> details<span class="o">)</span>.
+Otherwise, please register a new parser <span class="k">for</span> <span class="nb">type</span> str and extension singlefile, .ukn
+</pre></div>
+
+
+<p>This is pretty explicit: the framework is not able to parse our file, because there is currently no registered parser for this extension <code>.ukn</code> and this desired type <code>str</code>. This example is a good introduction to the way <code>parsyfiles</code> parser registry works: parsers are registered for a combination of <em>supported file extensions</em> and <em>supported destination types</em>. Everytime you wish to parse some file into some type, the framework checks if there are any capable parsers, and tries them all in the most logical order. We'll see that in more details below.</p>
 <h3 id="log-levels">Log levels<a class="headerlink" href="#log-levels" title="Permanent link">&para;</a></h3>
-<p>This is how you change the module default logging level : </p>
+<p>By default the library uses a <code>Logger</code> that has an additional handler to print to <code>stdout</code>. The default level is <code>INFO</code>. This is how you change the module default logging level:</p>
 <div class="codehilite"><pre><span></span><span class="kn">import</span> <span class="nn">logging</span>
 <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;parsyfiles&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
 </pre></div>
 
 
-<p>Otherwise you may also wish to provide your own logger:</p>
-<div class="codehilite"><pre><span></span><span class="n">daemon</span> <span class="o">=</span> <span class="n">ObjectDaemonProxy</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">logger</span> <span class="o">=</span> <span class="n">MyLogger</span><span class="p">())</span>
+<p>Running the same example again yieds a much more verbose output:</p>
+<div class="codehilite"><pre><span></span>**** Starting to parse single object  of <span class="nb">type</span> &lt;str&gt; at location hello_world ****
+Checking all files under hello_world
+hello_world <span class="o">(</span>singlefile, .txt<span class="o">)</span>
+File checks <span class="k">done</span>
+
+Building a parsing plan to parse hello_world <span class="o">(</span>singlefile, .txt<span class="o">)</span> into a str
+hello_world <span class="o">(</span>singlefile, .txt<span class="o">)</span> &gt; str ------- using &lt;read_str_from_txt&gt;
+Parsing Plan created successfully
+
+Executing Parsing Plan <span class="k">for</span> hello_world <span class="o">(</span>singlefile, .txt<span class="o">)</span> &gt; str ------- using &lt;read_str_from_txt&gt;
+Parsing hello_world <span class="o">(</span>singlefile, .txt<span class="o">)</span> &gt; str ------- using &lt;read_str_from_txt&gt;
+--&gt; Successfully parsed a str from hello_world
+Completed parsing successfully
 </pre></div>
 
 
+<h3 id="understanding-the-debug-level-log-messages">Understanding the debug-level Log messages<a class="headerlink" href="#understanding-the-debug-level-log-messages" title="Permanent link">&para;</a></h3>
+<p>In the log output above you see a couple hints on how the parsing framework works:</p>
+<ul>
+<li>
+<p>first it <strong>checks your files</strong>. That is the log section beginning with "<code>Checking all files ...</code>". If there is a missing file issue it will appear at this stage as an <code>ObjectNotFoundOnFileSystemError</code>.</p>
+</li>
+<li>
+<p>then it <strong>creates a parsing plan</strong> that is able to produce an object the required type. That's the section beginning with "<code>Building a parsing plan ...</code>". The parsing plan is the most important concept in the library, and the most complex. A parsing plan describes what the framework <em>will</em> try to perform when it will actually execute the parsing step (next step, below). If a parsing plan cannot be built at this stage you get a <code>NoParserFoundForObjectExt</code> error like the one we saw <a href="#unsupported_extensions">previously</a>. In this example we see that the parsing plan is straightforward: the framework will use a single parser, named <code>&lt;read_str_from_txt&gt;</code>.</p>
+</li>
+<li>
+<p>finally it <strong>executes the parsing plan</strong>. That's the section beginning with "<code>Executing Parsing Plan...</code>". Sometimes you will see in this section that the original plan gets updated as a consequence of parsing errors. For example a 'plan A' will be replaced by a 'plan B'. We will see some examples later on.</p>
+</li>
+</ul>
+<p>It is important to understand these 3 log sections, since the main issue with complex frameworks is debugging when something unexpected happens :-).</p>
+<h3 id="custom-logger">Custom logger<a class="headerlink" href="#custom-logger" title="Permanent link">&para;</a></h3>
+<p>You may also wish to provide your own logger:</p>
+<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">FileHandler</span>
+<span class="n">my_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;mine&#39;</span><span class="p">)</span>
+<span class="n">my_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">FileHandler</span><span class="p">(</span><span class="s1">&#39;hello.log&#39;</span><span class="p">))</span>
+<span class="n">my_logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">parse_item</span><span class="p">(</span><span class="s1">&#39;hello_world&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">logger</span> <span class="o">=</span> <span class="n">my_logger</span><span class="p">)</span>
+</pre></div>
+
+
+<h1 id="todo-refresh-remaining-sections">TODO refresh remaining sections<a class="headerlink" href="#todo-refresh-remaining-sections" title="Permanent link">&para;</a></h1>
 <h2 id="part-1-parsing-collections-of-known-types">Part 1 - Parsing collections of known types<a class="headerlink" href="#part-1-parsing-collections-of-known-types" title="Permanent link">&para;</a></h2>
 <h3 id="a-example-parsing-a-list-of-dataframe">(a) Example: parsing a list of DataFrame<a class="headerlink" href="#a-example-parsing-a-list-of-dataframe" title="Permanent link">&para;</a></h3>
 <p>The most simple case of all: you wish to parse a collection of files that all have the same type, and for which a parser is already registered. For example your wish to parse a list of <code>DataFrame</code> for a data folder that looks like this:</p>
@@ -868,12 +554,6 @@ Completed parsing successfully
 
 <p><em>Note: the above capture was slightly 'improved' for readability, because unfortunately pprint does not display dictionaries of dataframes as nicely as this.</em></p>
 <h3 id="b-understanding-the-log-output">(b) Understanding the log output<a class="headerlink" href="#b-understanding-the-log-output" title="Permanent link">&para;</a></h3>
-<p>By default the library uses a <code>Logger</code> that has an additional handler to print to <code>stdout</code>. If you do not want to see all these messages printed to the console, or if you want to use a different logging configuration, you may provide a custom logger to the function:</p>
-<div class="codehilite"><pre><span></span><span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
-<span class="n">dfs</span> <span class="o">=</span> <span class="n">parse_collection</span><span class="p">(</span><span class="s1">&#39;./demo/simple_collection&#39;</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;my_logger&#39;</span><span class="p">))</span>
-</pre></div>
-
-
 <p>In the log output you see a couple hints on how the parsing framework works:</p>
 <ul>
 <li>
@@ -1682,7 +1362,7 @@ ObjectInstantiationException : Error <span class="k">while</span> building objec
       
     </div>
     
-      <script src="../assets/javascripts/application-1d6ee6ee6c.js"></script>
+      <script src="../assets/javascripts/application-6940329b9f.js"></script>
       
       
       <script>app.initialize({url:{base:".."}})</script>

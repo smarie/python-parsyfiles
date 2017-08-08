@@ -1,0 +1,2 @@
+foo_param = "bar"
+bar_param = 2
