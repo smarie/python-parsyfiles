@@ -1,6 +1,11 @@
-## Changelog
+### 2.4.0 (dev) - Documentation and tests improvements
 
-### 2.3.0 Several major improvements and Travis integration
+ * Improved 'usage' documentation page
+ * Reorganized tests and documented them for better readability, and improved some of them (primitive types, default parsers)
+ * Test failure do not make travis builds fail anymore
+ * Fixed file system mappings: now '.' is not mandatory for relative paths
+
+### 2.3.0 - Several major improvements and Travis integration
 
 Improved verbosity, quality of parser and converter combinations, performance, sorted collections
 
@@ -26,6 +31,9 @@ Improved verbosity, quality of parser and converter combinations, performance, s
  * Big performance improvement for `_get_constructor_signature`, thanks to profiling
  * Big performance improvement for `var_checker`, thanks to profiling
  * added singleton cached instance for `RootParser` with default plugins so as not to pay the registration costs several times
+
+**TRAVIS INTEGRATION**
+ * tests, code coverage, doc generation, and releases deployment on PyPI are now automated
 
 ### 2.2.0 - New chaining capabilities and bugfixes
 

@@ -6,7 +6,7 @@ from typing import List, Any, Tuple, Dict, Set
 from unittest import TestCase
 
 from autoclass import is_in
-from parsyfiles import parse_collection, RootParser, parse_item
+from parsyfiles import parse_collection, RootParser, parse_item, ObjectNotFoundOnFileSystemError
 from parsyfiles.converting_core import AnyObject
 from parsyfiles.parsing_core import SingleFileParserFunction
 from parsyfiles.parsing_core_api import ParsingException
@@ -29,6 +29,18 @@ class DemoTests(TestCase):
     """
     The tests used in the README.md examples
     """
+
+    def test_a_helloworld(self):
+
+        with self.assertRaises(FileNotFoundError):
+            result = parse_item('hello_world', str)
+
+        with self.assertRaises(ObjectNotFoundOnFileSystemError):
+            result = parse_item('a_helloworld/hello_world.txt', str)
+
+        result = parse_item('a_helloworld/hello_world', str)
+        print(result)
+        assert result == 'hello'
 
     def test_simple_collection(self):
         """
@@ -205,11 +217,22 @@ class DemoTests(TestCase):
         :return:
         """
 
-        from autoclass import autoprops, autoargs, validate
+        from autoclass import autoprops, autoargs, validate, gt, minlens
         from enforce import runtime_validation, config
-        from numbers import Real
+        from numbers import Real, Integral
 
         config(dict(mode='covariant'))  # to accept subclasses in validation
+
+        # this first example is in the index.md
+        @runtime_validation
+        @autoprops
+        class MySimpleObject:
+            @validate(age=gt(0), name=minlens(0))
+            @autoargs
+            def __init__(self, age: Integral, name: str):
+                pass
+
+        MySimpleObject(0, 'r')
 
         @runtime_validation
         @autoprops

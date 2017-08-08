@@ -192,7 +192,7 @@ class RootParser(ParserRegistryWithConverters):
 
         logger = logger or RootParser._default_logger
         check_var(logger, var_types=Logger, var_name='logger')
-        self._logger = logger
+        self.logger = logger
 
     def install_basic_multifile_support(self):
         """
@@ -226,7 +226,7 @@ class RootParser(ParserRegistryWithConverters):
 
         # creating the wrapping dictionary type
         collection_type = Dict[str, base_item_type]
-        self._logger.debug('**** Starting to parse ' + item_name_for_log + ' collection of <'
+        self.logger.debug('**** Starting to parse ' + item_name_for_log + ' collection of <'
                           + get_pretty_type_str(base_item_type) + '> at location ' + item_file_prefix +' ****')
 
         # common steps
@@ -249,7 +249,7 @@ class RootParser(ParserRegistryWithConverters):
         item_name_for_log = item_name_for_log or ''
         check_var(item_name_for_log, var_types=str, var_name='item_name_for_log')
 
-        self._logger.debug('**** Starting to parse single object ' + item_name_for_log + ' of type <'
+        self.logger.debug('**** Starting to parse single object ' + item_name_for_log + ' of type <'
                           + get_pretty_type_str(item_type) + '> at location ' + location + ' ****')
 
         # common steps
@@ -273,19 +273,19 @@ class RootParser(ParserRegistryWithConverters):
 
         # creating the persisted object (this performs required checks)
         file_mapping_conf = file_mapping_conf or WrappedFileMappingConfiguration()
-        obj = file_mapping_conf.create_persisted_object(item_file_prefix, logger=self._logger)
+        obj = file_mapping_conf.create_persisted_object(item_file_prefix, logger=self.logger)
         # print('')
-        self._logger.debug('')
+        self.logger.debug('')
 
         # create the parsing plan
-        pp = self.create_parsing_plan(item_type, obj, logger=self._logger)
+        pp = self.create_parsing_plan(item_type, obj, logger=self.logger)
         # print('')
-        self._logger.debug('')
+        self.logger.debug('')
 
         # parse
-        res = pp.execute(logger=self._logger, options=options)
+        res = pp.execute(logger=self.logger, options=options)
         # print('')
-        self._logger.info('')
+        self.logger.info('')
 
         return res
 
@@ -345,6 +345,12 @@ def get_default_parser():
     return RootParser()
 
 
+def _create_parser_from_default(logger: Logger = RootParser._default_logger):
+    p = get_default_parser()
+    p.logger = logger
+    return p
+
+
 def parse_item(location: str, item_type: Type[T], item_name_for_log: str = None,
                file_mapping_conf: FileMappingConfiguration = None,
                logger: Logger = RootParser._default_logger, lazy_mfcollection_parsing: bool = False) -> T:
@@ -359,7 +365,7 @@ def parse_item(location: str, item_type: Type[T], item_name_for_log: str = None,
     :param lazy_mfcollection_parsing:
     :return:
     """
-    rp = get_default_parser()
+    rp = _create_parser_from_default(logger)
     opts = create_parser_options(lazy_mfcollection_parsing=lazy_mfcollection_parsing)
     return rp.parse_item(location, item_type, item_name_for_log=item_name_for_log, file_mapping_conf=file_mapping_conf,
                          options=opts)
@@ -380,7 +386,7 @@ def parse_collection(location: str, base_item_type: Type[T], item_name_for_log: 
     :param lazy_mfcollection_parsing:
     :return:
     """
-    rp = get_default_parser()
+    rp = _create_parser_from_default(logger)
     opts = create_parser_options(lazy_mfcollection_parsing=lazy_mfcollection_parsing)
     return rp.parse_collection(location, base_item_type, item_name_for_log=item_name_for_log,
                                file_mapping_conf=file_mapping_conf, options=opts)

@@ -1,31 +1,100 @@
+# Usage
 
-## Installing
-
-```bash
-> pip install parsyfiles
-```
-
-## Basic Usage
+## Basic
 
 ### Parsing one file
 
-Let's parse a single file, 
+Let's parse a single file containing a string: [hello_world.txt](./demo/a_helloworld/hello_world.txt). First right-click on this link and select 'save as' to save the file in your current working directory. Then
+
+```python
+from parsyfiles import parse_item
+
+result = parse_item('hello_world', str)
+print(result)
+```
+
+yields:
+
+```bash
+--> Successfully parsed a str from hello_world
+
+hello
+```
+
+### Never include the file extension !
+
+Note that the file extension should never be included when referencing a file with parsyfiles. This is because objects may be parsed from files or folders:
+
+```python
+result = parse_item('hello_world.txt', str)  # ObjectNotFoundOnFileSystemError
+```
+
+### Unsupported extensions
+
+Lets rename our file `hello_world.ukn` and run the script again. We get a different exception:
+
+```bash
+parsyfiles.parsing_registries.NoParserFoundForObjectExt: hello_world (singlefile, .ukn) cannot be parsed as a str because no parser supporting that extension (singlefile, .ukn) is registered.
+ If you wish to parse this fileobject in that type, you may replace the file with any of the following extensions currently supported :{'.yml', '.yaml', '<multifile>', '.txt', '.pyc'} (see get_capabilities_for_type(str, strict_type_matching=False) for details).
+Otherwise, please register a new parser for type str and extension singlefile, .ukn
+```
+
+This is pretty explicit: the framework is not able to parse our file, because there is currently no registered parser for this extension `.ukn` and this desired type `str`. This example is a good introduction to the way `parsyfiles` parser registry works: parsers are registered for a combination of *supported file extensions* and *supported destination types*. Everytime you wish to parse some file into some type, the framework checks if there are any capable parsers, and tries them all in the most logical order. We'll see that in more details below.
 
 
 ### Log levels
 
-This is how you change the module default logging level : 
+By default the library uses a `Logger` that has an additional handler to print to `stdout`. The default level is `INFO`. This is how you change the module default logging level:
 
 ```python
 import logging
 logging.getLogger('parsyfiles').setLevel(logging.DEBUG)
 ```
 
-Otherwise you may also wish to provide your own logger:
+Running the same example again yieds a much more verbose output:
+
+```bash
+**** Starting to parse single object  of type <str> at location hello_world ****
+Checking all files under hello_world
+hello_world (singlefile, .txt)
+File checks done
+
+Building a parsing plan to parse hello_world (singlefile, .txt) into a str
+hello_world (singlefile, .txt) > str ------- using <read_str_from_txt>
+Parsing Plan created successfully
+
+Executing Parsing Plan for hello_world (singlefile, .txt) > str ------- using <read_str_from_txt>
+Parsing hello_world (singlefile, .txt) > str ------- using <read_str_from_txt>
+--> Successfully parsed a str from hello_world
+Completed parsing successfully
+```
+
+### Understanding the debug-level Log messages
+
+In the log output above you see a couple hints on how the parsing framework works:
+
+* first it **checks your files**. That is the log section beginning with "`Checking all files ...`". If there is a missing file issue it will appear at this stage as an `ObjectNotFoundOnFileSystemError`.
+
+* then it **creates a parsing plan** that is able to produce an object the required type. That's the section beginning with "`Building a parsing plan ...`". The parsing plan is the most important concept in the library, and the most complex. A parsing plan describes what the framework *will* try to perform when it will actually execute the parsing step (next step, below). If a parsing plan cannot be built at this stage you get a `NoParserFoundForObjectExt` error like the one we saw [previously](#unsupported_extensions). In this example we see that the parsing plan is straightforward: the framework will use a single parser, named `<read_str_from_txt>`.
+
+* finally it **executes the parsing plan**. That's the section beginning with "`Executing Parsing Plan...`". Sometimes you will see in this section that the original plan gets updated as a consequence of parsing errors. For example a 'plan A' will be replaced by a 'plan B'. We will see some examples later on.
+
+It is important to understand these 3 log sections, since the main issue with complex frameworks is debugging when something unexpected happens :-).
+
+### Custom logger
+
+You may also wish to provide your own logger:
 
 ```python
-daemon = ObjectDaemonProxy(..., logger = MyLogger())
+from logging import FileHandler
+my_logger = logging.getLogger('mine')
+my_logger.addHandler(FileHandler('hello.log'))
+my_logger.setLevel(logging.INFO)
+result = parse_item('hello_world', str, logger = my_logger)
 ```
+
+
+# TODO refresh remaining sections
 
 
 ## Part 1 - Parsing collections of known types
@@ -105,12 +174,6 @@ Completed parsing successfully
 
 ### (b) Understanding the log output
 
-By default the library uses a `Logger` that has an additional handler to print to `stdout`. If you do not want to see all these messages printed to the console, or if you want to use a different logging configuration, you may provide a custom logger to the function:
-
-```python
-from logging import getLogger
-dfs = parse_collection('./demo/simple_collection', DataFrame, logger=getLogger('my_logger'))
-```
 
 In the log output you see a couple hints on how the parsing framework works:
 

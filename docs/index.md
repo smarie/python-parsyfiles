@@ -11,7 +11,9 @@ It is extremely easy to add a parser in `parsyfiles` if your favourite parser is
 
 ## Main use cases
 
-### 1 - Parse dictionaries and simple objects from various formats
+This is just a glance at what you could use parsyfiles for. Check the [Usage](./usage/) page for details.
+
+### 1 - Parsing dictionaries and simple objects from various formats
 
 The following files
 
@@ -30,20 +32,34 @@ The following files
 dct = parse_item('<file_path_without_ext>', Dict)
 ```
 
-and into a `MySimpleObject` with constructor `__init__(age: int, name: str)` using
+and into a `MySimpleObject` with constructor `__init__(self, age: int, name: str)` using
 
 ```python
 smpl = parse_item('<file_path_without_ext>', MySimpleObject)
 ```
 
+Note that you might wish to use [autoclass](https://github.com/smarie/python-autoclass) and [enforce](https://github.com/RussBaz/enforce) to write compact but yet validated classes. `parsyfiles` is totally compliant with those:
 
-### 2 - Parse objects from multiple files: collections and complex objects
+```python
+@runtime_validation
+@autoprops
+class MySimpleObject:
+    @validate(age=gt(0), name=minlens(0))
+    @autoargs
+    def __init__(self, age: Integral, name: str):
+        pass
+```
+
+
+### 2 - Parsing objects from multiple files: collections and complex objects
 
 If you already know how to parse the various files you need one by one, you might still wish to define higher-lever container objects made of several files/folders and potentially requiring to combine several parsers. For example objects made of several `DataFrame` each stored in a `.csv` (timeseries + descriptive data), combinations of csv and xml/json files, configuration files, pickle files, etc.
 
 Here is how you parse a collection of simple files into a dictionary of `MySimpleObject`:
 
 ```python
+dct = parse_collection('<folder_path>', MySimpleObject)
+# or
 dct = parse_item('<folder_path>', Dict[str, MySimpleObject])
 ```
 
@@ -54,7 +70,7 @@ cplx = parse_item('<folder_path>', MyComplexObject)
 ```
 
 
-### 3 - Parse test cases
+### 3 - Parsing test cases
 
 A typical use case for this library is to define your test cases as objects. These objects will typically contain fields such as test inputs and test expected outcomes. Here is an example with `py.test`:
 

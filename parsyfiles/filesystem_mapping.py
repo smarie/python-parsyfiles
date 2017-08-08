@@ -552,6 +552,8 @@ class WrappedFileMappingConfiguration(FileMappingConfiguration):
         :return: a dictionary of {ext : file_path}
         """
         parent_dir = dirname(location)
+        if parent_dir is '':
+            parent_dir = '.'
         base_prefix = basename(location)
 
         possible_object_files = {object_file[len(base_prefix):]: join(parent_dir, object_file)
@@ -615,6 +617,8 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
         :param no_errors:
         :return: a dictionary of <item_name>, <item_path>
         """
+        if parent_location == '':
+            parent_location = '.'
 
         # (1) Find the base directory and base name
         if isdir(parent_location):  # special case: parent location is the root folder where all the files are.
@@ -623,6 +627,8 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
             start_with = ''
         else:
             parent_dir = dirname(parent_location)
+            if parent_dir is '':
+                parent_dir = '.'
             # TODO one day we'll rather want to have a uniform definition of 'location' across filemappings
             # Indeed as of today, location is not abstract from the file mapping implementation, since we
             # "just" use basename() rather than replacing os separators with our separator:
@@ -697,6 +703,8 @@ class FlatFileMappingConfiguration(FileMappingConfiguration):
         :return: a dictionary{ext : file_path}
         """
         parent_dir = dirname(location)
+        if parent_dir is '':
+            parent_dir = '.'
         base_prefix = basename(location)
 
         # trick : is sep_for_flat is a dot, we have to take into account that there is also a dot for the extension
