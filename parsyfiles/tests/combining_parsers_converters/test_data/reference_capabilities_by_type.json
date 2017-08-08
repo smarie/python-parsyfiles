@@ -1,0 +1,963 @@
+{
+    "typing.Set": {
+        ".yml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "<read_collection_from_yaml>",
+                "$<read_object_from_yaml> => <list_to_set>$"
+            ]
+        },
+        ".txt": {
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ],
+            "1_exact_match": [
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <list_to_set>$"
+            ]
+        },
+        ".pyc": {
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <list_to_set>$"
+            ]
+        },
+        ".properties": {},
+        ".csv": {},
+        ".xlsx": {},
+        ".xls": {},
+        ".json": {
+            "1_exact_match": [
+                "$<read_dict_or_list_from_json> => <list_to_set>$"
+            ]
+        },
+        "<multifile>": {
+            "1_exact_match": [
+                "Multifile Collection parser (parsyfiles defaults)"
+            ]
+        },
+        ".cfg": {},
+        ".yaml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "<read_collection_from_yaml>",
+                "$<read_object_from_yaml> => <list_to_set>$"
+            ]
+        },
+        ".ini": {},
+        ".xlsm": {}
+    },
+    "<class 'str'>": {
+        ".yml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <bool_to_string>$",
+                "$<read_object_from_yaml> => <float_to_string>$",
+                "$<read_object_from_yaml> => <int_to_string>$"
+            ]
+        },
+        ".txt": {
+            "1_exact_match": [
+                "<read_str_from_txt>"
+            ]
+        },
+        ".pyc": {
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <bool_to_string>$",
+                "$<read_object_from_pickle> => <float_to_string>$",
+                "$<read_object_from_pickle> => <int_to_string>$"
+            ]
+        },
+        ".properties": {},
+        ".csv": {},
+        ".xlsx": {},
+        ".xls": {},
+        ".json": {},
+        "<multifile>": {},
+        ".cfg": {},
+        ".yaml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <bool_to_string>$",
+                "$<read_object_from_yaml> => <float_to_string>$",
+                "$<read_object_from_yaml> => <int_to_string>$"
+            ]
+        },
+        ".ini": {},
+        ".xlsm": {}
+    },
+    "<class 'pandas.core.series.Series'>": {
+        ".yml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <single_row_or_col_df_to_series>$",
+                "$<read_object_from_yaml> => <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_collection_from_yaml> => <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ]
+        },
+        ".txt": {
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ],
+            "1_exact_match": [
+                "<read_df_or_series_from_csv>",
+                "$<read_dict_from_properties> => <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ]
+        },
+        ".pyc": {
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <single_row_or_col_df_to_series>$",
+                "$<read_object_from_pickle> => <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_object_from_pickle> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_object_from_pickle> => <config_to_dict_of_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ]
+        },
+        ".properties": {
+            "1_exact_match": [
+                "$<read_dict_from_properties> => <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ]
+        },
+        ".csv": {
+            "1_exact_match": [
+                "<read_df_or_series_from_csv>"
+            ]
+        },
+        ".xlsx": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_series>$"
+            ]
+        },
+        ".xls": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_series>$"
+            ]
+        },
+        ".json": {
+            "1_exact_match": [
+                "$<read_dict_or_list_from_json> => <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ]
+        },
+        "<multifile>": {},
+        ".cfg": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ]
+        },
+        ".yaml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <single_row_or_col_df_to_series>$",
+                "$<read_object_from_yaml> => <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_collection_from_yaml> => <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ]
+        },
+        ".ini": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ]
+        },
+        ".xlsm": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_series>$"
+            ]
+        }
+    },
+    "<class 'float'>": {
+        ".yml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <bool_to_float>$",
+                "$<read_object_from_yaml> => <int_to_float>$",
+                "$<read_object_from_yaml> => <str_to_float>$"
+            ]
+        },
+        ".txt": {
+            "3_generic": [
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ],
+            "1_exact_match": [
+                "$<read_str_from_txt> => <str_to_float>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <bool_to_float>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <int_to_float>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <str_to_float>$"
+            ]
+        },
+        ".pyc": {
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <bool_to_float>$",
+                "$<read_object_from_pickle> => <int_to_float>$",
+                "$<read_object_from_pickle> => <str_to_float>$"
+            ]
+        },
+        ".properties": {},
+        ".csv": {},
+        ".xlsx": {},
+        ".xls": {},
+        ".json": {},
+        "<multifile>": {},
+        ".cfg": {},
+        ".yaml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <bool_to_float>$",
+                "$<read_object_from_yaml> => <int_to_float>$",
+                "$<read_object_from_yaml> => <str_to_float>$"
+            ]
+        },
+        ".ini": {},
+        ".xlsm": {}
+    },
+    "<class 'dict'>": {
+        ".yml": {
+            "2_approx_match": [
+                "<read_collection_from_yaml>",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <single_row_or_col_df_to_dict>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict>$"
+            ]
+        },
+        ".txt": {
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ],
+            "1_exact_match": [
+                "<read_dict_from_properties>",
+                "$<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict>$"
+            ]
+        },
+        ".pyc": {
+            "2_approx_match": [
+                "$<read_object_from_pickle> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <single_row_or_col_df_to_dict>$",
+                "$<read_object_from_pickle> => <merge_all_config_sections_into_a_single_dict>$"
+            ]
+        },
+        ".properties": {
+            "1_exact_match": [
+                "<read_dict_from_properties>"
+            ]
+        },
+        ".csv": {
+            "1_exact_match": [
+                "$<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict>$"
+            ]
+        },
+        ".xlsx": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict>$"
+            ]
+        },
+        ".xls": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict>$"
+            ]
+        },
+        ".json": {
+            "1_exact_match": [
+                "<read_dict_or_list_from_json>"
+            ]
+        },
+        "<multifile>": {
+            "2_approx_match": [
+                "Multifile Collection parser (parsyfiles defaults)"
+            ]
+        },
+        ".cfg": {
+            "2_approx_match": [
+                "$<read_config> => <config_to_dict_of_dict>$"
+            ],
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict>$"
+            ]
+        },
+        ".yaml": {
+            "2_approx_match": [
+                "<read_collection_from_yaml>",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <single_row_or_col_df_to_dict>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict>$"
+            ]
+        },
+        ".ini": {
+            "2_approx_match": [
+                "$<read_config> => <config_to_dict_of_dict>$"
+            ],
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict>$"
+            ]
+        },
+        ".xlsm": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict>$"
+            ]
+        }
+    },
+    "<class 'parsyfiles.converting_core.AnyObject'>": {
+        ".yml": {
+            "1_exact_match": [
+                "<read_object_from_yaml>",
+                "$<read_collection_from_yaml> => <dict_to_object>$"
+            ]
+        },
+        ".txt": {
+            "1_exact_match": [
+                "$<read_dict_from_properties> => <dict_to_object>$",
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$",
+                "$<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict> -> <dict_to_object>$"
+            ]
+        },
+        ".pyc": {
+            "1_exact_match": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        ".properties": {
+            "1_exact_match": [
+                "$<read_dict_from_properties> => <dict_to_object>$"
+            ]
+        },
+        ".csv": {
+            "1_exact_match": [
+                "$<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict> -> <dict_to_object>$"
+            ]
+        },
+        ".xlsx": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict> -> <dict_to_object>$"
+            ]
+        },
+        ".xls": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict> -> <dict_to_object>$"
+            ]
+        },
+        ".json": {
+            "1_exact_match": [
+                "$<read_dict_or_list_from_json> => <dict_to_object>$"
+            ]
+        },
+        "<multifile>": {
+            "1_exact_match": [
+                "Multifile Object parser (parsyfiles defaults)"
+            ]
+        },
+        ".cfg": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_of_dict_to_object>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_to_object>$"
+            ]
+        },
+        ".yaml": {
+            "1_exact_match": [
+                "<read_object_from_yaml>",
+                "$<read_collection_from_yaml> => <dict_to_object>$"
+            ]
+        },
+        ".ini": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_of_dict_to_object>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_to_object>$"
+            ]
+        },
+        ".xlsm": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict> -> <dict_to_object>$"
+            ]
+        }
+    },
+    "typing.List": {
+        ".yml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "<read_collection_from_yaml>"
+            ]
+        },
+        ".txt": {
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ]
+        },
+        ".pyc": {
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        ".properties": {},
+        ".csv": {},
+        ".xlsx": {},
+        ".xls": {},
+        ".json": {
+            "2_approx_match": [
+                "<read_dict_or_list_from_json>"
+            ]
+        },
+        "<multifile>": {
+            "1_exact_match": [
+                "Multifile Collection parser (parsyfiles defaults)"
+            ]
+        },
+        ".cfg": {},
+        ".yaml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "<read_collection_from_yaml>"
+            ]
+        },
+        ".ini": {},
+        ".xlsm": {}
+    },
+    "typing.Dict": {
+        ".yml": {
+            "2_approx_match": [
+                "$<read_object_from_yaml> => <single_row_or_col_df_to_dict>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict>$",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "<read_collection_from_yaml>"
+            ]
+        },
+        ".txt": {
+            "2_approx_match": [
+                "<read_dict_from_properties>",
+                "$<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict>$"
+            ],
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ]
+        },
+        ".pyc": {
+            "2_approx_match": [
+                "$<read_object_from_pickle> => <single_row_or_col_df_to_dict>$",
+                "$<read_object_from_pickle> => <merge_all_config_sections_into_a_single_dict>$",
+                "$<read_object_from_pickle> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        ".properties": {
+            "2_approx_match": [
+                "<read_dict_from_properties>"
+            ]
+        },
+        ".csv": {
+            "2_approx_match": [
+                "$<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict>$"
+            ]
+        },
+        ".xlsx": {
+            "2_approx_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict>$"
+            ]
+        },
+        ".xls": {
+            "2_approx_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict>$"
+            ]
+        },
+        ".json": {
+            "2_approx_match": [
+                "<read_dict_or_list_from_json>"
+            ]
+        },
+        "<multifile>": {
+            "1_exact_match": [
+                "Multifile Collection parser (parsyfiles defaults)"
+            ]
+        },
+        ".cfg": {
+            "2_approx_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict>$",
+                "$<read_config> => <config_to_dict_of_dict>$"
+            ]
+        },
+        ".yaml": {
+            "2_approx_match": [
+                "$<read_object_from_yaml> => <single_row_or_col_df_to_dict>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict>$",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "<read_collection_from_yaml>"
+            ]
+        },
+        ".ini": {
+            "2_approx_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict>$",
+                "$<read_config> => <config_to_dict_of_dict>$"
+            ]
+        },
+        ".xlsm": {
+            "2_approx_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict>$"
+            ]
+        }
+    },
+    "<class 'configparser.ConfigParser'>": {
+        ".yml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        ".txt": {
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ]
+        },
+        ".pyc": {
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        ".properties": {},
+        ".csv": {},
+        ".xlsx": {},
+        ".xls": {},
+        ".json": {},
+        "<multifile>": {},
+        ".cfg": {
+            "1_exact_match": [
+                "<read_config>"
+            ]
+        },
+        ".yaml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        ".ini": {
+            "1_exact_match": [
+                "<read_config>"
+            ]
+        },
+        ".xlsm": {}
+    },
+    "typing.Tuple": {
+        ".yml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "<read_collection_from_yaml>",
+                "$<read_object_from_yaml> => <list_to_tuple>$"
+            ]
+        },
+        ".txt": {
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ],
+            "1_exact_match": [
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <list_to_tuple>$"
+            ]
+        },
+        ".pyc": {
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <list_to_tuple>$"
+            ]
+        },
+        ".properties": {},
+        ".csv": {},
+        ".xlsx": {},
+        ".xls": {},
+        ".json": {
+            "1_exact_match": [
+                "$<read_dict_or_list_from_json> => <list_to_tuple>$"
+            ]
+        },
+        "<multifile>": {
+            "1_exact_match": [
+                "Multifile Collection parser (parsyfiles defaults)"
+            ]
+        },
+        ".cfg": {},
+        ".yaml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "<read_collection_from_yaml>",
+                "$<read_object_from_yaml> => <list_to_tuple>$"
+            ]
+        },
+        ".ini": {},
+        ".xlsm": {}
+    },
+    "<class 'pandas.core.frame.DataFrame'>": {
+        ".yml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <dict_to_df>$",
+                "$<read_collection_from_yaml> => <dict_to_df>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df>$",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict> -> <dict_to_df>$"
+            ]
+        },
+        ".txt": {
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ],
+            "1_exact_match": [
+                "<read_df_or_series_from_csv>",
+                "$<read_dict_from_properties> => <dict_to_df>$"
+            ]
+        },
+        ".pyc": {
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <dict_to_df>$",
+                "$<read_object_from_pickle> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df>$",
+                "$<read_object_from_pickle> => <config_to_dict_of_dict> -> <dict_to_df>$"
+            ]
+        },
+        ".properties": {
+            "1_exact_match": [
+                "$<read_dict_from_properties> => <dict_to_df>$"
+            ]
+        },
+        ".csv": {
+            "1_exact_match": [
+                "<read_df_or_series_from_csv>"
+            ]
+        },
+        ".xlsx": {
+            "1_exact_match": [
+                "<read_dataframe_from_xls>"
+            ]
+        },
+        ".xls": {
+            "1_exact_match": [
+                "<read_dataframe_from_xls>"
+            ]
+        },
+        ".json": {
+            "1_exact_match": [
+                "$<read_dict_or_list_from_json> => <dict_to_df>$"
+            ]
+        },
+        "<multifile>": {},
+        ".cfg": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_to_df>$"
+            ]
+        },
+        ".yaml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <dict_to_df>$",
+                "$<read_collection_from_yaml> => <dict_to_df>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df>$",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict> -> <dict_to_df>$"
+            ]
+        },
+        ".ini": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_to_df>$"
+            ]
+        },
+        ".xlsm": {
+            "1_exact_match": [
+                "<read_dataframe_from_xls>"
+            ]
+        }
+    },
+    "<class 'int'>": {
+        ".yml": {
+            "2_approx_match": [
+                "$<read_object_from_yaml> => <float_to_bool>$",
+                "$<read_object_from_yaml> => <int_to_bool>$",
+                "$<read_object_from_yaml> => <str_to_bool>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <bool_to_int>$",
+                "$<read_object_from_yaml> => <float_to_int>$",
+                "$<read_object_from_yaml> => <str_to_int>$"
+            ]
+        },
+        ".txt": {
+            "2_approx_match": [
+                "$<read_str_from_txt> => <str_to_bool>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <float_to_bool>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <int_to_bool>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <str_to_bool>$"
+            ],
+            "3_generic": [
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ],
+            "1_exact_match": [
+                "$<read_str_from_txt> => <str_to_int>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <bool_to_int>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <float_to_int>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <str_to_int>$"
+            ]
+        },
+        ".pyc": {
+            "2_approx_match": [
+                "$<read_object_from_pickle> => <float_to_bool>$",
+                "$<read_object_from_pickle> => <int_to_bool>$",
+                "$<read_object_from_pickle> => <str_to_bool>$"
+            ],
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <bool_to_int>$",
+                "$<read_object_from_pickle> => <float_to_int>$",
+                "$<read_object_from_pickle> => <str_to_int>$"
+            ]
+        },
+        ".properties": {},
+        ".csv": {},
+        ".xlsx": {},
+        ".xls": {},
+        ".json": {},
+        "<multifile>": {},
+        ".cfg": {},
+        ".yaml": {
+            "2_approx_match": [
+                "$<read_object_from_yaml> => <float_to_bool>$",
+                "$<read_object_from_yaml> => <int_to_bool>$",
+                "$<read_object_from_yaml> => <str_to_bool>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <bool_to_int>$",
+                "$<read_object_from_yaml> => <float_to_int>$",
+                "$<read_object_from_yaml> => <str_to_int>$"
+            ]
+        },
+        ".ini": {},
+        ".xlsm": {}
+    },
+    "<class 'list'>": {
+        ".yml": {
+            "2_approx_match": [
+                "<read_collection_from_yaml>"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        ".txt": {
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ]
+        },
+        ".pyc": {
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        ".properties": {},
+        ".csv": {},
+        ".xlsx": {},
+        ".xls": {},
+        ".json": {
+            "1_exact_match": [
+                "<read_dict_or_list_from_json>"
+            ]
+        },
+        "<multifile>": {
+            "2_approx_match": [
+                "Multifile Collection parser (parsyfiles defaults)"
+            ]
+        },
+        ".cfg": {},
+        ".yaml": {
+            "2_approx_match": [
+                "<read_collection_from_yaml>"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        ".ini": {},
+        ".xlsm": {}
+    },
+    "parsyfiles.plugins_base.support_for_collections.DictOfDict": {
+        ".yml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <config_to_dict_of_dict>$"
+            ]
+        },
+        ".txt": {
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ]
+        },
+        ".pyc": {
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <config_to_dict_of_dict>$"
+            ]
+        },
+        ".properties": {},
+        ".csv": {},
+        ".xlsx": {},
+        ".xls": {},
+        ".json": {},
+        "<multifile>": {},
+        ".cfg": {
+            "1_exact_match": [
+                "$<read_config> => <config_to_dict_of_dict>$"
+            ]
+        },
+        ".yaml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <config_to_dict_of_dict>$"
+            ]
+        },
+        ".ini": {
+            "1_exact_match": [
+                "$<read_config> => <config_to_dict_of_dict>$"
+            ]
+        },
+        ".xlsm": {}
+    },
+    "<class 'bool'>": {
+        ".yml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <float_to_bool>$",
+                "$<read_object_from_yaml> => <int_to_bool>$",
+                "$<read_object_from_yaml> => <str_to_bool>$"
+            ]
+        },
+        ".txt": {
+            "3_generic": [
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ],
+            "1_exact_match": [
+                "$<read_str_from_txt> => <str_to_bool>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <float_to_bool>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <int_to_bool>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <str_to_bool>$"
+            ]
+        },
+        ".pyc": {
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <float_to_bool>$",
+                "$<read_object_from_pickle> => <int_to_bool>$",
+                "$<read_object_from_pickle> => <str_to_bool>$"
+            ]
+        },
+        ".properties": {},
+        ".csv": {},
+        ".xlsx": {},
+        ".xls": {},
+        ".json": {},
+        "<multifile>": {},
+        ".cfg": {},
+        ".yaml": {
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ],
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <float_to_bool>$",
+                "$<read_object_from_yaml> => <int_to_bool>$",
+                "$<read_object_from_yaml> => <str_to_bool>$"
+            ]
+        },
+        ".ini": {},
+        ".xlsm": {}
+    }
+}

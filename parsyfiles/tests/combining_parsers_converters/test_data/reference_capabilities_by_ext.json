@@ -1,0 +1,749 @@
+{
+    ".xlsm": {
+        "<class 'pandas.core.frame.DataFrame'>": {
+            "1_exact_match": [
+                "<read_dataframe_from_xls>"
+            ]
+        },
+        "<class 'parsyfiles.converting_core.AnyObject'>": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict> -> <dict_to_object>$"
+            ]
+        },
+        "<class 'dict'>": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict>$"
+            ]
+        },
+        "<class 'pandas.core.series.Series'>": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_series>$"
+            ]
+        }
+    },
+    ".xls": {
+        "<class 'pandas.core.frame.DataFrame'>": {
+            "1_exact_match": [
+                "<read_dataframe_from_xls>"
+            ]
+        },
+        "<class 'parsyfiles.converting_core.AnyObject'>": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict> -> <dict_to_object>$"
+            ]
+        },
+        "<class 'dict'>": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict>$"
+            ]
+        },
+        "<class 'pandas.core.series.Series'>": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_series>$"
+            ]
+        }
+    },
+    ".ini": {
+        "<class 'dict'>": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict>$"
+            ],
+            "2_approx_match": [
+                "$<read_config> => <config_to_dict_of_dict>$"
+            ]
+        },
+        "parsyfiles.plugins_base.support_for_collections.DictOfDict": {
+            "1_exact_match": [
+                "$<read_config> => <config_to_dict_of_dict>$"
+            ]
+        },
+        "<class 'pandas.core.frame.DataFrame'>": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_to_df>$"
+            ]
+        },
+        "<class 'parsyfiles.converting_core.AnyObject'>": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_of_dict_to_object>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_to_object>$"
+            ]
+        },
+        "<class 'configparser.ConfigParser'>": {
+            "1_exact_match": [
+                "<read_config>"
+            ]
+        },
+        "<class 'pandas.core.series.Series'>": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ]
+        }
+    },
+    ".cfg": {
+        "<class 'dict'>": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict>$"
+            ],
+            "2_approx_match": [
+                "$<read_config> => <config_to_dict_of_dict>$"
+            ]
+        },
+        "parsyfiles.plugins_base.support_for_collections.DictOfDict": {
+            "1_exact_match": [
+                "$<read_config> => <config_to_dict_of_dict>$"
+            ]
+        },
+        "<class 'pandas.core.frame.DataFrame'>": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_to_df>$"
+            ]
+        },
+        "<class 'parsyfiles.converting_core.AnyObject'>": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_object>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_of_dict_to_object>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_to_object>$"
+            ]
+        },
+        "<class 'configparser.ConfigParser'>": {
+            "1_exact_match": [
+                "<read_config>"
+            ]
+        },
+        "<class 'pandas.core.series.Series'>": {
+            "1_exact_match": [
+                "$<read_config> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_config> => <config_to_dict_of_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ]
+        }
+    },
+    ".csv": {
+        "<class 'pandas.core.frame.DataFrame'>": {
+            "1_exact_match": [
+                "<read_df_or_series_from_csv>"
+            ]
+        },
+        "<class 'parsyfiles.converting_core.AnyObject'>": {
+            "1_exact_match": [
+                "$<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict> -> <dict_to_object>$"
+            ]
+        },
+        "<class 'dict'>": {
+            "1_exact_match": [
+                "$<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict>$"
+            ]
+        },
+        "<class 'pandas.core.series.Series'>": {
+            "1_exact_match": [
+                "<read_df_or_series_from_csv>"
+            ]
+        }
+    },
+    ".xlsx": {
+        "<class 'pandas.core.frame.DataFrame'>": {
+            "1_exact_match": [
+                "<read_dataframe_from_xls>"
+            ]
+        },
+        "<class 'parsyfiles.converting_core.AnyObject'>": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict> -> <dict_to_object>$"
+            ]
+        },
+        "<class 'dict'>": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_dict>$"
+            ]
+        },
+        "<class 'pandas.core.series.Series'>": {
+            "1_exact_match": [
+                "$<read_dataframe_from_xls> => <single_row_or_col_df_to_series>$"
+            ]
+        }
+    },
+    ".pyc": {
+        "parsyfiles.plugins_base.support_for_collections.DictOfDict": {
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        "<class 'int'>": {
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <bool_to_int>$",
+                "$<read_object_from_pickle> => <float_to_int>$",
+                "$<read_object_from_pickle> => <str_to_int>$"
+            ],
+            "2_approx_match": [
+                "$<read_object_from_pickle> => <float_to_bool>$",
+                "$<read_object_from_pickle> => <int_to_bool>$",
+                "$<read_object_from_pickle> => <str_to_bool>$"
+            ],
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        "<class 'dict'>": {
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <single_row_or_col_df_to_dict>$",
+                "$<read_object_from_pickle> => <merge_all_config_sections_into_a_single_dict>$"
+            ],
+            "2_approx_match": [
+                "$<read_object_from_pickle> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        "typing.Tuple": {
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <list_to_tuple>$"
+            ],
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        "<class 'bool'>": {
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <float_to_bool>$",
+                "$<read_object_from_pickle> => <int_to_bool>$",
+                "$<read_object_from_pickle> => <str_to_bool>$"
+            ],
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        "<class 'str'>": {
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <bool_to_string>$",
+                "$<read_object_from_pickle> => <float_to_string>$",
+                "$<read_object_from_pickle> => <int_to_string>$"
+            ],
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        "typing.Set": {
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <list_to_set>$"
+            ],
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        "<class 'pandas.core.frame.DataFrame'>": {
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <dict_to_df>$",
+                "$<read_object_from_pickle> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df>$",
+                "$<read_object_from_pickle> => <config_to_dict_of_dict> -> <dict_to_df>$"
+            ],
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        "<class 'parsyfiles.converting_core.AnyObject'>": {
+            "1_exact_match": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        "<class 'float'>": {
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <bool_to_float>$",
+                "$<read_object_from_pickle> => <int_to_float>$",
+                "$<read_object_from_pickle> => <str_to_float>$"
+            ],
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        },
+        "<class 'pandas.core.series.Series'>": {
+            "1_exact_match": [
+                "$<read_object_from_pickle> => <single_row_or_col_df_to_series>$",
+                "$<read_object_from_pickle> => <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_object_from_pickle> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_object_from_pickle> => <config_to_dict_of_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ],
+            "3_generic": [
+                "<read_object_from_pickle>"
+            ]
+        }
+    },
+    ".txt": {
+        "typing.Set": {
+            "1_exact_match": [
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <list_to_set>$"
+            ],
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ]
+        },
+        "<class 'dict'>": {
+            "1_exact_match": [
+                "<read_dict_from_properties>",
+                "$<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict>$"
+            ],
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ]
+        },
+        "typing.Tuple": {
+            "1_exact_match": [
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <list_to_tuple>$"
+            ],
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ]
+        },
+        "<class 'bool'>": {
+            "1_exact_match": [
+                "$<read_str_from_txt> => <str_to_bool>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <float_to_bool>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <int_to_bool>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <str_to_bool>$"
+            ],
+            "3_generic": [
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ]
+        },
+        "<class 'str'>": {
+            "1_exact_match": [
+                "<read_str_from_txt>"
+            ]
+        },
+        "<class 'int'>": {
+            "1_exact_match": [
+                "$<read_str_from_txt> => <str_to_int>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <bool_to_int>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <float_to_int>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <str_to_int>$"
+            ],
+            "2_approx_match": [
+                "$<read_str_from_txt> => <str_to_bool>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <float_to_bool>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <int_to_bool>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <str_to_bool>$"
+            ],
+            "3_generic": [
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ]
+        },
+        "<class 'pandas.core.frame.DataFrame'>": {
+            "1_exact_match": [
+                "<read_df_or_series_from_csv>",
+                "$<read_dict_from_properties> => <dict_to_df>$"
+            ],
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ]
+        },
+        "<class 'parsyfiles.converting_core.AnyObject'>": {
+            "1_exact_match": [
+                "$<read_dict_from_properties> => <dict_to_object>$",
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$",
+                "$<read_df_or_series_from_csv> => <single_row_or_col_df_to_dict> -> <dict_to_object>$"
+            ]
+        },
+        "<class 'float'>": {
+            "1_exact_match": [
+                "$<read_str_from_txt> => <str_to_float>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <bool_to_float>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <int_to_float>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object> -> <str_to_float>$"
+            ],
+            "3_generic": [
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ]
+        },
+        "<class 'pandas.core.series.Series'>": {
+            "1_exact_match": [
+                "<read_df_or_series_from_csv>",
+                "$<read_dict_from_properties> => <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ],
+            "3_generic": [
+                "$<read_str_from_txt> => <constructor_with_str_arg>$",
+                "$<read_str_from_txt> => <base64_ascii_str_pickle_to_object>$"
+            ]
+        }
+    },
+    ".yml": {
+        "<class 'dict'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <single_row_or_col_df_to_dict>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict>$"
+            ],
+            "2_approx_match": [
+                "<read_collection_from_yaml>",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'bool'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <float_to_bool>$",
+                "$<read_object_from_yaml> => <int_to_bool>$",
+                "$<read_object_from_yaml> => <str_to_bool>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "typing.Dict": {
+            "1_exact_match": [
+                "<read_collection_from_yaml>"
+            ],
+            "2_approx_match": [
+                "$<read_object_from_yaml> => <single_row_or_col_df_to_dict>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict>$",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'int'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <bool_to_int>$",
+                "$<read_object_from_yaml> => <float_to_int>$",
+                "$<read_object_from_yaml> => <str_to_int>$"
+            ],
+            "2_approx_match": [
+                "$<read_object_from_yaml> => <float_to_bool>$",
+                "$<read_object_from_yaml> => <int_to_bool>$",
+                "$<read_object_from_yaml> => <str_to_bool>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'pandas.core.frame.DataFrame'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <dict_to_df>$",
+                "$<read_collection_from_yaml> => <dict_to_df>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df>$",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict> -> <dict_to_df>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'pandas.core.series.Series'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <single_row_or_col_df_to_series>$",
+                "$<read_object_from_yaml> => <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_collection_from_yaml> => <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "typing.Set": {
+            "1_exact_match": [
+                "<read_collection_from_yaml>",
+                "$<read_object_from_yaml> => <list_to_set>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "typing.Tuple": {
+            "1_exact_match": [
+                "<read_collection_from_yaml>",
+                "$<read_object_from_yaml> => <list_to_tuple>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'float'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <bool_to_float>$",
+                "$<read_object_from_yaml> => <int_to_float>$",
+                "$<read_object_from_yaml> => <str_to_float>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "parsyfiles.plugins_base.support_for_collections.DictOfDict": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'str'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <bool_to_string>$",
+                "$<read_object_from_yaml> => <float_to_string>$",
+                "$<read_object_from_yaml> => <int_to_string>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'parsyfiles.converting_core.AnyObject'>": {
+            "1_exact_match": [
+                "<read_object_from_yaml>",
+                "$<read_collection_from_yaml> => <dict_to_object>$"
+            ]
+        },
+        "typing.List": {
+            "1_exact_match": [
+                "<read_collection_from_yaml>"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        }
+    },
+    ".properties": {
+        "<class 'pandas.core.frame.DataFrame'>": {
+            "1_exact_match": [
+                "$<read_dict_from_properties> => <dict_to_df>$"
+            ]
+        },
+        "<class 'parsyfiles.converting_core.AnyObject'>": {
+            "1_exact_match": [
+                "$<read_dict_from_properties> => <dict_to_object>$"
+            ]
+        },
+        "<class 'dict'>": {
+            "1_exact_match": [
+                "<read_dict_from_properties>"
+            ]
+        },
+        "<class 'pandas.core.series.Series'>": {
+            "1_exact_match": [
+                "$<read_dict_from_properties> => <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ]
+        }
+    },
+    ".yaml": {
+        "<class 'dict'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <single_row_or_col_df_to_dict>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict>$"
+            ],
+            "2_approx_match": [
+                "<read_collection_from_yaml>",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'bool'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <float_to_bool>$",
+                "$<read_object_from_yaml> => <int_to_bool>$",
+                "$<read_object_from_yaml> => <str_to_bool>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "typing.Dict": {
+            "1_exact_match": [
+                "<read_collection_from_yaml>"
+            ],
+            "2_approx_match": [
+                "$<read_object_from_yaml> => <single_row_or_col_df_to_dict>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict>$",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'int'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <bool_to_int>$",
+                "$<read_object_from_yaml> => <float_to_int>$",
+                "$<read_object_from_yaml> => <str_to_int>$"
+            ],
+            "2_approx_match": [
+                "$<read_object_from_yaml> => <float_to_bool>$",
+                "$<read_object_from_yaml> => <int_to_bool>$",
+                "$<read_object_from_yaml> => <str_to_bool>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'pandas.core.frame.DataFrame'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <dict_to_df>$",
+                "$<read_collection_from_yaml> => <dict_to_df>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df>$",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict> -> <dict_to_df>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'pandas.core.series.Series'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <single_row_or_col_df_to_series>$",
+                "$<read_object_from_yaml> => <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_collection_from_yaml> => <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_object_from_yaml> => <merge_all_config_sections_into_a_single_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$",
+                "$<read_object_from_yaml> => <config_to_dict_of_dict> -> <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "typing.Set": {
+            "1_exact_match": [
+                "<read_collection_from_yaml>",
+                "$<read_object_from_yaml> => <list_to_set>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "typing.Tuple": {
+            "1_exact_match": [
+                "<read_collection_from_yaml>",
+                "$<read_object_from_yaml> => <list_to_tuple>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'float'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <bool_to_float>$",
+                "$<read_object_from_yaml> => <int_to_float>$",
+                "$<read_object_from_yaml> => <str_to_float>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "parsyfiles.plugins_base.support_for_collections.DictOfDict": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <config_to_dict_of_dict>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'str'>": {
+            "1_exact_match": [
+                "$<read_object_from_yaml> => <bool_to_string>$",
+                "$<read_object_from_yaml> => <float_to_string>$",
+                "$<read_object_from_yaml> => <int_to_string>$"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        },
+        "<class 'parsyfiles.converting_core.AnyObject'>": {
+            "1_exact_match": [
+                "<read_object_from_yaml>",
+                "$<read_collection_from_yaml> => <dict_to_object>$"
+            ]
+        },
+        "typing.List": {
+            "1_exact_match": [
+                "<read_collection_from_yaml>"
+            ],
+            "3_generic": [
+                "<read_object_from_yaml>"
+            ]
+        }
+    },
+    "<multifile>": {
+        "<class 'dict'>": {
+            "2_approx_match": [
+                "Multifile Collection parser (parsyfiles defaults)"
+            ]
+        },
+        "<class 'bool'>": {},
+        "typing.Dict": {
+            "1_exact_match": [
+                "Multifile Collection parser (parsyfiles defaults)"
+            ]
+        },
+        "<class 'int'>": {},
+        "<class 'pandas.core.frame.DataFrame'>": {},
+        "<class 'pandas.core.series.Series'>": {},
+        "typing.Set": {
+            "1_exact_match": [
+                "Multifile Collection parser (parsyfiles defaults)"
+            ]
+        },
+        "typing.Tuple": {
+            "1_exact_match": [
+                "Multifile Collection parser (parsyfiles defaults)"
+            ]
+        },
+        "<class 'float'>": {},
+        "parsyfiles.plugins_base.support_for_collections.DictOfDict": {},
+        "<class 'str'>": {},
+        "<class 'parsyfiles.converting_core.AnyObject'>": {
+            "1_exact_match": [
+                "Multifile Object parser (parsyfiles defaults)"
+            ]
+        },
+        "typing.List": {
+            "1_exact_match": [
+                "Multifile Collection parser (parsyfiles defaults)"
+            ]
+        }
+    },
+    ".json": {
+        "<class 'dict'>": {
+            "1_exact_match": [
+                "<read_dict_or_list_from_json>"
+            ]
+        },
+        "typing.Tuple": {
+            "1_exact_match": [
+                "$<read_dict_or_list_from_json> => <list_to_tuple>$"
+            ]
+        },
+        "typing.Set": {
+            "1_exact_match": [
+                "$<read_dict_or_list_from_json> => <list_to_set>$"
+            ]
+        },
+        "<class 'pandas.core.frame.DataFrame'>": {
+            "1_exact_match": [
+                "$<read_dict_or_list_from_json> => <dict_to_df>$"
+            ]
+        },
+        "<class 'parsyfiles.converting_core.AnyObject'>": {
+            "1_exact_match": [
+                "$<read_dict_or_list_from_json> => <dict_to_object>$"
+            ]
+        },
+        "<class 'list'>": {
+            "1_exact_match": [
+                "<read_dict_or_list_from_json>"
+            ]
+        },
+        "<class 'pandas.core.series.Series'>": {
+            "1_exact_match": [
+                "$<read_dict_or_list_from_json> => <dict_to_df> -> <single_row_or_col_df_to_series>$"
+            ]
+        }
+    }
+}

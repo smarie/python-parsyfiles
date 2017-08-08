@@ -5,6 +5,7 @@ from pprint import pprint
 from typing import List, Any, Tuple, Dict, Set
 from unittest import TestCase
 
+from autoclass import is_in
 from parsyfiles import parse_collection, RootParser, parse_item
 from parsyfiles.converting_core import AnyObject
 from parsyfiles.parsing_core import SingleFileParserFunction
@@ -21,110 +22,7 @@ def fix_path(relative_path: str):
     :param relative_path: 
     :return: 
     """
-    return os.path.join(THIS_DIR, os.pardir, relative_path)
-
-
-class Timer(object):
-    def __init__(self, name=None):
-        self.name = name
-
-    def __enter__(self):
-        self.tstart = time.time()
-
-    def __exit__(self, type, value, traceback):
-        if self.name:
-            print('[%s]' % self.name)
-        print('Elapsed: %s' % (time.time() - self.tstart))
-
-
-class AllTests(TestCase):
-
-    def setUp(self):
-        """
-        Creates the root parser to be used in most tests
-        :return:
-        """
-        self.root_parser = RootParser()
-
-    def test_a_root_parser_capabilities(self):
-        """
-        Tests that we can print the capabilities of the root parser: registered parsers and converters, supported
-        extensions and types, etc.
-        :return:
-        """
-        p = self.root_parser.get_all_parsers(strict_type_matching=False)
-        print('\n' + str(len(p)) + ' Root parser parsers:')
-        pprint(p)
-
-        print('Testing option hints for parsing chain')
-        print(p[0].options_hints())
-
-        c = self.root_parser.get_all_conversion_chains()
-        print('\n' + str(len(c[0]) + len(c[2])) + ' Root parser converters:')
-        pprint(c)
-        e = self.root_parser.get_all_supported_exts()
-        print('\n' + str(len(e)) + ' Root parser supported extensions:')
-        pprint(e)
-        t = self.root_parser.get_all_supported_types_pretty_str()
-        print('\n' + str(len(t)) + ' Root parser supported types:')
-        pprint(t)
-        print('\nRoot parser parsers by extensions:')
-        self.root_parser.print_capabilities_by_ext(strict_type_matching=False)
-        print('\nRoot parser parsers by types:')
-        self.root_parser.print_capabilities_by_type(strict_type_matching=False)
-        return
-
-    def test_b_root_parser_any(self):
-        """
-        Tests that we can ask the rootparser for its capabilities to parse a given type
-        :return:
-        """
-        # print
-        self.root_parser.print_capabilities_for_type(typ=Any)
-
-        # details
-        res = self.root_parser.find_all_matching_parsers(strict=False, desired_type=AnyObject, required_ext='.cfg')
-        match_generic, match_approx, match_exact = res[0]
-        self.assertEquals(len(match_generic), 0)
-        self.assertEquals(len(match_approx), 0)
-
-    def test_objects_support(self):
-        """
-        Tests all the supported ways to parse a simple object
-        :return:
-        """
-
-        # Then define the simple class representing your test case
-        class ExecOpTest(object):
-
-            def __init__(self, x: float, y: float, op: str, expected_result: float):
-                self.x = x
-                self.y = y
-                self.op = op
-                self.expected_result = expected_result
-
-            def __str__(self):
-                return self.__repr__()
-
-            def __repr__(self):
-                return str(self.x) + ' ' + self.op + ' ' + str(self.y) + ' =? ' + str(self.expected_result)
-
-        # create the parser and parse a single file
-        e = parse_item(fix_path('./test_data/objects/test_diff_1'), ExecOpTest)
-        pprint(e)
-
-        # parse all of them
-        e = parse_collection(fix_path('./test_data/objects'), ExecOpTest)
-        pprint(e)
-
-    def test_collections(self):
-        """
-        Tests all the supported ways to parse collections
-        :return:
-        """
-        l = parse_item(fix_path('./test_data/collections'), Tuple[Dict[str, int], List[int], Set[int], Tuple[str, int,
-                                                                                                             str]])
-        print(l)
+    return os.path.join(THIS_DIR, relative_path)
 
 
 class DemoTests(TestCase):
@@ -138,10 +36,10 @@ class DemoTests(TestCase):
         :return:
         """
         from pandas import DataFrame
-        dfs = parse_collection(fix_path('./test_data/demo/simple_collection'), DataFrame)
+        dfs = parse_collection(fix_path('./simple_collection'), DataFrame)
         pprint(dfs)
 
-        df = parse_item(fix_path('./test_data/demo/simple_collection/c'), DataFrame)
+        df = parse_item(fix_path('./simple_collection/c'), DataFrame)
         pprint(df)
 
         RootParser().print_capabilities_for_type(typ=DataFrame)
@@ -152,12 +50,12 @@ class DemoTests(TestCase):
         :return:
         """
         from pandas import DataFrame
-        dfl = parse_item(fix_path('./test_data/demo/simple_collection'), List[DataFrame])
+        dfl = parse_item(fix_path('./simple_collection'), List[DataFrame])
         pprint(dfl)
-        # dataframe objects are not mutable > can't be hashed and therefore no set can be built
-        #dfs = parse_item('./test_data/demo/simple_collection', Set[DataFrame], logger=getLogger())
+        # dataframe objects_data are not mutable > can't be hashed and therefore no set can be built
+        #dfs = parse_item('./simple_collection', Set[DataFrame], logger=getLogger())
         #pprint(dfs)
-        dft = parse_item(fix_path('./test_data/demo/simple_collection'),
+        dft = parse_item(fix_path('./simple_collection'),
                          Tuple[DataFrame, DataFrame, DataFrame, DataFrame, DataFrame])
         pprint(dft)
 
@@ -167,17 +65,17 @@ class DemoTests(TestCase):
         :return:
         """
         from pandas import DataFrame
-        dfs = parse_collection(fix_path('./test_data/demo/simple_collection'), DataFrame, logger=getLogger())
+        dfs = parse_collection(fix_path('./simple_collection'), DataFrame, logger=getLogger())
         pprint(dfs)
 
-        df = parse_item(fix_path('./test_data/demo/simple_collection/c'), DataFrame, logger=getLogger())
+        df = parse_item(fix_path('./simple_collection/c'), DataFrame, logger=getLogger())
         pprint(df)
 
         # -- this defaults to the default logger, so not interesting to test
-        # dfs = parse_collection('./test_data/demo/simple_collection', DataFrame, logger=None)
+        # dfs = parse_collection('./simple_collection', DataFrame, logger=None)
         # pprint(dfs)
         #
-        # df = parse_item('./test_data/demo/simple_collection/c', DataFrame, logger=None)
+        # df = parse_item('./simple_collection/c', DataFrame, logger=None)
         # pprint(df)
 
     def test_simple_collection_lazy(self):
@@ -186,7 +84,7 @@ class DemoTests(TestCase):
         :return:
         """
         from pandas import DataFrame
-        dfs = parse_collection(fix_path('./test_data/demo/simple_collection'), DataFrame,
+        dfs = parse_collection(fix_path('./simple_collection'), DataFrame,
                                lazy_mfcollection_parsing=True)
 
         # check len
@@ -223,7 +121,7 @@ class DemoTests(TestCase):
 
     def test_simple_objects(self):
         """
-        Parsing a collection of simple objects
+        Parsing a collection of simple objects_data
         :return:
         """
 
@@ -252,25 +150,25 @@ class DemoTests(TestCase):
                 return str(self.x) + ' ' + self.op + ' ' + str(self.y) + ' =? ' + str(self.expected_result)
 
         # Create the parser and parse a single file
-        # e = parse_item('./test_data/objects/test_diff_1', ExecOpTest)
+        # e = parse_item('./test_data/objects_data/test_diff_1', ExecOpTest)
         # pprint(e)
 
         # parse all of them as dicts
-        sf_tests_dct = parse_collection(fix_path('./test_data/demo/simple_objects'), Dict)
+        sf_tests_dct = parse_collection(fix_path('./simple_objects'), Dict)
 
         # assert that they are sorted
         assert list(sf_tests_dct.keys()) == list(sorted(sf_tests_dct.keys()))
 
-        # parse all of them as objects
-        sf_tests = parse_collection(fix_path('./test_data/demo/simple_objects'), ExecOpTest)
+        # parse all of them as objects_data
+        sf_tests = parse_collection(fix_path('./simple_objects'), ExecOpTest)
         pprint(sf_tests)
 
         #
         RootParser().print_capabilities_for_type(typ=ExecOpTest)
 
-    def test_simple_object_with_contract_classtools(self):
+    def test_simple_object_with_contract_autoclass_pycontract(self):
         """
-        Parsing a collection of simple objects where the class is defined with `autocode-classtools`
+        Parsing a collection of simple objects_data where the class is defined with `autoclass` and PyContracts
         :return:
         """
 
@@ -287,26 +185,52 @@ class DemoTests(TestCase):
             def __init__(self, x: float, y: float, op: str, expected_result: float):
                 pass
 
-            def __str__(self):
-                return self.__repr__()
+            def __repr__(self):
+                return str(self.x) + ' ' + self.op + ' ' + str(self.y) + ' =? ' + str(self.expected_result)
+
+        try:
+            sf_tests = parse_item(fix_path('./simple_objects/test_diff_1'), ExecOpTest)
+        except ParsingException as e:
+            self.assertIn("<class 'contracts.interface.ContractNotRespected'>"
+                          + " Breach for argument 'op' to ExecOpTest:generated_setter_fun().\n"
+                          + "Value does not pass criteria of <lambda>()() (module:", e.args[0])
+            self.assertIn("checking: callable()       for value: Instance of <class 'str'>: '-'   \n"
+                          + "checking: allowed_op       for value: Instance of <class 'str'>: '-'   \n"
+                          + "checking: str,allowed_op   for value: Instance of <class 'str'>: '-'"
+                          , e.args[0])
+
+    def test_simple_object_with_contract_autoclass_enforce(self):
+        """
+        Parsing a collection of simple objects_data where the class is defined with `autoclass` and enforce
+        :return:
+        """
+
+        from autoclass import autoprops, autoargs, validate
+        from enforce import runtime_validation, config
+        from numbers import Real
+
+        config(dict(mode='covariant'))  # to accept subclasses in validation
+
+        @runtime_validation
+        @autoprops
+        class ExecOpTest(object):
+            @autoargs
+            @validate(op=is_in({'+', '*'}))
+            def __init__(self, x: Real, y: Real, op: str, expected_result: Real):
+                pass
 
             def __repr__(self):
                 return str(self.x) + ' ' + self.op + ' ' + str(self.y) + ' =? ' + str(self.expected_result)
 
         try:
-            sf_tests = parse_collection(fix_path('./test_data/demo/simple_objects'), ExecOpTest)
+            sf_tests = parse_item(fix_path('./simple_objects/test_diff_1'), ExecOpTest)
         except ParsingException as e:
-            self.assertIn("<class 'contracts.interface.ContractNotRespected'>"
-                          + " Breach for argument 'op' to ExecOpTest:generated_setter_fun().\n"
-                          + "Value does not pass criteria of <lambda>()() (module: parsyfiles.tests.test_parsyfiles).\n"
-                          + "checking: callable()       for value: Instance of <class 'str'>: '-'   \n"
-                          + "checking: allowed_op       for value: Instance of <class 'str'>: '-'   \n"
-                          + "checking: str,allowed_op   for value: Instance of <class 'str'>: '-'"
-                          , e.args[0])
+            self.assertIn("<class \'autoclass.validate.ValidationError\'> is_in: x in {\'*\', \'+\'} does not hold "
+                          "for x=-", e.args[0])
 
     def test_simple_object_with_contract_attrs(self):
         """
-        Parsing a collection of simple objects where the class is defined with `attrs`
+        Parsing a collection of simple objects_data where the class is defined with `attrs`
         :return:
         """
 
@@ -328,13 +252,13 @@ class DemoTests(TestCase):
             expected_result = attr.ib(convert=float, validator=instance_of(float))
 
         try:
-            sf_tests = parse_collection(fix_path('./test_data/demo/simple_objects'), ExecOpTest)
+            sf_tests = parse_collection(fix_path('./simple_objects'), ExecOpTest)
         except ParsingException as e:
             self.assertIn('<class \'ValueError\'> \'op\' has to be a string, in ', e.args[0])
 
     def test_multifile_objects(self):
         """
-        Parsing a list of multifile objects
+        Parsing a list of multifile objects_data
         :return:
         """
         from pandas import Series, DataFrame
@@ -359,13 +283,13 @@ class DemoTests(TestCase):
                 self.expected_results = expected_results
 
         # parse all of them
-        mf_tests = parse_collection(fix_path('./test_data/demo/complex_objects'), ExecOpSeriesTest)
+        mf_tests = parse_collection(fix_path('./complex_objects'), ExecOpSeriesTest)
         pprint(mf_tests)
 
         RootParser().print_capabilities_for_type(typ=ExecOpSeriesTest)
 
         from parsyfiles import FlatFileMappingConfiguration
-        dfs = parse_collection(fix_path('./test_data/demo/complex_objects_flat'), DataFrame,
+        dfs = parse_collection(fix_path('./complex_objects_flat'), DataFrame,
                                file_mapping_conf=FlatFileMappingConfiguration())
         pprint(dfs)
 
@@ -375,7 +299,7 @@ class DemoTests(TestCase):
         :return:
         """
         from pandas import DataFrame
-        dfs = parse_collection(fix_path('./test_data/demo/simple_collection_dataframe_inference'), DataFrame)
+        dfs = parse_collection(fix_path('./simple_collection_dataframe_inference'), DataFrame)
         pprint(dfs)
 
     def test_pass_parser_options(self):
@@ -407,7 +331,7 @@ class DemoTests(TestCase):
         opts = add_parser_options(opts, 'read_df_or_series_from_csv', {'parse_dates': True, 'index_col': 0})
         opts = add_parser_options(opts, 'read_dataframe_from_xls', {'index_col': 0})
 
-        dfs = parser.parse_collection(fix_path('./test_data/demo/ts_collection'), DataFrame, options=opts)
+        dfs = parser.parse_collection(fix_path('./ts_collection'), DataFrame, options=opts)
         print(dfs)
 
     def test_parse_subclass_of_known_with_custom_converter(self):
@@ -476,7 +400,7 @@ class DemoTests(TestCase):
         opts = add_parser_options(opts, 'read_df_or_series_from_csv', {'parse_dates': True, 'index_col': 0})
         opts = add_parser_options(opts, 'read_dataframe_from_xls', {'index_col': 0})
 
-        dfs = parser.parse_collection(fix_path('./test_data/demo/ts_collection'), TimeSeries, options=opts)
+        dfs = parser.parse_collection(fix_path('./ts_collection'), TimeSeries, options=opts)
 
     def test_parse_with_custom_parser(self):
         """
@@ -510,5 +434,5 @@ class DemoTests(TestCase):
 
         parser = RootParser('parsyfiles with timeseries')
         parser.register_parser(my_parser)
-        xmls = parser.parse_collection(fix_path('./test_data/demo/xml_collection'), ElementTree)
+        xmls = parser.parse_collection(fix_path('./xml_collection'), ElementTree)
         pprint({name: tostring(x.getroot()) for name, x in xmls.items()})

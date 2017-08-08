@@ -24,7 +24,7 @@ def fix_path(relative_path: str):
     :param relative_path: 
     :return: 
     """
-    return os.path.join(THIS_DIR, os.pardir, relative_path)
+    return os.path.join(THIS_DIR, relative_path)
 
 
 class Timer(object):
@@ -46,33 +46,8 @@ class MultifileAndCustomFunctionsTest(TestCase):
         with Timer('setup'):
             self.root_parser, self.main_type = self._create_root_parser()
 
-    def test_a_root_parser(self):
-        print('\nRoot parser parsers:')
-        pprint(self.root_parser.get_all_parsers(strict_type_matching=False))
-        print('\nRoot parser converters:')
-        pprint(self.root_parser.get_all_conversion_chains())
-        print('\nRoot parser supported extensions:')
-        pprint(self.root_parser.get_all_supported_exts())
-        print('\nRoot parser supported types:')
-        pprint(self.root_parser.get_all_supported_types_pretty_str())
-        print('\nRoot parser parsers by extensions:')
-        self.root_parser.print_capabilities_by_ext(strict_type_matching=False)
-        print('\nRoot parser parsers by types:')
-        self.root_parser.print_capabilities_by_type(strict_type_matching=False)
-        return
-
-    def test_b_root_parser_any(self):
-        # print
-        self.root_parser.print_capabilities_for_type(typ=Any)
-
-        # details
-        res = self.root_parser.find_all_matching_parsers(strict=False, desired_type=Any, required_ext='.cfg')
-        match_generic, match_approx, match_exact = res[0]
-        self.assertEquals(len(match_generic), 0)
-        self.assertEquals(len(match_approx), 0)
-
     def test_single_multifile_object_folders(self):
-        f = self.root_parser.parse_item(fix_path('./test_data/custom_with_folders/item1'), self.main_type)
+        f = self.root_parser.parse_item(fix_path('./custom_with_folders/item1'), self.main_type)
         pprint(f)
         return
 
@@ -82,32 +57,32 @@ class MultifileAndCustomFunctionsTest(TestCase):
 
         # Try to parse it as a list
         with self.assertRaises(ParsingException):
-            f = self.root_parser.parse_item(fix_path('./test_data/custom_without_folders/item1'), List[self.main_type], file_mapping_conf=config)
+            f = self.root_parser.parse_item(fix_path('./custom_without_folders/item1'), List[self.main_type], file_mapping_conf=config)
 
-        f = self.root_parser.parse_item(fix_path('./test_data/custom_without_folders/item1'), self.main_type, file_mapping_conf=config)
+        f = self.root_parser.parse_item(fix_path('./custom_without_folders/item1'), self.main_type, file_mapping_conf=config)
         pprint(f)
         return
 
     def test_single_list_object_with_folders(self):
-        f = self.root_parser.parse_item(fix_path('./test_data/custom_with_folders'), List[self.main_type])
+        f = self.root_parser.parse_item(fix_path('./custom_with_folders'), List[self.main_type])
         pprint(f)
         self.assertEqual(len(f), 3)
         return
 
     def test_list_object_with_folders(self):
-        l = self.root_parser.parse_item(fix_path('./test_data/custom_with_folders'), List[self.main_type])
+        l = self.root_parser.parse_item(fix_path('./custom_with_folders'), List[self.main_type])
         pprint(l)
         self.assertEqual(len(l), 3)
         return
 
     def test_with_folders_set(self):
-        s = self.root_parser.parse_item(fix_path('./test_data/custom_with_folders'), Set[self.main_type])
+        s = self.root_parser.parse_item(fix_path('./custom_with_folders'), Set[self.main_type])
         pprint(s)
         self.assertEqual(len(s), 3)
         return
 
     def test_with_folders_dict(self):
-        d = self.root_parser.parse_collection(fix_path('./test_data/custom_with_folders'), self.main_type)
+        d = self.root_parser.parse_collection(fix_path('./custom_with_folders'), self.main_type)
         pprint(d)
         self.assertEqual(len(d), 3)
         return
@@ -115,7 +90,7 @@ class MultifileAndCustomFunctionsTest(TestCase):
     def test_no_folders(self):
 
         config = FlatFileMappingConfiguration()
-        d = self.root_parser.parse_collection(fix_path('./test_data/custom_without_folders'), self.main_type, file_mapping_conf=config)
+        d = self.root_parser.parse_collection(fix_path('./custom_without_folders'), self.main_type, file_mapping_conf=config)
         pprint(d)
         self.assertEqual(len(d), 3)
         return
@@ -123,12 +98,12 @@ class MultifileAndCustomFunctionsTest(TestCase):
 
     def _create_root_parser(self):
 
-        # This framework allows users to parse (collections of) objects from files. Each object is a dictionary with
+        # This framework allows users to parse (collections_data of) objects_data from files. Each object is a dictionary with
         # user-defined fields. Each field is mapped to a file, or a collection of files in a folder.
 
         # Step 1: define the applicative data model.
         # ------------------------------------------
-        # a) define the *basic* types of the objects you want to read from files.
+        # a) define the *basic* types of the objects_data you want to read from files.
         # Each of these object types should be readable from *one* (and only one) file.
         #
         # -- Sometimes you will feel the need to use a class of your own, that probably already exists in your program:
@@ -179,7 +154,7 @@ class MultifileAndCustomFunctionsTest(TestCase):
         # *really* want as the outcome of the parsing step. For example it might represent a test case.
         class MainFooBarItem(object):
             """
-            The main class of objects that we want to parse. The signature of its constructor will be used to infer
+            The main class of objects_data that we want to parse. The signature of its constructor will be used to infer
             the parsers to use and to check which attributes are optional or not.
             """
             def __init__(self, input_simple: OneLiner, expected_out: Config, expected_perf: Config = None):
@@ -363,7 +338,7 @@ class TestDemo(TestCase):
         root_parser.register_parser(SingleFileParserFunction(test_parse_configuration_cfg_file, streaming_mode=True,
                                                              supported_types={OpConfig}, supported_exts={'.cfg'}))
 
-        # Finally we define the 'test case' objects
+        # Finally we define the 'test case' objects_data
         class OpTestCase(object):
             def __init__(self, input_a: int, input_b: int, output: int, options: OpConfig = None):
                 self.input_a, self.input_b, self.output = input_a, input_b, output
@@ -379,11 +354,11 @@ class TestDemo(TestCase):
                 return str(self.input_a) + ' ' + self.op + ' ' + str(self.input_b) + ' =? ' + str(self.output)
 
         # And we parse a collection of these
-        results = root_parser.parse_collection(fix_path('./test_data/custom_old_demo'), OpTestCase)
+        results = root_parser.parse_collection(fix_path('./custom_old_demo'), OpTestCase)
         pprint(results)
 
         conf = FlatFileMappingConfiguration(separator='--')
-        results = root_parser.parse_collection(fix_path('./test_data/custom_old_demo_flat'), OpTestCase, file_mapping_conf=conf)
+        results = root_parser.parse_collection(fix_path('./custom_old_demo_flat'), OpTestCase, file_mapping_conf=conf)
         pprint(results)
 
         class OpTestCaseColl(object):
@@ -404,10 +379,10 @@ class TestDemo(TestCase):
                         self.output) + ' ' + str(self.input_c)
 
 
-        results = root_parser.parse_collection(fix_path('./test_data/custom_old_demo_flat_coll'), OpTestCaseColl,
+        results = root_parser.parse_collection(fix_path('./custom_old_demo_flat_coll'), OpTestCaseColl,
                                                file_mapping_conf=conf)
         pprint(results['case3'].input_c)
 
-        results = root_parser.parse_collection(fix_path('./test_data/custom_old_demo_coll'), OpTestCaseColl)
+        results = root_parser.parse_collection(fix_path('./custom_old_demo_coll'), OpTestCaseColl)
         pprint(results['case3'].input_c)
 
