@@ -1,10 +1,15 @@
 import json
-from typing import Any
+import shutil
+from io import TextIOBase, StringIO
+from logging import Logger
+from typing import Any, Type
 
 import os
-from parsyfiles import RootParser, pprint
+from pprint import pprint
+from copy import copy, deepcopy
+from parsyfiles import RootParser
 from parsyfiles.converting_core import AnyObject
-
+from parsyfiles.parsing_core import SingleFileParserFunction
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -41,6 +46,16 @@ def to_str_coll(dct):
         except:
             # a value
             return str(dct)
+
+
+def test_copy(root_parser: RootParser):
+    """ Tests that a rootparser may be copied """
+    copy(root_parser)
+
+
+def test_deep_copy(root_parser: RootParser):
+    """ Tests that a rootparser may be copied """
+    deepcopy(root_parser)
 
 
 def test_get_all_parsers(root_parser: RootParser):
@@ -151,3 +166,47 @@ def test_root_parser_any():
     match_generic, match_approx, match_exact = res[0]
     assert len(match_generic) == 0
     assert len(match_approx) == 0
+
+
+def test_custom_parser_ok_for_subclasses():
+    """
+    Tests that if you register a custom parser for a subclass of A, it gets correctly used to parse A (in non-strict
+    mode, which is the default)
+    :return:
+    """
+    root_parser = RootParser()
+
+    class A:
+        def __init__(self, txt):
+            self.txt = txt
+
+    class B(A):
+        """ a subclass of A """
+        pass
+
+    def read_B_from_txt(desired_type: Type[dict], file_object: TextIOBase,
+                      logger: Logger, *args, **kwargs) -> str:
+        # read the entire stream into a string
+        str_io = StringIO()
+        shutil.copyfileobj(file_object, str_io)
+        # only return the first character
+        return B(str_io.getvalue()[0])
+
+    # before registering a parser for B, only generic parsers are able to parse a A
+    before_capa = root_parser.get_capabilities_for_type(A)['.txt']
+    assert list(before_capa.keys()) == ['3_generic']
+
+    # register a parser for B
+    root_parser.register_parser(SingleFileParserFunction(parser_function=read_B_from_txt,
+                                                         streaming_mode=True,
+                                                         supported_exts={'.txt'},
+                                                         supported_types={B}))
+
+    # after registering the new parser appears in the list able to parse A
+    after_capa = root_parser.get_capabilities_for_type(A)['.txt']
+    assert str(after_capa['2_approx_match'][0]) == '<read_B_from_txt>'
+
+    a = root_parser.parse_item(get_path('b64pickle-float-1.0=True'), A)
+    # check that the custom parser was used, not the generic 'construct from string'
+    assert len(a.txt) == 1
+    assert a.txt == 'g'

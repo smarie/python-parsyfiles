@@ -1,5 +1,6 @@
-### 2.4.0 (dev) - Documentation and tests improvements
+### 2.3.1 - Documentation and tests improvements + bug fix
 
+ * Important bug fix for 2.3.0: custom parsers/converters were appearing in the capabilities but not used. Added a test to prevent this kind of regression to happen again.
  * Improved 'usage' documentation page
  * Reorganized tests and documented them for better readability, and improved some of them (primitive types, default parsers)
  * Test failure do not make travis builds fail anymore

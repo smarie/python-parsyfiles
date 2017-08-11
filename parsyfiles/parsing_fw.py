@@ -5,7 +5,7 @@ from logging import getLogger, StreamHandler, Logger, INFO
 from typing import Type, Dict, Any, Set, Tuple, List
 from warnings import warn
 
-from copy import copy
+from copy import deepcopy
 
 from parsyfiles.converting_core import JOKER
 from parsyfiles.filesystem_mapping import FileMappingConfiguration, WrappedFileMappingConfiguration
@@ -166,6 +166,25 @@ class RootParser(ParserRegistryWithConverters):
             # new instance creation, as usual
             return super(RootParser, cls).__new__(cls)
 
+    def __copy__(self):
+        # be sure not to use DefaultRootParser new()
+        newone = type(self)(register_default_parsers=self.default_parsers_installed)
+        newone.__dict__.update(self.__dict__)
+        return newone
+
+    def __getstate__(self):
+        """ Used for pickle and deepcopy: we have to replace the logger by something that CAN be pickled """
+        d = self.__dict__.copy()
+        if 'logger' in d.keys():
+            d['logger'] = d['logger'].name
+        return d
+
+    def __setstate__(self, d):
+        """ Used for pickle and deepcopy: put back the logger based on its name """
+        if 'logger' in d.keys():
+            d['logger'] = getLogger(d['logger'])
+        self.__dict__.update(d)
+
     def __init__(self, pretty_name: str = None, *, strict_matching: bool = False,
                  register_default_parsers: bool = True, logger: Logger = _default_logger):
         """
@@ -183,6 +202,7 @@ class RootParser(ParserRegistryWithConverters):
 
         # remember if the user registers the default parsers - for future calls to install_basic_multifile_support()
         self.multifile_installed = register_default_parsers
+        self.default_parsers_installed = register_default_parsers
 
         if register_default_parsers:
             # register_default_plugins(self)
@@ -316,8 +336,15 @@ class DefaultRootParser(RootParser):
                 # save it
                 DefaultRootParser._instance = inst
 
-            # return a copy of the default instance
-            return copy(DefaultRootParser._instance)
+            # create a DEEP copy of the default instance otherwise the parsers/converters that use this object as the
+            # 'finder' will get stuck on the previous one !
+            return deepcopy(DefaultRootParser._instance)
+
+    def __copy__(self):
+        # be sure not to use the default instance here: pass the 'explicit' argument
+        newone = type(self)(this_is_an_explicit_call=True)
+        newone.__dict__.update(self.__dict__)
+        return newone
 
     def __init__(self, *args, **kwargs):
         if DefaultRootParser._instance is None:
