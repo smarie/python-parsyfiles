@@ -33,12 +33,12 @@ class DemoTests(TestCase):
     def test_a_helloworld(self):
 
         with self.assertRaises(FileNotFoundError):
-            result = parse_item('hello_world', str)
+            result = parse_item(fix_path('hello_world'), str)
 
         with self.assertRaises(ObjectNotFoundOnFileSystemError):
-            result = parse_item('a_helloworld/hello_world.txt', str)
+            result = parse_item(fix_path('a_helloworld/hello_world.txt'), str)
 
-        result = parse_item('a_helloworld/hello_world', str)
+        result = parse_item(fix_path('a_helloworld/hello_world'), str)
         print(result)
         assert result == 'hello'
 
