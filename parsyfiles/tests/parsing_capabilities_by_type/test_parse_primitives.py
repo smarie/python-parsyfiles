@@ -142,6 +142,7 @@ for bad_val in [  # floats
 
 # -------------
 types = os.listdir(os.path.join(THIS_DIR, 'primitives_data'))
+types = types[1:]  # ignore .gitignore
 
 
 @pytest.mark.parametrize("typ", types)
