@@ -1,5 +1,6 @@
-### 2.4.0 - typing_inspect dependency
+### 2.4.2 - typing_inspect dependency
  * does not use internals from `typing` anymore but relies on `typing_inspect` API to guarantee the stability, see https://github.com/smarie/python-parsyfiles/issues/4
+ * minor travis configuration
 
 ### 2.3.1 - Documentation and tests improvements + bug fix
 

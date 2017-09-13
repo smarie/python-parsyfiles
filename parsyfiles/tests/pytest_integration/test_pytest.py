@@ -4,7 +4,7 @@ from pprint import pprint
 import pytest
 
 from parsyfiles.tests.parsing_capabilities_by_type.test_parse_custom_object import ExecOpTest, exec_op
-from parsyfiles import parse_collection, parse_item, get_capabilities_for_type
+from parsyfiles import parse_collection, get_capabilities_for_type
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 

@@ -1,8 +1,7 @@
 from inspect import Parameter, signature
 from typing import TypeVar, MutableMapping, Dict, List, Set, Tuple, Type, Any, Mapping, Iterable, Optional
 
-from typing_inspect import is_generic_type, get_generic_type, get_last_origin, get_origin, get_args, is_tuple_type, \
-    is_union_type, get_last_args
+from typing_inspect import is_generic_type, get_origin, get_args, is_tuple_type, is_union_type, get_last_args
 
 from parsyfiles.var_checker import check_var
 from collections import OrderedDict

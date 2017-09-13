@@ -1,9 +1,10 @@
-from numbers import Integral, Real
+from numbers import Integral
 from typing import Tuple, List, Dict, Set, Any, Union, Callable, Optional, TypeVar, Generic
 
-import pytest
+from parsyfiles.type_inspection_tools import robust_isinstance, get_base_generic_type, is_collection, \
+    _extract_collection_base_type
 
-from type_inspection_tools import robust_isinstance, get_base_generic_type, is_collection, _extract_collection_base_type
+import pytest
 
 T = TypeVar('T')
 

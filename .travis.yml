@@ -1,6 +1,6 @@
 language: python
 
-# cache: pip
+cache: pip
 
 python:
 #  - "2.6"
@@ -77,7 +77,7 @@ deploy:
     secure: "ixgMdgCcSxEAXMqeL/+1i5W3QxSDqS0a49qmru6Aw4wmjpJ7aMAxNPXw/CKHp6IB+GCwih+zmXotXXa81/WsUUNLSahbPr/2p6OeK73uzRBNo3ua+wIY6XKqfEdY12JzWKXi0QvvD3MhzXVt8dfZETdhJfSZ9LxXZx5bYObLT959wjQdgD/pA1y3qcY1QCW2JRS53mnCoJGvcz/T/GDn7go8bJxmKjhP6i90ntFCzczZ4ZC0b41Rgj0OwOO59/GYZRFh6Iwveekt8JTYOUqXMjk/OUJChyLAEOtJS/WM//tVV1MzoHasGEKUZcY6HGo5CP/uyW/y8o8P/GCAPhskxF+weXfxxGJZBsexbTJIdSKmzogQ3Myc8aJWErERRA9aDmsX1fYPrd96mpO3sBvHE2iQS4sEmUFXqi/TtUXc4lFQzHykXoxcVJBP+cyX7dCHBcow4IpJv5KkSkUFHZeM2DkTSGWMklVDOUriw/tg6Qlp4nIrKLv4fahSkaZFf9pMvyAA4YKJwGFZ2SSyWjmUezGV9DtXDgSPfq2a+PFAvAPC+PRrFuVBagMesBMM2pAIOV6JccIZWyl5fuof1VhO5p3nZk5uAoiAKDTDIixcvDCnOZZKH8BYYLmyNU35kiMIJsZdxMGFQrFIuuc6ZMezVDtnoxuXh7RwYVcLIKF2as8="
   on:
     tags: true
-    python: 3.5  #only one of the builds have to be deployed
+    python: 3.6  #only one of the builds have to be deployed
 #  server: https://test.pypi.org/legacy/
   distributions: "bdist_wheel"
 
