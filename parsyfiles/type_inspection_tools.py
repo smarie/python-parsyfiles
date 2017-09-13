@@ -210,7 +210,7 @@ def _extract_collection_base_type(collection_object_type, exception_if_none: boo
                                     'keys as being of type ' + str(contents_key_type) + ' which is not supported. Only '
                                     'str keys are supported at the moment, since we use them as item names')
 
-    elif issubclass(collection_object_type, Iterable):  # List or Set
+    elif issubclass(collection_object_type, Iterable):  # List or Set. Should we rather use Container here ?
         if is_generic_type(collection_object_type):
             # --old: hack into typing module
             # if hasattr(collection_object_type, '__args__') and collection_object_type.__args__ is not None:
