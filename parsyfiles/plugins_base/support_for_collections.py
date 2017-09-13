@@ -44,7 +44,7 @@ def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List
     """
     base_desired_type = get_base_generic_type(desired_type)
 
-    if issubclass(base_desired_type, Mapping) or issubclass(base_desired_type, dict):
+    if issubclass(base_desired_type, Mapping):  # or issubclass(base_desired_type, dict):
         # get the base collection type if provided
         base_typ, discarded = _extract_collection_base_type(desired_type, exception_if_none=False)
 
@@ -61,7 +61,7 @@ def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List
                                                               options=kwargs)
             return res
 
-    elif issubclass(base_desired_type, Sequence) or issubclass(base_desired_type, list):
+    elif issubclass(base_desired_type, Sequence):  # or issubclass(base_desired_type, list):
         # get the base collection type if provided
         base_typ, discarded = _extract_collection_base_type(desired_type, exception_if_none=False)
 
@@ -74,7 +74,7 @@ def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List
             return [ConversionFinder.try_convert_value(conversion_finder, '', val, base_typ, logger, options=kwargs)
                     for val in coll_to_convert]
 
-    elif issubclass(base_desired_type, AbstractSet) or issubclass(base_desired_type, set):
+    elif issubclass(base_desired_type, AbstractSet):  # or issubclass(base_desired_type, set):
         # get the base collection type if provided
         base_typ, discarded = _extract_collection_base_type(desired_type, exception_if_none=False)
 
@@ -437,8 +437,7 @@ class MultifileCollectionParser(MultiFileParser):
         if issubclass(desired_type, list):
             # return a list facade
             return KeySortedListFacadeForDict(results)
-        elif issubclass(desired_type, tuple) \
-                or issubclass(desired_type, Tuple): # for some reason Tuple is not subclass of tuple
+        elif issubclass(desired_type, tuple):
             # return a tuple facade
             return KeySortedTupleFacadeForDict(results)
         elif issubclass(desired_type, set):

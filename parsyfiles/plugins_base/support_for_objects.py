@@ -197,18 +197,20 @@ def _is_valid_for_dict_to_object_conversion(strict_mode: bool, from_type: Type, 
     :param to_type:
     :return:
     """
-    # if the destination type is 'strictly a collection' (not a subclass of a collection) we cant handle it here
-    if is_collection(to_type, strict=True):
-        return False
-    # we have to explicitly handle the 'None' (joker) or 'any' type
-    elif to_type is None or is_any_type(to_type):
+    if to_type is None or is_any_type(to_type):
+        # explicitly handle the 'None' (joker) or 'any' type
         return True
+
+    elif is_collection(to_type, strict=True):
+        # if the destination type is 'strictly a collection' (not a subclass of a collection) we know that we can't
+        # handle it here, the constructor is not pep484-typed
+        return False
+
     else:
         try:
-            # test pep-484 compliance
+            # can we find enough pep-484 information in the constructor to be able to understand what is required ?
             get_constructor_attributes_types(to_type)
             return True
-
         except TypeInformationRequiredError:
             # failed: we cant guess the required types of constructor arguments
             return False
@@ -233,9 +235,12 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
     check_var(contents_dict, var_types=dict, var_name='contents_dict')
 
     if is_collection(desired_type, strict=True):
+        # if the destination type is 'strictly a collection' (not a subclass of a collection) we know that we can't
+        # handle it here, the constructor is not pep484-typed
         raise TypeError('Desired object type \'' + get_pretty_type_str(desired_type) + '\' is a collection, '
                         'so it cannot be created using this generic object creator')
 
+    # collect pep-484 information in the constructor to be able to understand what is required
     constructor_args_types_and_opt = get_constructor_attributes_types(desired_type)
 
     try:
@@ -399,8 +404,7 @@ class MultifileObjectParser(MultiFileParser):
 
     def __str__(self):
         return 'Multifile Object parser (' + str(self.parser_finder) + ')'
-        #'(based on \'' + str(self.parser_finder) + '\' to find the parser for each ' \
-        #                                                                           'attribute)'
+        # '(based on \'' + str(self.parser_finder) + '\' to find the parser for each attribute)'
 
     # def __repr__(self):
     #     # should we rather use the full canonical names ? yes, but pprint uses __repr__ so we'd like users to see
@@ -420,13 +424,15 @@ class MultifileObjectParser(MultiFileParser):
         """
 
         if is_collection(desired_type, strict=True):
-            raise TypeError('Desired object type \'' + get_pretty_type_str(desired_type)+ '\' is a collection, '
+            # if the destination type is 'strictly a collection' (not a subclass of a collection) we know that we can't
+            # handle it here, the constructor is not pep484-typed
+            raise TypeError('Desired object type \'' + get_pretty_type_str(desired_type) + '\' is a collection, '
                             'so it cannot be parsed with this default object parser')
 
         # First get the file children
         children_on_fs = obj_on_fs.get_multifile_children()
 
-        # -- (a) extract the schema from the class constructor
+        # -- (a) collect pep-484 information in the class constructor to be able to understand what is required
         constructor_args_types_and_opt = get_constructor_attributes_types(desired_type)
 
         # -- (b) plan to parse each attribute required by the constructor
@@ -490,5 +496,3 @@ class MultifileObjectParser(MultiFileParser):
                     + ' by passing them as attributes of the constructor')
 
         return dict_to_object(desired_type, results, logger, options, conversion_finder=self.conversion_finder)
-
-

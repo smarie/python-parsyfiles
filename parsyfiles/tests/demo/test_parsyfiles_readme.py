@@ -65,8 +65,8 @@ class DemoTests(TestCase):
         dfl = parse_item(fix_path('./simple_collection'), List[DataFrame])
         pprint(dfl)
         # dataframe objects_data are not mutable > can't be hashed and therefore no set can be built
-        #dfs = parse_item('./simple_collection', Set[DataFrame], logger=getLogger())
-        #pprint(dfs)
+        # dfs = parse_item('./simple_collection', Set[DataFrame], logger=getLogger())
+        # pprint(dfs)
         dft = parse_item(fix_path('./simple_collection'),
                          Tuple[DataFrame, DataFrame, DataFrame, DataFrame, DataFrame])
         pprint(dft)
@@ -248,8 +248,7 @@ class DemoTests(TestCase):
         try:
             sf_tests = parse_item(fix_path('./simple_objects/test_diff_1'), ExecOpTest)
         except ParsingException as e:
-            self.assertIn("<class \'autoclass.validate.ValidationError\'> is_in: x in {\'*\', \'+\'} does not hold "
-                          "for x=-", e.args[0])
+            self.assertIn("autoclass.validate.ValidationError", e.args[0])
 
     def test_simple_object_with_contract_attrs(self):
         """

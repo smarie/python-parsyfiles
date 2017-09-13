@@ -208,6 +208,7 @@ class Converter(Generic[S, T], metaclass=ABCMeta):
 
         # -- first call custom checker if provided
         if self.is_able_to_convert_func is not None:
+            # TODO Maybe one day, rather push the JOKER to the function ? not sure that it will be more explicit..
             if not self.is_able_to_convert_func(strict,
                                                 from_type=None if from_type is JOKER else from_type ,
                                                 to_type=None if to_type is JOKER else to_type):
