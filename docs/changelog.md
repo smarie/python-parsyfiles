@@ -1,3 +1,6 @@
+### 2.4.0 - typing_inspect dependency
+ * does not use internals from `typing` anymore but relies on `typing_inspect` API to guarantee the stability, see https://github.com/smarie/python-parsyfiles/issues/4
+
 ### 2.3.1 - Documentation and tests improvements + bug fix
 
  * Important bug fix for 2.3.0: custom parsers/converters were appearing in the capabilities but not used. Added a test to prevent this kind of regression to happen again.
