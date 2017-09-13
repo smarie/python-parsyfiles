@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuite errors="1" failures="0" name="pytest" skips="0" tests="1" time="2.066"><testcase classname="" file="parsyfiles/tests/unittests/test_type_inspection_tools.py" name="parsyfiles.tests.unittests.test_type_inspection_tools" time="0"><error message="collection failure">ImportError while importing test module &apos;/home/travis/build/smarie/python-parsyfiles/parsyfiles/tests/unittests/test_type_inspection_tools.py&apos;.
+<?xml version="1.0" encoding="utf-8"?><testsuite errors="1" failures="0" name="pytest" skips="0" tests="1" time="1.870"><testcase classname="" file="parsyfiles/tests/unittests/test_type_inspection_tools.py" name="parsyfiles.tests.unittests.test_type_inspection_tools" time="0"><error message="collection failure">ImportError while importing test module &apos;/home/travis/build/smarie/python-parsyfiles/parsyfiles/tests/unittests/test_type_inspection_tools.py&apos;.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 parsyfiles/tests/unittests/test_type_inspection_tools.py:6: in &lt;module&gt;
