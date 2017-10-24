@@ -49,7 +49,7 @@ DOWNLOAD_URL = URL + '/tarball/' + version_for_download_url
 KEYWORDS = 'file collection complex simple test object parser converter parsing framework PEP484 typing data binding ' \
            'SFiCoPaF'
 # --Get the long description from the README file
-#with open(path.join(here, 'README.md'), encoding='utf-8') as f:
+# with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 #    LONG_DESCRIPTION = f.read()
 try:
     import pypandoc
