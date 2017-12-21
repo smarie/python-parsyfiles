@@ -39,6 +39,7 @@ install:
 
 script:
   - pip install .
+  - python -c "import os; os.chdir('..'); import parsyfiles"
 
 after_success:
 # ***tests***
