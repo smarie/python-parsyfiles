@@ -130,6 +130,6 @@ This framework contains a bit of nontrivial logic in order to transparently infe
 
 * Check [here](https://github.com/webmaven/python-parsing-tools) for other parsers in Python, that you might wish to register as unitary parsers to perform specific file format parsing (binary, json, custom...) for some of your objects.
 
-* Do you like this library ? You might also like [these](https://github.com/smarie?utf8=%E2%9C%93&tab=repositories&q=&type=&language=python) 
+* Do you like this library ? You might also like [my other python libraries](https://github.com/smarie?utf8=%E2%9C%93&tab=repositories&q=&type=&language=python) 
 
 * This [cattrs](https://cattrs.readthedocs.io/en/latest/readme.html) project seems to have related interests, to check. 
