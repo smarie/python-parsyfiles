@@ -160,8 +160,10 @@ class RootParser(ParserRegistryWithConverters):
     def __new__(cls, pretty_name: str = None, *, strict_matching: bool = False,
                 register_default_parsers: bool = True, logger: Logger = _default_logger):
         if cls is RootParser and register_default_parsers:
-            # return a copy of the DefaultRootParser singleton
-            return DefaultRootParser.get_singleton_copy()
+            # return a copy of the DefaultRootParser singleton with the new logger (urgh! not multithread safe!)
+            c = DefaultRootParser.get_singleton_copy()
+            c.logger = logger
+            return c
         else:
             # new instance creation, as usual
             return super(RootParser, cls).__new__(cls)

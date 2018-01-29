@@ -1,3 +1,7 @@
+### 2.4.3 - logger customization fix
+
+ * logger customization was not taken into account - fixed [#7](https://github.com/smarie/python-parsyfiles/issues/7)
+
 ### 2.4.2 - typing_inspect dependency
  * does not use internals from `typing` anymore but relies on `typing_inspect` API to guarantee the stability, see https://github.com/smarie/python-parsyfiles/issues/4
  * minor travis configuration
