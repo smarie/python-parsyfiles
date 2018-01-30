@@ -1,3 +1,7 @@
+### 2.4.4 - global traceback size option
+
+ * Added a global configuration that can be changed by calling `parsyfiles_global_config(...)`. The only option available for now is controlling the traceback size in case of several parsers exceptions. This fixes [#9](https://github.com/smarie/python-parsyfiles/issues/9)
+
 ### 2.4.3 - logger customization fix
 
  * logger customization was not taken into account - fixed [#7](https://github.com/smarie/python-parsyfiles/issues/7)

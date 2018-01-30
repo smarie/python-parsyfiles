@@ -3,6 +3,7 @@ from io import StringIO, TextIOBase
 from logging import Logger, DEBUG
 from typing import Type, Dict, Any, List
 
+from parsyfiles.global_config import GLOBAL_CONFIG
 from parsyfiles.converting_core import Converter, T, S, ConversionChain, AnyObject
 from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_core import AnyParser
@@ -50,7 +51,7 @@ def print_error_to_io_stream(err: Exception, io: TextIOBase, print_big_traceback
     :return:
     """
     if print_big_traceback:
-        traceback.print_tb(err.__traceback__, file=io, limit=-3)
+        traceback.print_tb(err.__traceback__, file=io, limit=-GLOBAL_CONFIG.multiple_errors_tb_limit)
     else:
         traceback.print_tb(err.__traceback__, file=io, limit=-1)
     io.writelines('  ' + str(err.__class__.__name__) + ' : ' + str(err))

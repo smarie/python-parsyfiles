@@ -4,6 +4,7 @@
 # from these.
 from parsyfiles.filesystem_mapping import *
 from parsyfiles.parsing_fw import *
+from parsyfiles.global_config import parsyfiles_global_config
 
 # For the rest, allow user to do
 #    import parsyfiles as pf
