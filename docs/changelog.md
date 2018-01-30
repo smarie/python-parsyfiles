@@ -1,3 +1,7 @@
+### In progress - 
+
+ * Added a warning in <dict_to_object> converter when some desired type can not be converted because of its constructor signature. Fixes [#10](https://github.com/smarie/python-parsyfiles/issues/10**)
+
 ### 2.4.4 - global traceback size option
 
  * Added a global configuration that can be changed by calling `parsyfiles_global_config(...)`. The only option available for now is controlling the traceback size in case of several parsers exceptions. This fixes [#9](https://github.com/smarie/python-parsyfiles/issues/9)

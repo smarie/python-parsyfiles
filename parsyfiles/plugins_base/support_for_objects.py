@@ -1,5 +1,6 @@
 from abc import ABCMeta
 from inspect import Parameter
+from warnings import warn
 from logging import Logger, warning
 from typing import Type, Any, List, Dict, Union
 
@@ -211,8 +212,12 @@ def _is_valid_for_dict_to_object_conversion(strict_mode: bool, from_type: Type, 
             # can we find enough pep-484 information in the constructor to be able to understand what is required ?
             get_constructor_attributes_types(to_type)
             return True
-        except TypeInformationRequiredError:
+        except TypeInformationRequiredError as e:
             # failed: we cant guess the required types of constructor arguments
+            if hasattr(to_type, '__module__') and to_type.__module__ not in {'builtins'} \
+                    and not to_type.__module__.startswith('parsyfiles'):
+                warn('Object constructor signature for type {} does not allow parsyfiles to automatically create '
+                     'instances from dict content. Caught {}'.format(to_type, e))
             return False
 
 
