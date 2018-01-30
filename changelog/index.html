@@ -70,7 +70,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search">
     <label class="md-overlay" data-md-component="overlay" for="drawer"></label>
     
-      <a href="#243-logger-customization-fix" tabindex="1" class="md-skip">
+      <a href="#244-global-traceback-size-option" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -272,6 +272,13 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#244-global-traceback-size-option" title="2.4.4 - global traceback size option" class="md-nav__link">
+    2.4.4 - global traceback size option
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#243-logger-customization-fix" title="2.4.3 - logger customization fix" class="md-nav__link">
     2.4.3 - logger customization fix
   </a>
@@ -369,6 +376,13 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#244-global-traceback-size-option" title="2.4.4 - global traceback size option" class="md-nav__link">
+    2.4.4 - global traceback size option
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#243-logger-customization-fix" title="2.4.3 - logger customization fix" class="md-nav__link">
     2.4.3 - logger customization fix
   </a>
@@ -457,7 +471,11 @@
                 
                   <h1>Changelog</h1>
                 
-                <h3 id="243-logger-customization-fix">2.4.3 - logger customization fix<a class="headerlink" href="#243-logger-customization-fix" title="Permanent link">&para;</a></h3>
+                <h3 id="244-global-traceback-size-option">2.4.4 - global traceback size option<a class="headerlink" href="#244-global-traceback-size-option" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Added a global configuration that can be changed by calling <code>parsyfiles_global_config(...)</code>. The only option available for now is controlling the traceback size in case of several parsers exceptions. This fixes <a href="https://github.com/smarie/python-parsyfiles/issues/9">#9</a></li>
+</ul>
+<h3 id="243-logger-customization-fix">2.4.3 - logger customization fix<a class="headerlink" href="#243-logger-customization-fix" title="Permanent link">&para;</a></h3>
 <ul>
 <li>logger customization was not taken into account - fixed <a href="https://github.com/smarie/python-parsyfiles/issues/7">#7</a></li>
 </ul>
