@@ -1,3 +1,7 @@
+### 2.4.6 - yaml parsing improvements
+
+ * Fixed [#13](https://github.com/smarie/python-parsyfiles/issues/13): yaml collections now benefit from the conversion framework, meaning that if an inner object inside the collection has not the expected type it is converted.
+
 ### 2.4.5 - <dict_to_object> and log improvements
 
  * Added a warning in <dict_to_object> converter when some desired type can not be converted because of its constructor signature. Fixes [#10](https://github.com/smarie/python-parsyfiles/issues/10**)
