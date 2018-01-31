@@ -603,14 +603,15 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
     def __str__(self):
         return self.pretty_name
 
-    def _create_parsing_plan(self, desired_type: Type[T], filesystem_object: PersistedObject, logger: Logger) \
-            -> ParsingPlan[T]:
+    def _create_parsing_plan(self, desired_type: Type[T], filesystem_object: PersistedObject, logger: Logger,
+                             log_only_last: bool = False) -> ParsingPlan[T]:
         """
         Implementation of Parser API
         Relies on the underlying registry of parsers to provide the best parsing plan
         :param desired_type:
         :param filesystem_object:
         :param logger:
+        :param log_only_last: a flag to only log the last part of the file path (default False)
         :return:
         """
         # find the parser for this object

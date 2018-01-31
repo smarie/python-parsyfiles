@@ -3,6 +3,7 @@ from io import TextIOBase
 from logging import Logger
 from typing import Dict, Any, List, Union, Type, Set, Tuple, Callable, AbstractSet
 
+from parsyfiles import GLOBAL_CONFIG
 from parsyfiles.converting_core import Converter, ConverterFunction
 from parsyfiles.filesystem_mapping import PersistedObject, FolderAndFilesStructureError
 from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser, MultiFileParser, ParsingPlan, T
@@ -363,7 +364,8 @@ class MultifileCollectionParser(MultiFileParser):
             # -- use the parserfinder to find the plan
             child_parser = self.parser_finder.build_parser_for_fileobject_and_desiredtype(child_fileobject, child_typ,
                                                                                           logger)
-            children_plan[child_name] = child_parser.create_parsing_plan(child_typ, child_fileobject, logger)
+            children_plan[child_name] = child_parser.create_parsing_plan(child_typ, child_fileobject, logger,
+                                                                         _main_call=False)
 
         return children_plan
 
@@ -415,8 +417,11 @@ class MultifileCollectionParser(MultiFileParser):
             # build a lazy dictionary
             results = LazyDictionary(sorted(list(parsing_plan_for_children.keys())),
                                      loading_method=lambda x: parsing_plan_for_children[x].execute(logger, options))
-            logger.debug('Assembling a ' + get_pretty_type_str(desired_type) + ' from all children of ' + str(obj)
-                        + ' (lazy parsing: children will be parsed when used) ')
+            # logger.debug('Assembling a ' + get_pretty_type_str(desired_type) + ' from all children of ' + str(obj)
+            #             + ' (lazy parsing: children will be parsed when used) ')
+            logger.debug('(P) {loc} : lazy parsing ON, children will be parsed only if/when used'.format(
+                loc=obj.get_pretty_location(blank_parent_part=(not GLOBAL_CONFIG.full_paths_in_logs),
+                                            compact_file_ext=True)))
 
         elif background_parsing:
             # -- TODO create a thread to perform the parsing in the background
@@ -431,8 +436,8 @@ class MultifileCollectionParser(MultiFileParser):
             # (in case of multiple errors, the same error will show up first everytime)
             for child_name, child_plan in sorted(parsing_plan_for_children.items()):
                 results[child_name] = child_plan.execute(logger, options)
-            logger.debug('Assembling a ' + get_pretty_type_str(desired_type) + ' from all parsed children of '
-                        + str(obj))
+            # logger.debug('Assembling a ' + get_pretty_type_str(desired_type) + ' from all parsed children of '
+            #             + str(obj))
 
         if issubclass(desired_type, list):
             # return a list facade

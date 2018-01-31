@@ -1,6 +1,9 @@
-### In progress - 
+### 2.4.5 - <dict_to_object> and log improvements
 
  * Added a warning in <dict_to_object> converter when some desired type can not be converted because of its constructor signature. Fixes [#10](https://github.com/smarie/python-parsyfiles/issues/10**)
+ * Added support for `typing.Optional` in <dict_to_object> converter. This Fixes [#11](https://github.com/smarie/python-parsyfiles/issues/11)
+ * Improved log messages to display information about the parsing chain used, and many other things. Fixes [#12](https://github.com/smarie/python-parsyfiles/issues/12)
+ * New global configuration option `full_paths_in_logs`
 
 ### 2.4.4 - global traceback size option
 

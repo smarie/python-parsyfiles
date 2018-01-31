@@ -1,9 +1,10 @@
 from abc import abstractmethod, ABCMeta
 from logging import Logger
-from os import listdir
+from os import listdir, sep
 from os.path import isfile, join, isdir, dirname, basename, exists, splitext
 from typing import Dict, List, Any, Tuple, Union
 
+from parsyfiles.global_config import GLOBAL_CONFIG
 from parsyfiles.var_checker import check_var
 
 EXT_SEPARATOR = '.'
@@ -297,12 +298,39 @@ class PersistedObject(metaclass=ABCMeta):
         """
         return ('singlefile, ' + self.ext) if self.is_singlefile else 'multifile'
 
-    def get_pretty_location(self):
+    def get_pretty_location(self, blank_parent_part: bool = False, append_file_ext: bool = True,
+                            compact_file_ext: bool = False):
         """
         Utility method to return a string representing the location, mode and extension of this file.
         :return:
         """
-        return self.location + ' (' + self.get_pretty_file_ext() + ')'
+        if append_file_ext:
+            if compact_file_ext:
+                suffix = self.ext if self.is_singlefile else ''
+            else:
+                suffix = ' (' + self.get_pretty_file_ext() + ')'
+        else:
+            suffix = ''
+        if blank_parent_part:
+            # TODO sep should be replaced with the appropriate separator in flat mode
+            idx = self.location.rfind(sep)
+            return (' ' * (idx-1-len(sep))) + '|--' + self.location[(idx+1):] + suffix
+        else:
+            return self.location + suffix
+
+    def get_pretty_child_location(self, child_name, blank_parent_part: bool = False):
+        """
+        Utility method to return a string representation of the location of a child
+        :param child_name:
+        :param blank_parent_part:
+        :return:
+        """
+        if blank_parent_part:
+            idx = len(self.location)
+            return (' ' * (idx-3)) + '|--' + child_name
+        else:
+            # TODO sep should be replaced with the appropriate separator in flat mode
+            return self.location + sep + child_name
 
     @abstractmethod
     def get_singlefile_path(self):
@@ -359,7 +387,7 @@ class FileMappingConfiguration(AbstractFileMappingConfiguration):
         """
 
         def __init__(self, location: str, file_mapping_conf: AbstractFileMappingConfiguration = None,
-                     logger: Logger = None):
+                     logger: Logger = None, log_only_last: bool = False):
             """
             Creates a PersistedObject representing an object on the filesystem at location 'location'. It may be
             multifile or singlefile. When this object is created it recursively scans all of its children if any, and
@@ -387,12 +415,13 @@ class FileMappingConfiguration(AbstractFileMappingConfiguration):
 
                 # -- log this for easy debug
                 if logger is not None:
-                    logger.debug(str(self))
+                    logger.debug('(C) ' + self.get_pretty_location(
+                        blank_parent_part=(log_only_last and not GLOBAL_CONFIG.full_paths_in_logs)))
 
                 # -- create and attach all the self.children if multifile
                 if not self.is_singlefile:
                     self.children = {name: FileMappingConfiguration.RecursivePersistedObject(loc,
-                                     file_mapping_conf=self.file_mapping_conf, logger=self.logger)
+                                     file_mapping_conf=self.file_mapping_conf, logger=self.logger, log_only_last=True)
                                      for name, loc in sorted(self._contents_or_path.items())}
 
             except (ObjectNotFoundOnFileSystemError, ObjectPresentMultipleTimesOnFileSystemError,
@@ -454,7 +483,7 @@ class FileMappingConfiguration(AbstractFileMappingConfiguration):
         :return:
         """
         #print('Checking all files under ' + location)
-        logger.debug('Checking all files under ' + location)
+        logger.debug('Checking all files under [{loc}]'.format(loc=location))
         obj = FileMappingConfiguration.RecursivePersistedObject(location=location, file_mapping_conf=self,
                                                                 logger=logger)
         #print('File checks done')

@@ -1,7 +1,7 @@
 from abc import ABCMeta
 from inspect import Parameter
 from warnings import warn
-from logging import Logger, warning
+from logging import Logger, warning, DEBUG
 from typing import Type, Any, List, Dict, Union
 
 from parsyfiles.converting_core import Converter, ConverterFunction, AnyObject, S, T, is_any_type, JOKER
@@ -458,20 +458,28 @@ class MultifileObjectParser(MultiFileParser):
                                                                                               logger=logger)
                 # create a parsing plan
                 children_plan[attribute_name] = parser_found.create_parsing_plan(attribute_type, child_on_fs,
-                                                                                logger=logger)
+                                                                                 logger=logger, _main_call=False)
             else:
                 if attribute_is_mandatory:
                     raise MissingMandatoryAttributeFiles.create(obj_on_fs, desired_type, attribute_name)
                 else:
                     # we don't care : optional attribute
                     # dont use warning since it does not show up nicely
-                    #print('----- WARNING: Attribute ' + attribute_name + ' was not found on file system. However '
-                    #      'it is not mandatory for the constructor of type ' + get_pretty_type_str(desired_type)
-                    #      + ', so we\'ll build the object without it...')
-                    logger.warning('----- Attribute ' + attribute_name + ' was not found on file system. However '
-                                   'it is not mandatory for the constructor of type ' + get_pretty_type_str(desired_type)
-                                   + ', so we\'ll build the object without it...')
-                    pass
+                    msg = 'NOT FOUND - This optional constructor attribute for type ' \
+                          + get_pretty_type_str(desired_type) + ' was not found on file system, but this may be normal'\
+                          ' - this message is displayed \'just in case\'.'
+                    if logger.isEnabledFor(DEBUG):
+                        logger.warning('(B) ' + obj_on_fs.get_pretty_child_location(attribute_name,
+                                                                                    blank_parent_part=True) + ': '
+                                       + msg)
+                    else:
+                        logger.warning('WARNING parsing [{loc}] as a [{typ}]: optional constructor attribute [{att}] '
+                                       'not found on file system. This may be normal - this message is displayed \'just '
+                                       'in case\'.'.format(
+                            loc=obj_on_fs.get_pretty_location(blank_parent_part=False, append_file_ext=False),
+                            typ=get_pretty_type_str(desired_type),
+                            att=attribute_name))
+
         return children_plan
 
     def _parse_multifile(self, desired_type: Type[T], obj: PersistedObject,
@@ -497,7 +505,8 @@ class MultifileObjectParser(MultiFileParser):
             results[child_name] = child_plan.execute(logger, options)
 
         # 2) finally build the resulting object
-        logger.debug('Assembling a ' + get_pretty_type_str(desired_type) + ' from all parsed children of ' + str(obj)
-                    + ' by passing them as attributes of the constructor')
+        # not useful
+        # logger.debug('Assembling a ' + get_pretty_type_str(desired_type) + ' from all parsed children of ' + str(obj)
+        #             + ' by passing them as attributes of the constructor')
 
         return dict_to_object(desired_type, results, logger, options, conversion_finder=self.conversion_finder)

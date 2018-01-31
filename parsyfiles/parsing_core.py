@@ -1,9 +1,10 @@
 import threading
 from abc import abstractmethod
 from io import TextIOBase
-from logging import Logger
+from logging import Logger, DEBUG
 from typing import Union, Type, Callable, Dict, Any, Set
 
+from parsyfiles import GLOBAL_CONFIG
 from parsyfiles.converting_core import get_options_for_id
 from parsyfiles.filesystem_mapping import MULTIFILE_EXT, PersistedObject
 from parsyfiles.parsing_core_api import Parser, T, ParsingPlan, get_parsing_plan_log_str
@@ -124,16 +125,28 @@ class _BaseParsingPlan(ParsingPlan[T]):
             if not hasattr(_BaseParsingPlan.thrd_locals, 'flag_exec') \
                     or _BaseParsingPlan.thrd_locals.flag_exec == 0:
                 # print('Executing Parsing Plan for ' + str(self))
-                logger.debug('Executing Parsing Plan for ' + str(self))
+                logger.debug('Executing Parsing Plan for [{location}]'
+                             ''.format(location=self.obj_on_fs_to_parse.get_pretty_location(append_file_ext=False)))
                 _BaseParsingPlan.thrd_locals.flag_exec = 1
                 in_root_call = True
 
         # Common log message
-        logger.debug('Parsing ' + str(self))
+        logger.debug('(P) ' + get_parsing_plan_log_str(self.obj_on_fs_to_parse, self.obj_type,
+                                                       log_only_last=not in_root_call, parser=self.parser))
 
         try:
             res = super(_BaseParsingPlan, self).execute(logger, options)
-            logger.info('--> Successfully parsed a ' + get_pretty_type_str(self.obj_type) + ' from ' + self.location)
+            if logger.isEnabledFor(DEBUG):
+                logger.info('(P) {loc} -> {type} SUCCESS !'
+                            ''.format(loc=self.obj_on_fs_to_parse.get_pretty_location(
+                    blank_parent_part=not GLOBAL_CONFIG.full_paths_in_logs,
+                    compact_file_ext=True),
+                    type=get_pretty_type_str(self.obj_type)))
+            else:
+                logger.info('SUCCESS parsed [{loc}] as a [{type}] successfully. Parser used was [{parser}]'
+                            ''.format(loc=self.obj_on_fs_to_parse.get_pretty_location(compact_file_ext=True),
+                                      type=get_pretty_type_str(self.obj_type),
+                                      parser=str(self.parser)))
             if in_root_call:
                 # print('Completed parsing successfully')
                 logger.debug('Completed parsing successfully')
@@ -266,14 +279,15 @@ class AnyParser(_BaseParser):
         if _main_call and (not hasattr(AnyParser.thrd_locals, 'flag_init') or AnyParser.thrd_locals.flag_init == 0):
             # print('Building a parsing plan to parse ' + str(filesystem_object) + ' into a ' +
             #      get_pretty_type_str(desired_type))
-            logger.debug('Building a parsing plan to parse ' + str(filesystem_object) + ' into a ' +
-                        get_pretty_type_str(desired_type))
+            logger.debug('Building a parsing plan to parse [{location}] into a {type}'
+                         ''.format(location=filesystem_object.get_pretty_location(append_file_ext=False),
+                                   type=get_pretty_type_str(desired_type)))
             AnyParser.thrd_locals.flag_init = 1
             in_root_call = True
 
         # -- create the parsing plan
         try:
-            pp = self._create_parsing_plan(desired_type, filesystem_object, logger)
+            pp = self._create_parsing_plan(desired_type, filesystem_object, logger, log_only_last=(not _main_call))
         finally:
             # remove threadlocal flag if needed
             if in_root_call:
@@ -287,16 +301,19 @@ class AnyParser(_BaseParser):
         # -- finally return
         return pp
 
-    def _create_parsing_plan(self, desired_type: Type[T], filesystem_object: PersistedObject, logger: Logger):
+    def _create_parsing_plan(self, desired_type: Type[T], filesystem_object: PersistedObject, logger: Logger,
+                             log_only_last: bool = False):
         """
         Adds a log message and creates a recursive parsing plan.
 
         :param desired_type:
         :param filesystem_object:
         :param logger:
+        :param log_only_last: a flag to only log the last part of the file path (default False)
         :return:
         """
-        logger.debug(get_parsing_plan_log_str(filesystem_object, desired_type, self))
+        logger.debug('(B) ' + get_parsing_plan_log_str(filesystem_object, desired_type,
+                                                       log_only_last=log_only_last, parser=self))
         return AnyParser._RecursiveParsingPlan(desired_type, filesystem_object, self, logger)
 
     @abstractmethod

@@ -303,16 +303,16 @@ class CascadingParser(DelegatingParser):
                     if i > 0:
                         # print('----- Rebuilding local parsing plan with next candidate parser:')
                         if logger is not None:
-                            logger.info('')
                             logger.info('Rebuilding local parsing plan with next candidate parser: ' + str(p))
                     try:
                         # -- try to rebuild a parsing plan with next parser, and remember it if is succeeds
                         self.active_parsing_plan = CascadingParser.ActiveParsingPlan(p.create_parsing_plan(
                             self.obj_type, self.obj_on_fs_to_parse, self.logger, _main_call=False), self.parser)
                         self.active_parser_idx = i
-                        # if i > 0:
-                        #     if logger is not None:
-                        #         logger.info(' < Done rebuilding local parsing plan. Resuming parsing... >')
+                        if i > 0 and logger is not None:
+                            logger.info('DONE Rebuilding local parsing plan for [{location}]. Resuming parsing...'
+                                        ''.format(location=self.obj_on_fs_to_parse.get_pretty_location(
+                                compact_file_ext=True)))
                         return
 
                     except Exception as e:
@@ -355,12 +355,17 @@ class CascadingParser(DelegatingParser):
 
                     except Exception as e:
                         # -- log the error
-                        msg = StringIO()
-                        print_error_to_io_stream(e, msg, print_big_traceback=False)
                         if not logger.isEnabledFor(DEBUG):
-                            logger.warning(str(self.active_parsing_plan))
-                        logger.warning('  !! Caught error during execution !!')
-                        logger.warning(msg.getvalue())
+                            logger.warning('ERROR while parsing [{location}] into a [{type}] using [{parser}]. '
+                                           'Set log level to DEBUG for details'.format(
+                                location=self.obj_on_fs_to_parse.get_pretty_location(compact_file_ext=True),
+                                type=get_pretty_type_str(self.obj_type),
+                                parser=str(self.active_parsing_plan.parser), err_type=type(e).__name__, err=e))
+                        else:
+                            msg = StringIO()
+                            print_error_to_io_stream(e, msg, print_big_traceback=False)
+                            logger.warning('  !! Caught error during execution !!')
+                            logger.warning(msg.getvalue())
                         # print('----- WARNING: Caught error during execution : ')
                         # print(msg.getvalue())
                         # (Note: we dont use warning because it does not show up in the correct order in the console)
@@ -378,8 +383,8 @@ class CascadingParser(DelegatingParser):
             else:
                 raise Exception('Cannot execute this parsing plan : empty parser list !')
 
-    def _create_parsing_plan(self, desired_type: Type[T], filesystem_object: PersistedObject, logger: Logger) \
-            -> ParsingPlan[T]:
+    def _create_parsing_plan(self, desired_type: Type[T], filesystem_object: PersistedObject, logger: Logger,
+                             log_only_last: bool = False) -> ParsingPlan[T]:
         """
         Creates a parsing plan to parse the given filesystem object into the given desired_type.
         This overrides the method in AnyParser, in order to provide a 'cascading' parsing plan
@@ -387,10 +392,12 @@ class CascadingParser(DelegatingParser):
         :param desired_type:
         :param filesystem_object:
         :param logger:
+        :param log_only_last: a flag to only log the last part of the file path (default False)
         :return:
         """
         # build the parsing plan
-        logger.debug(get_parsing_plan_log_str(filesystem_object, desired_type, self))
+        logger.debug('(B) ' + get_parsing_plan_log_str(filesystem_object, desired_type,
+                                                       log_only_last=log_only_last, parser=self))
         return CascadingParser.CascadingParsingPlan(desired_type, filesystem_object, self, self._parsers_list,
                                                     logger=logger)
 

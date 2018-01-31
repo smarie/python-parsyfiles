@@ -248,7 +248,9 @@ class RootParser(ParserRegistryWithConverters):
 
         # creating the wrapping dictionary type
         collection_type = Dict[str, base_item_type]
-        self.logger.debug('**** Starting to parse ' + item_name_for_log + ' collection of <'
+        if len(item_name_for_log) > 0:
+            item_name_for_log = item_name_for_log + ' '
+        self.logger.debug('**** Starting to parse ' + item_name_for_log + 'collection of <'
                           + get_pretty_type_str(base_item_type) + '> at location ' + item_file_prefix +' ****')
 
         # common steps
@@ -271,7 +273,9 @@ class RootParser(ParserRegistryWithConverters):
         item_name_for_log = item_name_for_log or ''
         check_var(item_name_for_log, var_types=str, var_name='item_name_for_log')
 
-        self.logger.debug('**** Starting to parse single object ' + item_name_for_log + ' of type <'
+        if len(item_name_for_log) > 0:
+            item_name_for_log = item_name_for_log + ' '
+        self.logger.debug('**** Starting to parse single object ' + item_name_for_log + 'of type <'
                           + get_pretty_type_str(item_type) + '> at location ' + location + ' ****')
 
         # common steps

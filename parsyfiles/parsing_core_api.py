@@ -2,6 +2,7 @@ from abc import abstractmethod
 from logging import Logger
 from typing import TypeVar, Generic, Type, Callable, Dict, Any, Set, Tuple, List
 
+from parsyfiles.global_config import GLOBAL_CONFIG
 from parsyfiles.converting_core import get_validated_types, S, Converter, get_options_for_id, is_any_type, \
     is_any_type_set, JOKER
 from parsyfiles.filesystem_mapping import EXT_SEPARATOR, MULTIFILE_EXT, PersistedObject
@@ -300,17 +301,23 @@ class ParsingException(Exception):
                                 str(desired_type))
 
 
-def get_parsing_plan_log_str(obj_on_fs_to_parse, desired_type, parser):
+def get_parsing_plan_log_str(obj_on_fs_to_parse, desired_type, log_only_last: bool, parser):
     """
     Utility method used by several classes to log a message indicating that a given file object is planned to be parsed
     to the given object type with the given parser. It is in particular used in str(ParsingPlan), but not only.
 
     :param obj_on_fs_to_parse:
     :param desired_type:
+    :param log_only_last: a flag to only log the last part of the file path (default False). Note that this can be
+    overriden by a global configuration 'full_paths_in_logs'
     :param parser:
     :return:
     """
-    return str(obj_on_fs_to_parse) + ' > ' + get_pretty_type_str(desired_type) + ' ------- using ' + str(parser)
+    loc = obj_on_fs_to_parse.get_pretty_location(blank_parent_part=(log_only_last
+                                                                    and not GLOBAL_CONFIG.full_paths_in_logs),
+                                                 compact_file_ext=True)
+    return '{loc} -> {type} ------- using {parser}'.format(loc=loc, type=get_pretty_type_str(desired_type),
+                                                               parser=str(parser))
 
 
 class ParsingPlan(Generic[T], PersistedObject):
@@ -382,7 +389,7 @@ class ParsingPlan(Generic[T], PersistedObject):
         return self.obj_on_fs_to_parse.get_multifile_children()
 
     def __str__(self):
-        return get_parsing_plan_log_str(self.obj_on_fs_to_parse, self.obj_type, self.parser)
+        return get_parsing_plan_log_str(self.obj_on_fs_to_parse, self.obj_type, False, self.parser)
 
     def get_pretty_type_str(self) -> str:
         return get_pretty_type_str(self.obj_type)
