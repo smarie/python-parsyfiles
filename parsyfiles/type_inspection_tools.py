@@ -289,8 +289,15 @@ def get_constructor_attributes_types(item_type) -> Dict[str, Tuple[Type[Any], bo
 
                 # -- get and check the attribute type
                 typ = s.parameters[attr_name].annotation
-                # is there a better API to check that an annotation is conform to PEP484 ? not that I know
-                # TODO support Optional (Union to NoneType) that is not an instance of type
+
+                # is there a better API to check that an annotation is conform to PEP484 ?
+                # We might wish to use https://github.com/ilevkivskyi/typing_inspect in the future though
+
+                # support Optional (Union to NoneType)
+                if is_union_type(typ):
+                    if len(typ.__args__) == 2 and typ.__args__[1] is type(None):
+                        typ = typ.__args__[0]
+
                 if typ is None or typ is Parameter.empty or not isinstance(typ, type):
                     raise TypeInformationRequiredError.create_for_object_attributes(item_type, attr_name)
 
@@ -349,7 +356,6 @@ class TypeInformationRequiredError(Exception):
         #     prt_type = get_pretty_type_str(item_type)
         # except:
         #     prt_type = str(item_type)
-        return TypeInformationRequiredError('Cannot parse object of type ' + str(item_type) + ' using a '
-                                            'configuration file as a \'dictionary of dictionaries\': '
-                                            'attribute \'' + faulty_attribute_name + '\' has no valid '
+        return TypeInformationRequiredError('Cannot create instances of type ' + str(item_type) + ': '
+                                            'constructor attribute \'' + faulty_attribute_name + '\' has no valid '
                                             'PEP484 type hint.')
