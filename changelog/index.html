@@ -70,7 +70,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search">
     <label class="md-overlay" data-md-component="overlay" for="drawer"></label>
     
-      <a href="#244-global-traceback-size-option" tabindex="1" class="md-skip">
+      <a href="#245-and-log-improvements" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -272,6 +272,13 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#245-and-log-improvements" title="2.4.5 -  and log improvements" class="md-nav__link">
+    2.4.5 -  and log improvements
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#244-global-traceback-size-option" title="2.4.4 - global traceback size option" class="md-nav__link">
     2.4.4 - global traceback size option
   </a>
@@ -376,6 +383,13 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#245-and-log-improvements" title="2.4.5 -  and log improvements" class="md-nav__link">
+    2.4.5 -  and log improvements
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#244-global-traceback-size-option" title="2.4.4 - global traceback size option" class="md-nav__link">
     2.4.4 - global traceback size option
   </a>
@@ -471,7 +485,14 @@
                 
                   <h1>Changelog</h1>
                 
-                <h3 id="244-global-traceback-size-option">2.4.4 - global traceback size option<a class="headerlink" href="#244-global-traceback-size-option" title="Permanent link">&para;</a></h3>
+                <h3 id="245-and-log-improvements">2.4.5 - <dict_to_object> and log improvements<a class="headerlink" href="#245-and-log-improvements" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Added a warning in <dict_to_object> converter when some desired type can not be converted because of its constructor signature. Fixes <a href="https://github.com/smarie/python-parsyfiles/issues/10**">#10</a></li>
+<li>Added support for <code>typing.Optional</code> in <dict_to_object> converter. This Fixes <a href="https://github.com/smarie/python-parsyfiles/issues/11">#11</a></li>
+<li>Improved log messages to display information about the parsing chain used, and many other things. Fixes <a href="https://github.com/smarie/python-parsyfiles/issues/12">#12</a></li>
+<li>New global configuration option <code>full_paths_in_logs</code></li>
+</ul>
+<h3 id="244-global-traceback-size-option">2.4.4 - global traceback size option<a class="headerlink" href="#244-global-traceback-size-option" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Added a global configuration that can be changed by calling <code>parsyfiles_global_config(...)</code>. The only option available for now is controlling the traceback size in case of several parsers exceptions. This fixes <a href="https://github.com/smarie/python-parsyfiles/issues/9">#9</a></li>
 </ul>
