@@ -144,23 +144,23 @@ def get_default_primitive_converters():
     prim_to_prim = []
 
     # primitive to int
-    for t in {str, bool, float}:
+    for t in [str, float, bool]:
         prim_to_prim.append(ConverterFunction(from_type=t, to_type=int, conversion_method=primitive_to_int,
                                               custom_name=t.__name__ + '_to_int', can_chain=False))
 
     # primitive to float
-    for t in {str, bool, int}:
+    for t in [str, int, bool]:
         prim_to_prim.append(ConverterFunction(from_type=t, to_type=float, conversion_method=primitive_to_float,
                                               custom_name=t.__name__ + '_to_float', can_chain=False))
     # primitive to bool
-    for t in {str, float, int}:
+    for t in [str, int, float]:
         prim_to_prim.append(ConverterFunction(from_type=t, to_type=bool, conversion_method=primitive_to_bool,
                                               custom_name=t.__name__ + '_to_bool', can_chain=False))
 
     # primitive to str
     prim_to_prim += [ConverterFunction(from_type=t, to_type=str, conversion_method=to_str,
                                        custom_name=t.__name__ + '_to_string', can_chain=False)
-                     for t in {bool, float, int}]
+                     for t in [int, float, bool]]
 
     # construct anything from str
     # TODO this should be removed... but useful for np.int_ etc ? Most probably we would need instead a 'construct from single argument' + 'construct from positional arguments')
