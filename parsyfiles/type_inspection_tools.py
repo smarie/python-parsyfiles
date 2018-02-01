@@ -52,14 +52,14 @@ def get_pretty_type_str(object_type) -> str:
     try:
         contents_item_type, contents_key_type = _extract_collection_base_type(object_type)
         if isinstance(contents_item_type, tuple):
-            return object_type.__name__ + '[' + ', '.join([item_type.__name__ for item_type in contents_item_type]) \
-                   + ']'
+            return object_type.__name__ + '[' \
+                   + ', '.join([get_pretty_type_str(item_type) for item_type in contents_item_type]) + ']'
         else:
             if contents_key_type is not None:
-                return object_type.__name__ + '[' + contents_key_type.__name__ + ', ' + contents_item_type.__name__ \
-                       + ']'
+                return object_type.__name__ + '[' + get_pretty_type_str(contents_key_type) + ', ' \
+                       + get_pretty_type_str(contents_item_type) + ']'
             elif contents_item_type is not None:
-                return object_type.__name__ + '[' + contents_item_type.__name__ + ']'
+                return object_type.__name__ + '[' + get_pretty_type_str(contents_item_type) + ']'
     except Exception as e:
         pass
 
