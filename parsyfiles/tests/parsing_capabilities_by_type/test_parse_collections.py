@@ -36,24 +36,23 @@ class FooDct(Dict):
 
 
 def test_nested_and_custom_dict1(root_parser):
-    """
+    """ tests that a collection of custom type works """
 
-    :param root_parser:
-    :return:
-    """
-
-    result = root_parser.parse_item(os.path.join(THIS_DIR, 'foo_file'), Dict[str, Foo])
+    result = root_parser.parse_item(os.path.join(THIS_DIR, 'collections_data2', 'foo_file'), Dict[str, Foo])
     assert type(result['foo1']) == Foo
     assert result['foo1'] == Foo('a', 'b')
 
 
 def test_nested_and_custom_dict2(root_parser):
-    """
+    """ Tests that a dictionary of custom collection type works """
 
-    :param root_parser:
-    :return:
-    """
-
-    result = root_parser.parse_item(os.path.join(THIS_DIR, 'foo_file2'), Dict[str, FooDct])
+    result = root_parser.parse_item(os.path.join(THIS_DIR, 'collections_data2', 'foo_file2'), Dict[str, FooDct])
     assert type(result['a']) == FooDct
     assert result['a'].foo1 == Foo('a', 'b')
+
+
+def test_nested_and_custom_dict3(root_parser):
+    """ Tests that a custom collection type works """
+    result = root_parser.parse_item(os.path.join(THIS_DIR, 'collections_data2', 'foo_file'), FooDct)
+    assert type(result) == FooDct
+    assert result.foo1 == Foo('a', 'b')
