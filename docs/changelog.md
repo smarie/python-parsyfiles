@@ -1,3 +1,9 @@
+### 2.4.7 - log and yaml parsing improvements 2
+
+ * Fixed [#14](https://github.com/smarie/python-parsyfiles/issues/14): nested dictionary types now appear correctly in log messages
+ * Fixed [#15](https://github.com/smarie/python-parsyfiles/issues/15): collections of custom collection types now benefit from automatic conversion too.
+ * Unit tests updated to work with latest version of dependencies
+
 ### 2.4.6 - yaml parsing improvements
 
  * Fixed [#13](https://github.com/smarie/python-parsyfiles/issues/13): yaml collections now benefit from the conversion framework, meaning that if an inner object inside the collection has not the expected type it is converted.

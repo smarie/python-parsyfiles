@@ -14,7 +14,7 @@ INSTALL_REQUIRES = ['typing_inspect']
 DEPENDENCY_LINKS = []
 SETUP_REQUIRES = ['pytest-runner', 'setuptools_scm', 'pypandoc', 'pandoc', 'docutils']
 TESTS_REQUIRE = ['pytest', 'pytest-logging', 'pytest-cov', 'numpy', 'pandas', 'jprops', 'pyyaml', 'xlrd', 'autoclass',
-                 'pycontracts', 'attrs', 'enforce']
+                 'pycontracts', 'attrs', 'enforce', 'valid8']
 EXTRAS_REQUIRE = {'xls_parser': ['xlrd'],
                   'numpy_parser': ['numpy'],
                   'pandas_parser': ['numpy', 'pandas'],

@@ -5,7 +5,7 @@ from pprint import pprint
 from typing import List, Any, Tuple, Dict, Set
 from unittest import TestCase
 
-from autoclass import is_in
+from valid8 import is_in
 from parsyfiles import parse_collection, RootParser, parse_item, ObjectNotFoundOnFileSystemError
 from parsyfiles.converting_core import AnyObject
 from parsyfiles.parsing_core import SingleFileParserFunction
@@ -204,7 +204,7 @@ class DemoTests(TestCase):
             sf_tests = parse_item(fix_path('./simple_objects/test_diff_1'), ExecOpTest)
         except ParsingException as e:
             self.assertIn("<class 'contracts.interface.ContractNotRespected'>"
-                          + " Breach for argument 'op' to ExecOpTest:generated_setter_fun().\n"
+                          + " Breach for argument 'op' to ExecOpTest:autoprops_generated_setter().\n"
                           + "Value does not pass criteria of <lambda>()() (module:", e.args[0])
             self.assertIn("checking: callable()       for value: Instance of <class 'str'>: '-'   \n"
                           + "checking: allowed_op       for value: Instance of <class 'str'>: '-'   \n"
@@ -217,7 +217,8 @@ class DemoTests(TestCase):
         :return:
         """
 
-        from autoclass import autoprops, autoargs, validate, gt, minlens
+        from autoclass import autoprops, autoargs
+        from valid8 import validate_io, gt, minlens
         from enforce import runtime_validation, config
         from numbers import Real, Integral
 
@@ -227,7 +228,7 @@ class DemoTests(TestCase):
         @runtime_validation
         @autoprops
         class MySimpleObject:
-            @validate(age=gt(0), name=minlens(0))
+            @validate_io(age=gt(0), name=minlens(0))
             @autoargs
             def __init__(self, age: Integral, name: str):
                 pass
@@ -238,7 +239,7 @@ class DemoTests(TestCase):
         @autoprops
         class ExecOpTest(object):
             @autoargs
-            @validate(op=is_in({'+', '*'}))
+            @validate_io(op=is_in({'+', '*'}))
             def __init__(self, x: Real, y: Real, op: str, expected_result: Real):
                 pass
 
@@ -248,7 +249,7 @@ class DemoTests(TestCase):
         try:
             sf_tests = parse_item(fix_path('./simple_objects/test_diff_1'), ExecOpTest)
         except ParsingException as e:
-            self.assertIn("autoclass.validate.ValidationError", e.args[0])
+            self.assertIn("InputValidationError[ValueError]", e.args[0])
 
     def test_simple_object_with_contract_attrs(self):
         """
@@ -261,7 +262,7 @@ class DemoTests(TestCase):
         from parsyfiles.plugins_optional.support_for_attrs import chain
 
         # custom contract used in the class
-        def validate_op(instance, attribute, value):
+        def validate_io_op(instance, attribute, value):
             allowed = {'+', '*'}
             if value not in allowed:
                 raise ValueError('\'op\' has to be a string, in ' + str(allowed) + '!')
@@ -270,7 +271,7 @@ class DemoTests(TestCase):
         class ExecOpTest(object):
             x = attr.ib(convert=float, validator=instance_of(float))
             y = attr.ib(convert=float, validator=instance_of(float))
-            op = attr.ib(convert=str, validator=chain(instance_of(str), validate_op))
+            op = attr.ib(convert=str, validator=chain(instance_of(str), validate_io_op))
             expected_result = attr.ib(convert=float, validator=instance_of(float))
 
         try:
@@ -321,6 +322,7 @@ class DemoTests(TestCase):
         :return:
         """
         from pandas import DataFrame
+        # TODO recreate a t_pickle.pyc example with latest version of pandas (current file is obsolete)
         dfs = parse_collection(fix_path('./simple_collection_dataframe_inference'), DataFrame)
         pprint(dfs)
 

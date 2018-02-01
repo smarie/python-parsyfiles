@@ -5,6 +5,7 @@ jprops
 pyyaml
 xlrd
 autoclass
+valid8
 pycontracts
 attrs
 enforce
