@@ -7,7 +7,6 @@ import yaml
 from parsyfiles.converting_core import AnyObject
 from parsyfiles.parsing_core import AnyParser, SingleFileParserFunction
 from parsyfiles.parsing_registries import ParserFinder, ConversionFinder
-from parsyfiles.plugins_base.support_for_collections import convert_collection_values_according_to_pep
 
 
 def read_object_from_yaml(desired_type: Type[Any], file_object: TextIOBase, logger: Logger,
@@ -45,7 +44,8 @@ def read_collection_from_yaml(desired_type: Type[Any], file_object: TextIOBase, 
     res = yaml.load(file_object)
 
     # convert if required
-    return convert_collection_values_according_to_pep(res, desired_type, conversion_finder, logger, **kwargs)
+    return ConversionFinder.convert_collection_values_according_to_pep(res, desired_type, conversion_finder, logger,
+                                                                       **kwargs)
 
 
 def get_default_yaml_parsers(parser_finder: ParserFinder, conversion_finder: ConversionFinder) -> List[AnyParser]:

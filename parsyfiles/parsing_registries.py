@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from io import StringIO
 from logging import Logger
 from pprint import pprint
-from typing import Type, Dict, Any, List, Set, Tuple
+from typing import Type, Dict, Any, List, Set, Tuple, Union, Mapping, AbstractSet, Sequence
 from warnings import warn
 
 from parsyfiles.converting_core import S, Converter, ConversionChain, is_any_type, get_validated_type, JOKER, \
@@ -13,7 +13,7 @@ from parsyfiles.parsing_combining_parsers import ParsingChain, CascadingParser, 
 from parsyfiles.parsing_core import _InvalidParserException
 from parsyfiles.parsing_core_api import Parser, ParsingPlan, T
 from parsyfiles.type_inspection_tools import get_pretty_type_str, get_base_generic_type, get_pretty_type_keys_dict, \
-    robust_isinstance
+    robust_isinstance, is_collection, _extract_collection_base_type, is_typed_collection
 from parsyfiles.var_checker import check_var
 
 
@@ -812,7 +812,7 @@ class ConversionFinder(metaclass=ABCMeta):
         :return:
         """
 
-        if isinstance(attr_value, desired_attr_type):
+        if robust_isinstance(attr_value, desired_attr_type) and not is_collection(desired_attr_type):
             # value is already of the correct type
             return attr_value
 
@@ -835,6 +835,83 @@ class ConversionFinder(metaclass=ABCMeta):
                 raise NoConverterAvailableForAttributeException.create(self, attr_value, desired_attr_type)
 
     @staticmethod
+    def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List, Set, Tuple],
+                                                   desired_type: Type[Union[Dict, List, Set, Tuple]],
+                                                   conversion_finder: 'ConversionFinder', logger: Logger, **kwargs) \
+            -> Union[Dict, List, Set, Tuple]:
+        """
+        Helper method to convert the values of a collection into the required (pep-declared) value type in desired_type.
+        If desired_type does not explicitly mention a type for its values, the collection will be returned as is, otherwise
+        a  copy will be created and filled with conversions of the values, performed by the provided conversion_finder
+
+        :param coll_to_convert:
+        :param desired_type:
+        :param conversion_finder:
+        :param logger:
+        :param kwargs:
+        :return:
+        """
+        base_desired_type = get_base_generic_type(desired_type)
+
+        if issubclass(base_desired_type, Mapping):  # or issubclass(base_desired_type, dict):
+            # get the base collection type if provided (this raises an error if key type is not str)
+            item_typ, _ = _extract_collection_base_type(desired_type, exception_if_none=False)
+
+            if item_typ is None:
+                # nothing is required in terms of dict values: use the base method
+                return ConversionFinder.try_convert_value(conversion_finder, '', coll_to_convert, desired_type,
+                                                          logger=logger, options=kwargs)
+            else:
+                # TODO resuse appropriate container type (not necessary a dict) according to type of coll_to_convert
+                # there is a specific type required for the dict values.
+                res = dict()
+                # convert if required
+                for key, val in coll_to_convert.items():
+                    res[key] = ConversionFinder.try_convert_value(conversion_finder, '', val, item_typ, logger,
+                                                                  options=kwargs)
+                return res
+
+        elif issubclass(base_desired_type, Sequence):  # or issubclass(base_desired_type, list):
+            # get the base collection type if provided
+            item_typ, _ = _extract_collection_base_type(desired_type, exception_if_none=False)
+
+            if item_typ is None:
+                # nothing is required in terms of dict values: use the base method
+                return ConversionFinder.try_convert_value(conversion_finder, '', coll_to_convert, desired_type,
+                                                          logger=logger, options=kwargs)
+            else:
+                # TODO resuse appropriate container type (not necessary a list) according to type of coll_to_convert
+                # there is a specific type required for the list values.
+                res = list()
+                # convert if required
+                for val in coll_to_convert:
+                    res.append(ConversionFinder.try_convert_value(conversion_finder, '', val, item_typ, logger,
+                                                                  options=kwargs))
+                return res
+
+        elif issubclass(base_desired_type, AbstractSet):  # or issubclass(base_desired_type, set):
+            # get the base collection type if provided
+            item_typ, _ = _extract_collection_base_type(desired_type, exception_if_none=False)
+
+            if item_typ is None:
+                # nothing is required in terms of dict values: use the base method
+                return ConversionFinder.try_convert_value(conversion_finder, '', coll_to_convert, desired_type,
+                                                          logger=logger, options=kwargs)
+            else:
+                # TODO resuse appropriate container type (not necessary a set) according to type of coll_to_convert
+                # there is a specific type required for the list values.
+                res = set()
+                # convert if required
+                for val in coll_to_convert:
+                    res.add(ConversionFinder.try_convert_value(conversion_finder, '', val, item_typ, logger,
+                                                               options=kwargs))
+                return res
+
+        else:
+            raise TypeError('Cannot convert collection values, expected type is not a supported collection '
+                            '(dict, list, set, Mapping, Sequence, AbstractSet)! : ' + str(desired_type))
+
+    @staticmethod
     def try_convert_value(conversion_finder, attr_name: str, attr_value: S, desired_attr_type: Type[T], logger: Logger,
                           options: Dict[str, Dict[str, Any]]) -> T:
         """
@@ -851,8 +928,16 @@ class ConversionFinder(metaclass=ABCMeta):
         """
 
         # check if we need additional conversion
+
+        # (a) a collection with details about the internal item type
+        if is_typed_collection(desired_attr_type):
+            return ConversionFinder.convert_collection_values_according_to_pep(coll_to_convert=attr_value,
+                                                                               desired_type=desired_attr_type,
+                                                                               conversion_finder=conversion_finder,
+                                                                               logger=logger,
+                                                                               **options)
         # --- typing types do not work with isinstance so there is a special check here
-        if not robust_isinstance(attr_value, desired_attr_type):
+        elif not robust_isinstance(attr_value, desired_attr_type):
             if conversion_finder is not None:
                 return conversion_finder.find_and_convert(attr_name,
                                                           attr_value,

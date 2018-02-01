@@ -8,7 +8,8 @@ from parsyfiles.converting_core import Converter, ConverterFunction
 from parsyfiles.filesystem_mapping import PersistedObject, FolderAndFilesStructureError
 from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser, MultiFileParser, ParsingPlan, T
 from parsyfiles.parsing_registries import ParserFinder, ConversionFinder
-from parsyfiles.type_inspection_tools import _extract_collection_base_type, get_pretty_type_str, get_base_generic_type
+from parsyfiles.type_inspection_tools import _extract_collection_base_type, get_pretty_type_str, get_base_generic_type, \
+    is_collection
 from parsyfiles.var_checker import check_var
 
 
@@ -27,71 +28,6 @@ from parsyfiles.var_checker import check_var
 #     return [line_str for line_str in file_object]
 
 
-def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List, Set, Tuple],
-                                               desired_type: Type[Union[Dict, List, Set, Tuple]],
-                                               conversion_finder: ConversionFinder, logger: Logger, **kwargs) \
-        -> Union[Dict, List, Set, Tuple]:
-    """
-    Helper method to convert the values of a collection into the required (pep-declared) value type in desired_type.
-    If desired_type does not explicitly mention a type for its values, the collection will be returned as is, otherwise
-    a  copy will be created and filled with conversions of the values, performed by the provided conversion_finder
-
-    :param coll_to_convert:
-    :param desired_type:
-    :param conversion_finder:
-    :param logger:
-    :param kwargs:
-    :return:
-    """
-    base_desired_type = get_base_generic_type(desired_type)
-
-    if issubclass(base_desired_type, Mapping):  # or issubclass(base_desired_type, dict):
-        # get the base collection type if provided
-        base_typ, discarded = _extract_collection_base_type(desired_type, exception_if_none=False)
-
-        if base_typ is None:
-            # nothing is required in terms of dict values: consider that it is correct
-            return coll_to_convert
-        else:
-            # TODO resuse appropriate container type (not necessary a dict) according to type of coll_to_convert
-            # there is a specific type required for the dict values.
-            res = dict()
-            # convert if required
-            for key, val in coll_to_convert.items():
-                res[key] = ConversionFinder.try_convert_value(conversion_finder, '', val, base_typ, logger,
-                                                              options=kwargs)
-            return res
-
-    elif issubclass(base_desired_type, Sequence):  # or issubclass(base_desired_type, list):
-        # get the base collection type if provided
-        base_typ, discarded = _extract_collection_base_type(desired_type, exception_if_none=False)
-
-        if base_typ is None:
-            # nothing is required in terms of dict values: consider that it is correct
-            return coll_to_convert
-        else:
-            # TODO resuse appropriate container type (not necessary a list) according to type of coll_to_convert
-            # there is a specific type required for the list values. convert if required
-            return [ConversionFinder.try_convert_value(conversion_finder, '', val, base_typ, logger, options=kwargs)
-                    for val in coll_to_convert]
-
-    elif issubclass(base_desired_type, AbstractSet):  # or issubclass(base_desired_type, set):
-        # get the base collection type if provided
-        base_typ, discarded = _extract_collection_base_type(desired_type, exception_if_none=False)
-
-        if base_typ is None:
-            # nothing is required in terms of dict values: consider that it is correct
-            return coll_to_convert
-        else:
-            # TODO resuse appropriate container type (not necessary a set) according to type of coll_to_convert
-            # there is a specific type required for the list values. convert if required
-            return {ConversionFinder.try_convert_value(conversion_finder, '', val, base_typ, logger, options=kwargs)
-                    for val in coll_to_convert}
-    else:
-        raise TypeError('Cannot convert collection values, expected type is not a supported collection '
-                        '(dict, list, set, Mapping, Sequence, AbstractSet)! : ' + str(desired_type))
-
-
 def read_dict_or_list_from_json(desired_type: Type[dict], file_object: TextIOBase,
                                 logger: Logger, conversion_finder: ConversionFinder, **kwargs) -> Dict[str, Any]:
     """
@@ -104,7 +40,7 @@ def read_dict_or_list_from_json(desired_type: Type[dict], file_object: TextIOBas
     res = json.load(file_object)
 
     # convert if required
-    return convert_collection_values_according_to_pep(res, desired_type, conversion_finder, logger, **kwargs)
+    return ConversionFinder.convert_collection_values_according_to_pep(res, desired_type, conversion_finder, logger, **kwargs)
 
 
 class DictOfDict(Dict[str, Dict[str, Any]]):
@@ -467,7 +403,8 @@ def list_to_set(desired_type: Type[T], contents_list: List[str], logger: Logger,
     res = set(contents_list)
 
     # convert if required
-    return convert_collection_values_according_to_pep(res, desired_type, conversion_finder, logger, **kwargs)
+    return ConversionFinder.convert_collection_values_according_to_pep(res, desired_type, conversion_finder, logger,
+                                                                       **kwargs)
 
 
 def list_to_tuple(desired_type: Type[T], contents_list: List[str], logger: Logger,
@@ -477,7 +414,8 @@ def list_to_tuple(desired_type: Type[T], contents_list: List[str], logger: Logge
     res = tuple(contents_list)
 
     # convert if required
-    return convert_collection_values_according_to_pep(res, desired_type, conversion_finder, logger, **kwargs)
+    return ConversionFinder.convert_collection_values_according_to_pep(res, desired_type, conversion_finder, logger,
+                                                                       **kwargs)
 
 
 def get_default_collection_parsers(parser_finder: ParserFinder, conversion_finder: ConversionFinder) -> List[AnyParser]:

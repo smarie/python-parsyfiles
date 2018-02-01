@@ -6,7 +6,7 @@ from typing import List, Union, Any, Dict, Type
 from parsyfiles.converting_core import Converter, ConverterFunction, T
 from parsyfiles.parsing_core import SingleFileParserFunction, AnyParser
 from parsyfiles.parsing_registries import ConversionFinder
-from parsyfiles.plugins_base.support_for_collections import DictOfDict, convert_collection_values_according_to_pep
+from parsyfiles.plugins_base.support_for_collections import DictOfDict
 from parsyfiles.type_inspection_tools import _extract_collection_base_type
 
 
@@ -104,8 +104,9 @@ def config_to_dict_of_dict(desired_type: Type[T], config: ConfigParser, logger: 
     results = dict()
     for section, props in config.items():
         # convert all values of the sub-dictionary
-        results[section] = convert_collection_values_according_to_pep(props, base_typ, conversion_finder, logger,
-                                                                      **kwargs)
+        results[section] = ConversionFinder.convert_collection_values_according_to_pep(props, base_typ,
+                                                                                       conversion_finder, logger,
+                                                                                       **kwargs)
 
     return results
 
@@ -133,7 +134,8 @@ def merge_all_config_sections_into_a_single_dict(desired_type: Type[T], config: 
             else:
                 results[key] = value
 
-    return convert_collection_values_according_to_pep(results, desired_type, conversion_finder, logger, **kwargs)
+    return ConversionFinder.convert_collection_values_according_to_pep(results, desired_type, conversion_finder,
+                                                                       logger, **kwargs)
 
 
 def get_default_config_converters(conv_finder: ConversionFinder) -> List[Union[Converter[Any, ConfigParser], Converter[ConfigParser, Any]]]:

@@ -131,6 +131,16 @@ def get_base_generic_type(object_type):
     #     return object_type
 
 
+def is_typed_collection(object_type) -> bool:
+    """
+    Returns True if the object type is a collection with correct PEP type hints about its contents
+    :param object_type:
+    :return:
+    """
+    return is_collection(object_type) and \
+           _extract_collection_base_type(object_type, exception_if_none=False)[0] is not None
+
+
 def is_collection(object_type, strict: bool = False) -> bool:
     """
     Utility method to check if a type is a subclass of typing.{List,Dict,Set,Tuple}

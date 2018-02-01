@@ -6,7 +6,6 @@ import jprops
 
 from parsyfiles.parsing_core import AnyParser, SingleFileParserFunction
 from parsyfiles.parsing_registries import ConversionFinder, ParserFinder
-from parsyfiles.plugins_base.support_for_collections import convert_collection_values_according_to_pep
 
 
 def try_parse_num_and_booleans(num_str):
@@ -64,7 +63,8 @@ def read_dict_from_properties(desired_type: Type[dict], file_object: TextIOBase,
     res = {key: try_parse_num_and_booleans(val) for key, val in res.items()}
 
     # further convert if required
-    return convert_collection_values_according_to_pep(res, desired_type, conversion_finder, logger, **kwargs)
+    return ConversionFinder.convert_collection_values_according_to_pep(res, desired_type, conversion_finder, logger, 
+                                                                       **kwargs)
 
 
 def get_default_jprops_parsers(parser_finder: ParserFinder, conversion_finder: ConversionFinder) -> List[AnyParser]:
