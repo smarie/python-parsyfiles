@@ -215,7 +215,7 @@ def _is_valid_for_dict_to_object_conversion(strict_mode: bool, from_type: Type, 
         except TypeInformationRequiredError as e:
             # failed: we cant guess the required types of constructor arguments
             if hasattr(to_type, '__module__') and to_type.__module__ not in {'builtins'} \
-                    and not to_type.__module__.startswith('parsyfiles'):
+                    and not to_type.__module__.startswith('parsyfiles') and not to_type.__name__ == 'DataFrame':
                 warn('Object constructor signature for type {} does not allow parsyfiles to automatically create '
                      'instances from dict content. Caught {}: {}'.format(to_type, type(e).__name__, e))
             return False
