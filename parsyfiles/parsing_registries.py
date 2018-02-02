@@ -883,10 +883,26 @@ class ConversionFinder(metaclass=ABCMeta):
                 # TODO resuse appropriate container type (not necessary a list) according to type of coll_to_convert
                 # there is a specific type required for the list values.
                 res = list()
-                # convert if required
-                for val in coll_to_convert:
-                    res.append(ConversionFinder.try_convert_value(conversion_finder, '', val, item_typ, logger,
-                                                                  options=kwargs))
+
+                # special case where base_desired_type is a Tuple: in that case item_typ may be a tuple or else
+                if type(item_typ) != tuple:
+                    # convert each item if required
+                    for val in coll_to_convert:
+                        res.append(ConversionFinder.try_convert_value(conversion_finder, '', val, item_typ, logger,
+                                                                      options=kwargs))
+                else:
+                    if len(item_typ) == 1:
+                        item_typ_tuple = item_typ * len(coll_to_convert)
+                    elif len(item_typ) == len(coll_to_convert):
+                        item_typ_tuple = item_typ
+                    else:
+                        raise ValueError('Collection to convert is of length {} which is not compliant with desired '
+                                         'type {}'.format(len(coll_to_convert), item_typ))
+                    for val, item_t in zip(coll_to_convert, item_typ_tuple):
+                        res.append(ConversionFinder.try_convert_value(conversion_finder, '', val, item_t, logger,
+                                                                      options=kwargs))
+                    res = tuple(res)
+
                 return res
 
         elif issubclass(base_desired_type, AbstractSet):  # or issubclass(base_desired_type, set):

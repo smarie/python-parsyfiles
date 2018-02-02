@@ -1,3 +1,9 @@
+### 2.4.8 - various improvements
+
+ * Removed annoying warnings for DataFrame objects in <dict_to_object>
+ * Final log newline is now only present in debug mode
+ * Handling of Tuple in nested conversion process now works correctly
+
 ### 2.4.7 - log and yaml parsing improvements 2
 
  * Fixed [#14](https://github.com/smarie/python-parsyfiles/issues/14): nested dictionary types now appear correctly in log messages
