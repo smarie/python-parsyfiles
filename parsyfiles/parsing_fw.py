@@ -311,7 +311,7 @@ class RootParser(ParserRegistryWithConverters):
         # parse
         res = pp.execute(logger=self.logger, options=options)
         # print('')
-        self.logger.info('')
+        self.logger.debug('')
 
         return res
 
