@@ -185,7 +185,7 @@ def test_custom_parser_ok_for_subclasses():
         pass
 
     def read_B_from_txt(desired_type: Type[dict], file_object: TextIOBase,
-                      logger: Logger, *args, **kwargs) -> str:
+                        logger: Logger, *args, **kwargs) -> str:
         # read the entire stream into a string
         str_io = StringIO()
         shutil.copyfileobj(file_object, str_io)
