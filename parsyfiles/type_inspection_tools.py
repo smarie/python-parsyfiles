@@ -63,10 +63,13 @@ def get_pretty_type_str(object_type) -> str:
     except Exception as e:
         pass
 
-    try:
-        return object_type.__name__
-    except:
-        return str(object_type)
+    if is_union_type(object_type):
+        return 'Union[' + ', '.join([get_pretty_type_str(item_type) for item_type in object_type.__args__]) + ']'
+    else:
+        try:
+            return object_type.__name__
+        except:
+            return str(object_type)
 
 
 def get_pretty_type_keys_dict(dict: Dict[Any, Any]) -> Dict[str, Any]:
@@ -153,7 +156,7 @@ def is_collection(object_type, strict: bool = False) -> bool:
     :param strict: if set to True, this method will look for a strict match.
     :return:
     """
-    if object_type is None:
+    if object_type is None or is_union_type(object_type):
         return False
     elif strict:
         return object_type == dict \
