@@ -1,3 +1,5 @@
+from logging import getLogger, DEBUG
+
 from parsyfiles import RootParser
 from py.xml import html
 import pytest
@@ -6,6 +8,8 @@ from setuptools_scm.git import GitWorkdir
 
 @pytest.fixture
 def root_parser():
+    l = getLogger('parsyfiles')
+    l.setLevel(DEBUG)
     return RootParser()
 
 

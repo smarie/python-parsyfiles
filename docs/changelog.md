@@ -1,3 +1,7 @@
+### 2.5.0 - support for Union types
+
+ * Union types are now supported. This fixes [#16](https://github.com/smarie/python-parsyfiles/issues/16)
+
 ### 2.4.8 - various improvements
 
  * Removed annoying warnings for DataFrame objects in <dict_to_object>

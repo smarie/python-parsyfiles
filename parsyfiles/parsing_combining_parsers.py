@@ -1,15 +1,52 @@
 import traceback
+from collections import Mapping
 from io import StringIO, TextIOBase
 from logging import Logger, DEBUG
-from typing import Type, Dict, Any, List
+from typing import Type, Dict, Any, List, Iterable, Union, Tuple
 
 from parsyfiles.global_config import GLOBAL_CONFIG
 from parsyfiles.converting_core import Converter, T, S, ConversionChain, AnyObject
 from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_core import AnyParser
 from parsyfiles.parsing_core_api import get_parsing_plan_log_str, Parser, ParsingPlan, ParsingException
-from parsyfiles.type_inspection_tools import get_pretty_type_str
+from parsyfiles.type_inspection_tools import get_pretty_type_str, get_base_generic_type
 from parsyfiles.var_checker import check_var
+
+
+class DelegatingParsingPlan(ParsingPlan[T]):
+    """
+    A wrapper for a parsing plan.
+    """
+
+    # noinspection PyMissingConstructor
+    def __init__(self, pp):
+        # -- explicitly DONT use base constructor : we are just a proxy
+        # super(CascadingParser.ActiveParsingPlan, self).__init__()
+        self.pp = pp
+
+    def __str__(self):
+        return str(self.pp) + ' (proxy)'
+
+    def execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
+        return self.pp.execute(logger, options)
+
+    def _execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
+        return self.pp._execute(logger, options)
+
+    def _get_children_parsing_plan(self) -> Dict[str, ParsingPlan]:
+        return self.pp._get_children_parsing_plan()
+
+    def __getattr__(self, item):
+        # Redirect anything that is not implemented here to the underlying parsing plan.
+        # this is called only if the attribute was not found the usual way
+
+        # easy version of the dynamic proxy just to save time :)
+        # see http://code.activestate.com/recipes/496741-object-proxying/ for "the answer"
+        pp = object.__getattribute__(self, 'pp')
+        if hasattr(pp, item):
+            return getattr(pp, item)
+        else:
+            raise AttributeError('\'' + self.__class__.__name__ + '\' object has no attribute \'' + item + '\'')
 
 
 class DelegatingParser(AnyParser):
@@ -139,8 +176,11 @@ class CascadingParser(DelegatingParser):
     Represents a cascade of parsers that are tried in order: the first parser is used, then if it fails the second is
     used, etc. If all parsers failed, a CascadeError is thrown in order to provide an overview of all errors.
     Note that before switching to another parser, a new parsing plan is rebuilt with that new parser.
+
+    Finally note that this class can either be used to create a cascade of parsers for the same destination type, or
+    for different destination types (for example in case of a Union)
     """
-    def __init__(self, parsers: List[AnyParser] = None):
+    def __init__(self, parsers: Union[Iterable[AnyParser], Dict[Type, Iterable[AnyParser]]] = None):
         """
         Constructor from an initial list of parsers
         :param parsers:
@@ -153,32 +193,45 @@ class CascadingParser(DelegatingParser):
         self._parsers_list = []
 
         if parsers is not None:
-            check_var(parsers, var_types=list, var_name='parsers')
-            for parser in parsers:
-                self.add_parser_to_cascade(parser)
+            check_var(parsers, var_types=Iterable, var_name='parsers')
+            if isinstance(parsers, Mapping):
+                for typ, parser in parsers.items():
+                    self.add_parser_to_cascade(parser, typ)
+            else:
+                for parser in parsers:
+                    self.add_parser_to_cascade(parser)
 
     def __str__(self):
         if len(self._parsers_list) > 1:
-            return '[Try \'' + str(self._parsers_list[0]) + '\' then \'' \
-                   + '\' then \''.join([str(parser) for parser in self._parsers_list[1:]]) + ']'
+            first_typ = self._parsers_list[0][0]
+            if all([p[0] is None for p in self._parsers_list[1:]]):
+                return "[Try '{first}' then '{rest}']" \
+                       "".format(first=self._parsers_list[0][1],
+                                 rest="' then '".join([str(p[1]) for p in self._parsers_list[1:]]) + ']')
+            else:
+                return "[Try '{first}' -> [{first_typ}] then {rest}]" \
+                       "".format(first=self._parsers_list[0][1], first_typ=first_typ,
+                                 rest=" then ".join(["'{p}' -> [{p_typ}]".format(p=p[1], p_typ=p[0])
+                                                       for p in self._parsers_list[1:]]) + ']')
         elif len(self._parsers_list) == 1:
             # useless...
-            return 'ParserCascade[' + str(self._parsers_list[0]) + ']'
+            return 'CascadingParser[' + str(self._parsers_list[0]) + ']'
         else:
-            return 'ParserCascade[Empty]'
+            return 'CascadingParser[Empty]'
 
     def __repr__(self):
         # __repr__ is supposed to offer an unambiguous representation,
         # but pprint uses __repr__ so we'd like users to see the small and readable version
         return self.__str__()
 
-    def add_parser_to_cascade(self, parser: AnyParser):
+    def add_parser_to_cascade(self, parser: AnyParser, typ: Type = None):
         """
         Adds the provided parser to this cascade. If this is the first parser, it will configure the cascade according
         to the parser capabilities (single and multifile support, extensions).
         Subsequent parsers will have to support the same capabilities at least, to be added.
 
         :param parser:
+        :param typ:
         :return:
         """
         # the first parser added will configure the cascade
@@ -200,63 +253,52 @@ class CascadingParser(DelegatingParser):
                     'configuration (multifile support)')
 
         if AnyObject not in parser.supported_types:
-            if AnyObject in self.supported_types:
-                raise ValueError(
-                    'Cannot add this parser to this parsing cascade : it does not match the rest of the cascades '
-                    'configuration (the cascade supports any type while the parser only supports '
-                    + str(parser.supported_types) + ')')
-            else:
-                missing_types = set(self.supported_types) - set(parser.supported_types)
-                if len(missing_types) > 0:
+            if typ is None:
+                # in that case the expected types for this parser will be self.supported_types
+                if AnyObject in self.supported_types:
                     raise ValueError(
-                        'Cannot add this parser to this parsing chain : it does not match the rest of the chains '
-                        'configuration (supported types should at least contain the supported types already in place.'
-                        ' The parser misses type(s) ' + str(missing_types) + ')')
+                        'Cannot add this parser to this parsing cascade : it does not match the rest of the cascades '
+                        'configuration (the cascade supports any type while the parser only supports '
+                        + str(parser.supported_types) + ')')
+                else:
+                    missing_types = set(self.supported_types) - set(parser.supported_types)
+                    if len(missing_types) > 0:
+                        raise ValueError(
+                            'Cannot add this parser to this parsing cascade : it does not match the rest of the '
+                            'cascades configuration (supported types should at least contain the supported types '
+                            'already in place. The parser misses type(s) ' + str(missing_types) + ')')
+            else:
+                if typ == AnyObject:
+                    raise ValueError(
+                        'Cannot add this parser to this parsing cascade : it does not match the expected type "Any", '
+                        'it only supports ' + str(parser.supported_types))
+                else:
+                    if get_base_generic_type(typ) not in parser.supported_types:
+                        raise ValueError(
+                            'Cannot add this parser to this parsing cascade : it does not match the expected type ' +
+                            str(typ) + ', it only supports ' + str(parser.supported_types))
 
         missing_exts = set(self.supported_exts) - set(parser.supported_exts)
         if len(missing_exts) > 0:
             raise ValueError(
-                'Cannot add this parser to this parsing chain : it does not match the rest of the chains '
+                'Cannot add this parser to this parsing cascade : it does not match the rest of the cascades '
                 'configuration (supported extensions should at least contain the supported extensions already in '
                 'place. The parser misses extension(s) ' + str(missing_exts) + ')')
 
         # finally add it
-        self._parsers_list.append(parser)
+        self._parsers_list.append((typ, parser))
 
-    class ActiveParsingPlan(ParsingPlan[T]):
+    class ActiveParsingPlan(DelegatingParsingPlan[T]):
         """
         A wrapper for the currently active parsing plan, simply to provide a different string representation.
         """
-
-        def __init__(self, pp, cascadeparser):
-            # -- explicitly DONT use base constructor : we are just a proxy
-            # super(CascadingParser.ActiveParsingPlan, self).__init__()
-            self.pp = pp
+        def __init__(self, pp, cascadeparser: 'CascadingParser'):
+            # -- explicitly DONT use base constructor nor super
+            DelegatingParsingPlan.__init__(self, pp)
             self.cascadeparser = cascadeparser
 
         def __str__(self):
             return str(self.pp) + ' (currently active parsing plan in ' + str(self.cascadeparser) + ')'
-
-        def execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
-            return self.pp.execute(logger, options)
-
-        def _execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:
-            return self.pp._execute(logger, options)
-
-        def _get_children_parsing_plan(self) -> Dict[str, ParsingPlan]:
-            return self.pp._get_children_parsing_plan()
-
-        def __getattr__(self, item):
-            # Redirect anything that is not implemented here to the base parsing plan.
-            # this is called only if the attribute was not found the usual way
-
-            # easy version of the dynamic proxy just to save time :)
-            # see http://code.activestate.com/recipes/496741-object-proxying/ for "the answer"
-            pp = object.__getattribute__(self, 'pp')
-            if hasattr(pp, item):
-                return getattr(pp, item)
-            else:
-                raise AttributeError('\'' + self.__class__.__name__ + '\' object has no attribute \'' + item + '\'')
 
     class CascadingParsingPlan(ParsingPlan[T]):
         """
@@ -269,7 +311,7 @@ class CascadingParser(DelegatingParser):
                                       'This should not be called normally')
 
         def __init__(self, desired_type: Type[T], obj_on_filesystem: PersistedObject, parser: AnyParser,
-                     parser_list: List[Parser], logger: Logger):
+                     parser_list: List[Tuple[Type, Parser]], logger: Logger):
 
             super(CascadingParser.CascadingParsingPlan, self).__init__(desired_type, obj_on_filesystem, parser)
 
@@ -299,7 +341,7 @@ class CascadingParser(DelegatingParser):
             if (self.active_parser_idx+1) < len(self.parser_list):
                 # ask each parser to create a parsing plan right here. Stop at the first working one
                 for i in range(self.active_parser_idx+1, len(self.parser_list)):
-                    p = self.parser_list[i]
+                    typ, p = self.parser_list[i]
                     if i > 0:
                         # print('----- Rebuilding local parsing plan with next candidate parser:')
                         if logger is not None:
@@ -307,7 +349,7 @@ class CascadingParser(DelegatingParser):
                     try:
                         # -- try to rebuild a parsing plan with next parser, and remember it if is succeeds
                         self.active_parsing_plan = CascadingParser.ActiveParsingPlan(p.create_parsing_plan(
-                            self.obj_type, self.obj_on_fs_to_parse, self.logger, _main_call=False), self.parser)
+                            typ or self.obj_type, self.obj_on_fs_to_parse, self.logger, _main_call=False), self.parser)
                         self.active_parser_idx = i
                         if i > 0 and logger is not None:
                             logger.info('DONE Rebuilding local parsing plan for [{location}]. Resuming parsing...'
@@ -318,7 +360,7 @@ class CascadingParser(DelegatingParser):
                     except Exception as e:
                         # -- log the error
                         msg = StringIO()
-                        print_error_to_io_stream(e, msg, print_big_traceback=False)
+                        print_error_to_io_stream(e, msg, print_big_traceback=logger.isEnabledFor(DEBUG))
                         logger.warning('----- WARNING: Caught error while creating parsing plan with parser ' + str(p))
                         logger.warning(msg.getvalue())
                         # print('----- WARNING: Caught error while creating parsing plan with parser ' + str(p) + '.')
@@ -359,11 +401,11 @@ class CascadingParser(DelegatingParser):
                             logger.warning('ERROR while parsing [{location}] into a [{type}] using [{parser}]. '
                                            'Set log level to DEBUG for details'.format(
                                 location=self.obj_on_fs_to_parse.get_pretty_location(compact_file_ext=True),
-                                type=get_pretty_type_str(self.obj_type),
+                                type=get_pretty_type_str(self.active_parsing_plan.obj_type),
                                 parser=str(self.active_parsing_plan.parser), err_type=type(e).__name__, err=e))
                         else:
                             msg = StringIO()
-                            print_error_to_io_stream(e, msg, print_big_traceback=False)
+                            print_error_to_io_stream(e, msg, print_big_traceback=logger.isEnabledFor(DEBUG))
                             logger.warning('  !! Caught error during execution !!')
                             logger.warning(msg.getvalue())
                         # print('----- WARNING: Caught error during execution : ')

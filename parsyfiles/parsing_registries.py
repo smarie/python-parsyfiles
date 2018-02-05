@@ -1,9 +1,12 @@
 from abc import ABCMeta, abstractmethod
+from collections import OrderedDict
 from io import StringIO
 from logging import Logger
 from pprint import pprint
-from typing import Type, Dict, Any, List, Set, Tuple, Union, Mapping, AbstractSet, Sequence
+from typing import Type, Dict, Any, List, Set, Tuple, Union, Mapping, AbstractSet, Sequence, Iterable
 from warnings import warn
+
+from typing_inspect import is_union_type
 
 from parsyfiles.converting_core import S, Converter, ConversionChain, is_any_type, get_validated_type, JOKER, \
     ConversionException
@@ -51,7 +54,7 @@ class NoParserFoundForObjectExt(Exception):
         super(NoParserFoundForObjectExt, self).__init__(contents)
 
     @staticmethod
-    def create(obj: PersistedObject, obj_type: Type[T], extensions_supported: List[str]):
+    def create(obj: PersistedObject, obj_type: Type[T], extensions_supported: Iterable[str]):
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
         https://github.com/nose-devs/nose/issues/725
@@ -101,7 +104,7 @@ class NoParserFoundForObjectType(Exception):
         super(NoParserFoundForObjectType, self).__init__(contents)
 
     @staticmethod
-    def create(obj: PersistedObject, obj_type: Type[T], types_supported: List[str]):
+    def create(obj: PersistedObject, obj_type: Type[T], types_supported: Iterable[str]):
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
         https://github.com/nose-devs/nose/issues/725
@@ -131,6 +134,42 @@ class NoParserFoundForObjectType(Exception):
 
         # save the extensions supported
         e.types_supported = types_supported
+
+        return e
+
+
+class NoParserFoundForUnionType(Exception):
+    """
+    Raised whenever a union object can not be parsed because no parser was found for each alternative
+    """
+
+    def __init__(self, contents):
+        """
+        We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+        That's why we have a helper static method create()
+
+        :param contents:
+        """
+        super(NoParserFoundForUnionType, self).__init__(contents)
+
+    @staticmethod
+    def create(obj: PersistedObject, obj_type: Type[T], errors: Dict[Type, Exception]):
+        """
+        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+
+        :param obj:
+        :param errors: a dictionary of the errors raised for each alternate type tried
+        :return:
+        """
+
+        e = NoParserFoundForUnionType('{obj} cannot be parsed as a {typ} because no parser could be found for any of '
+                                      'the alternate types. Caught exceptions: {errs}'
+                                      ''.format(obj=obj, typ=get_pretty_type_str(obj_type), errs=errors))
+
+        # save the errors
+        e.errors = errors
 
         return e
 
@@ -620,7 +659,50 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
         # ask the parser for the parsing plan
         return combined_parser.create_parsing_plan(desired_type, filesystem_object, logger)
 
-    def build_parser_for_fileobject_and_desiredtype(self, obj_on_filesystem: PersistedObject, object_typ: Type[T],
+    def build_parser_for_fileobject_and_desiredtype(self, obj_on_filesystem: PersistedObject, object_type: Type[T],
+                                                    logger: Logger = None):
+        """
+        Builds from the registry, a parser to parse object obj_on_filesystem as an object of type object_type.
+
+        To do that, it iterates through all registered parsers in the list in reverse order (last inserted first),
+        and checks if they support the provided object format (single or multifile) and type.
+        If several parsers match, it returns a cascadingparser that will try them in order.
+
+        If several alternatives are requested (through a root Union type), this is done independently for each
+        alternative.
+
+        :param obj_on_filesystem:
+        :param object_type:
+        :param logger:
+        :return:
+        """
+        # support Union
+        if not is_union_type(object_type):
+            # as usual
+            return self._build_parser_for_fileobject_and_desiredtype(obj_on_filesystem, object_typ=object_type,
+                                                                     logger=logger)
+        else:
+            # build a parser for each possible type
+            parsers = OrderedDict()
+            errors = dict()
+            for typ in object_type.__args__:
+                try:
+                    parsers[typ] = self._build_parser_for_fileobject_and_desiredtype(obj_on_filesystem, object_typ=typ,
+                                                                                     logger=logger)
+                except NoParserFoundForObjectExt as e:
+                    warn(e)
+                    errors[e] = e
+                except NoParserFoundForObjectType as f:
+                    warn(f)
+                    errors[f] = f
+
+            # Combine if there are remaining, otherwise raise
+            if len(parsers) > 0:
+                return CascadingParser(parsers)
+            else:
+                raise NoParserFoundForUnionType.create(obj_on_filesystem, object_type, errors)
+
+    def _build_parser_for_fileobject_and_desiredtype(self, obj_on_filesystem: PersistedObject, object_typ: Type[T],
                                                     logger: Logger = None) -> Parser:
         """
         Builds from the registry, a parser to parse object obj_on_filesystem as an object of type object_type.
@@ -712,7 +794,7 @@ class AttrConversionException(ConversionException):
         return AttrConversionException(base_msg + msg.getvalue())
 
 
-class NoConverterAvailableForAttributeException(FileNotFoundError):
+class NoConverterFoundForObjectType(Exception):
     """
     Raised whenever no ConversionFinder has been provided, while a dictionary value needs conversion to be used as an
      object constructor attribute
@@ -726,10 +808,10 @@ class NoConverterAvailableForAttributeException(FileNotFoundError):
 
         :param contents:
         """
-        super(NoConverterAvailableForAttributeException, self).__init__(contents)
+        super(NoConverterFoundForObjectType, self).__init__(contents)
 
     @staticmethod
-    def create(conversion_finder, parsed_att: Any, attribute_type: Type[Any]):
+    def create(conversion_finder, parsed_att: Any, attribute_type: Type[Any], errors: Dict[Type, Exception] = None):
         """
         Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
         https://github.com/nose-devs/nose/issues/725
@@ -740,17 +822,20 @@ class NoConverterAvailableForAttributeException(FileNotFoundError):
         :return:
         """
         if conversion_finder is None:
-            return NoConverterAvailableForAttributeException('No conversion finder provided to find a converter '
-                                                             'between parsed attribute \'' + str(parsed_att) + '\' of '
-                                                             'type \'' + get_pretty_type_str(type(parsed_att)) + '\' '
-                                                             'and expected type \''
-                                                             + get_pretty_type_str(attribute_type) + '\'.')
+            msg = "No conversion finder provided to find a converter between parsed attribute '{patt}' of type " \
+                  "'{typ}' and expected type '{expt}'.".format(patt=str(parsed_att),
+                                                               typ=get_pretty_type_str(type(parsed_att)),
+                                                               expt=get_pretty_type_str(attribute_type))
         else:
-            return NoConverterAvailableForAttributeException('No conversion chain found between parsed attribute \'' +
-                                                             str(parsed_att) + '\' of type \'' +
-                                                             get_pretty_type_str(type(parsed_att)) + '\' and expected type '
-                                                             + get_pretty_type_str(attribute_type) + ' using conversion '
-                                                             'finder \'' + str(conversion_finder) +'\'.')
+            msg = "No conversion chain found between parsed attribute '{patt}' of type '{typ}' and expected type " \
+                  "'{expt}' using conversion finder {conv}.".format(patt=parsed_att,
+                                                                    typ=get_pretty_type_str(type(parsed_att)),
+                                                                    expt=get_pretty_type_str(attribute_type),
+                                                                    conv=conversion_finder)
+        if errors is not None:
+            msg = msg + ' ' + str(errors)
+
+        return NoConverterFoundForObjectType(msg)
 
 
 # def _handle_from_type_wildcard(desired_from_type: Optional[Type], c: Converter):
@@ -832,13 +917,13 @@ class ConversionFinder(metaclass=ABCMeta):
 
             else:
                 # did not find any conversion chain
-                raise NoConverterAvailableForAttributeException.create(self, attr_value, desired_attr_type)
+                raise NoConverterFoundForObjectType.create(self, attr_value, desired_attr_type)
 
     @staticmethod
     def convert_collection_values_according_to_pep(coll_to_convert: Union[Dict, List, Set, Tuple],
-                                                   desired_type: Type[Union[Dict, List, Set, Tuple]],
+                                                   desired_type: Type[T],
                                                    conversion_finder: 'ConversionFinder', logger: Logger, **kwargs) \
-            -> Union[Dict, List, Set, Tuple]:
+            -> T:
         """
         Helper method to convert the values of a collection into the required (pep-declared) value type in desired_type.
         If desired_type does not explicitly mention a type for its values, the collection will be returned as is, otherwise
@@ -930,6 +1015,27 @@ class ConversionFinder(metaclass=ABCMeta):
     @staticmethod
     def try_convert_value(conversion_finder, attr_name: str, attr_value: S, desired_attr_type: Type[T], logger: Logger,
                           options: Dict[str, Dict[str, Any]]) -> T:
+        # support Union
+        if not is_union_type(desired_attr_type):
+            # as usual
+            return ConverterCache._try_convert_value(conversion_finder, attr_name=attr_name, attr_value=attr_value,
+                                                     desired_attr_type=desired_attr_type, logger=logger,
+                                                     options=options)
+        else:
+            errors = dict()
+            for alternate_typ in desired_attr_type.__args__:
+                try:
+                    return ConverterCache._try_convert_value(conversion_finder, attr_name=attr_name,
+                                                             attr_value=attr_value, desired_attr_type=desired_attr_type,
+                                                             logger=logger, options=options)
+                except NoConverterFoundForObjectType as e:
+                    errors[alternate_typ] = e
+
+            raise NoConverterFoundForObjectType.create(conversion_finder, attr_value, desired_attr_type, errors)
+
+    @staticmethod
+    def _try_convert_value(conversion_finder, attr_name: str, attr_value: S, desired_attr_type: Type[T], logger: Logger,
+                           options: Dict[str, Dict[str, Any]]) -> T:
         """
         Utility method to try to use provided conversion_finder to convert attr_value into desired_attr_type.
         If no conversion is required, the conversion finder is not even used (it can be None)
@@ -960,9 +1066,9 @@ class ConversionFinder(metaclass=ABCMeta):
                                                           desired_attr_type,
                                                           logger, options)
             else:
-                raise NoConverterAvailableForAttributeException.create(conversion_finder,
-                                                                       attr_value,
-                                                                       desired_attr_type)
+                raise NoConverterFoundForObjectType.create(conversion_finder,
+                                                           attr_value,
+                                                           desired_attr_type)
         else:
             # we can safely use the value: it is already of the correct type
             return attr_value
@@ -1167,7 +1273,6 @@ class ConverterCache(AbstractConverterCache):
                         if ConversionChain.are_worth_chaining(a, b_):
                             generic_nonstrict_chains.append(ConversionChain.chain(a, b_, strict=False))
 
-
         return generic_chains, generic_nonstrict_chains, specific_chains, specific_nonstrict_chains
 
     def get_all_conversion_chains(self, from_type: Type[Any] = JOKER, to_type: Type[Any] = JOKER) \
@@ -1370,15 +1475,48 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
         matching_p_approx, matching_p_approx_with_approx_chain,\
         matching_p_exact, matching_p_exact_with_approx_chain = [], [], [], [], [], []
 
-        # first transform any 'Any' type requirement into the official class for that
-        desired_type = get_validated_type(desired_type, 'desired_type', enforce_not_joker=False)
+        # support Union
+        orig_desired_type = desired_type
+        if is_union_type(orig_desired_type):
+            desired_types = desired_type.__args__
+        else:
+            desired_types = (orig_desired_type,)
 
-        # ---- Generic converters - only if the parsed type is not already 'any'
-        if not is_any_type(parser_supported_type):
-            for cv in matching_c_generic_to_type:
+        for desired_type in desired_types:
+
+            # first transform any 'Any' type requirement into the official class for that
+            desired_type = get_validated_type(desired_type, 'desired_type', enforce_not_joker=False)
+
+            # ---- Generic converters - only if the parsed type is not already 'any'
+            if not is_any_type(parser_supported_type):
+                for cv in matching_c_generic_to_type:
+                    # if the converter can attach to this parser, we have a matching parser !
+
+                    # --start from strict
+                    if cv.is_able_to_convert(strict=True,
+                                             from_type=parser_supported_type,
+                                             to_type=desired_type):
+                        if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
+                            chain = ParsingChain(parser, cv, strict=True,
+                                                 base_parser_chosen_dest_type=parser_supported_type)
+                            # insert it at the beginning since it should have less priority
+                            matching_p_generic.append(chain)
+
+                    # --then non-strict
+                    elif (not self.strict) \
+                            and cv.is_able_to_convert(strict=False,
+                                                      from_type=parser_supported_type,
+                                                      to_type=desired_type):
+                        if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
+                            chain = ParsingChain(parser, cv, strict=False,
+                                                 base_parser_chosen_dest_type=parser_supported_type)
+                            # insert it at the beginning since it should have less priority
+                            matching_p_generic_with_approx_chain.append(chain)
+
+            # ---- Approx to_type
+            for cv in matching_c_approx_to_type:
                 # if the converter can attach to this parser, we have a matching parser !
-
-                # --start from strict
+                # -- start from strict
                 if cv.is_able_to_convert(strict=True,
                                          from_type=parser_supported_type,
                                          to_type=desired_type):
@@ -1386,9 +1524,8 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
                         chain = ParsingChain(parser, cv, strict=True,
                                              base_parser_chosen_dest_type=parser_supported_type)
                         # insert it at the beginning since it should have less priority
-                        matching_p_generic.append(chain)
-
-                # --then non-strict
+                        matching_p_approx.append(chain)
+                # then non-strict
                 elif (not self.strict) \
                         and cv.is_able_to_convert(strict=False,
                                                   from_type=parser_supported_type,
@@ -1397,51 +1534,28 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
                         chain = ParsingChain(parser, cv, strict=False,
                                              base_parser_chosen_dest_type=parser_supported_type)
                         # insert it at the beginning since it should have less priority
-                        matching_p_generic_with_approx_chain.append(chain)
+                        matching_p_approx_with_approx_chain.append(chain)
 
-        # ---- Approx to_type
-        for cv in matching_c_approx_to_type:
-            # if the converter can attach to this parser, we have a matching parser !
-            # -- start from strict
-            if cv.is_able_to_convert(strict=True,
-                                     from_type=parser_supported_type,
-                                     to_type=desired_type):
-                if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
-                    chain = ParsingChain(parser, cv, strict=True,
-                                         base_parser_chosen_dest_type=parser_supported_type)
-                    # insert it at the beginning since it should have less priority
-                    matching_p_approx.append(chain)
-            # then non-strict
-            elif (not self.strict) \
-                    and cv.is_able_to_convert(strict=False,
-                                              from_type=parser_supported_type,
-                                              to_type=desired_type):
-                if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
-                    chain = ParsingChain(parser, cv, strict=False,
-                                         base_parser_chosen_dest_type=parser_supported_type)
-                    # insert it at the beginning since it should have less priority
-                    matching_p_approx_with_approx_chain.append(chain)
-
-        # ---- Exact to_type
-        for cv in matching_c_exact_to_type:
-            # if the converter can attach to this parser, we have a matching parser !
-            if cv.is_able_to_convert(strict=True,
-                                     from_type=parser_supported_type,
-                                     to_type=desired_type):
-                if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
-                    chain = ParsingChain(parser, cv, strict=True,
-                                         base_parser_chosen_dest_type=parser_supported_type)
-                    # insert it at the beginning since it should have less priority
-                    matching_p_exact.append(chain)
-            elif (not self.strict) \
-                    and cv.is_able_to_convert(strict=False,
-                                              from_type=parser_supported_type,
-                                              to_type=desired_type):
-                if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
-                    chain = ParsingChain(parser, cv, strict=False,
-                                         base_parser_chosen_dest_type=parser_supported_type)
-                    # insert it at the beginning since it should have less priority
-                    matching_p_exact_with_approx_chain.append(chain)
+            # ---- Exact to_type
+            for cv in matching_c_exact_to_type:
+                # if the converter can attach to this parser, we have a matching parser !
+                if cv.is_able_to_convert(strict=True,
+                                         from_type=parser_supported_type,
+                                         to_type=desired_type):
+                    if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
+                        chain = ParsingChain(parser, cv, strict=True,
+                                             base_parser_chosen_dest_type=parser_supported_type)
+                        # insert it at the beginning since it should have less priority
+                        matching_p_exact.append(chain)
+                elif (not self.strict) \
+                        and cv.is_able_to_convert(strict=False,
+                                                  from_type=parser_supported_type,
+                                                  to_type=desired_type):
+                    if ParsingChain.are_worth_chaining(parser, parser_supported_type, cv):
+                        chain = ParsingChain(parser, cv, strict=False,
+                                             base_parser_chosen_dest_type=parser_supported_type)
+                        # insert it at the beginning since it should have less priority
+                        matching_p_exact_with_approx_chain.append(chain)
 
         # Preferred is LAST, so approx should be first
         return matching_p_generic_with_approx_chain, matching_p_generic, \

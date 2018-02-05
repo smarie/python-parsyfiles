@@ -2,6 +2,8 @@ from abc import abstractmethod
 from logging import Logger
 from typing import TypeVar, Generic, Type, Callable, Dict, Any, Set, Tuple, List
 
+from typing_inspect import is_union_type
+
 from parsyfiles.global_config import GLOBAL_CONFIG
 from parsyfiles.converting_core import get_validated_types, S, Converter, get_options_for_id, is_any_type, \
     is_any_type_set, JOKER
@@ -317,7 +319,7 @@ def get_parsing_plan_log_str(obj_on_fs_to_parse, desired_type, log_only_last: bo
                                                                     and not GLOBAL_CONFIG.full_paths_in_logs),
                                                  compact_file_ext=True)
     return '{loc} -> {type} ------- using {parser}'.format(loc=loc, type=get_pretty_type_str(desired_type),
-                                                               parser=str(parser))
+                                                           parser=str(parser))
 
 
 class ParsingPlan(Generic[T], PersistedObject):
@@ -343,7 +345,8 @@ class ParsingPlan(Generic[T], PersistedObject):
 
         # check and apply defaults
         # -- object_type
-        check_var(object_type, var_types=type, var_name='object_type')
+        if not is_union_type(object_type):
+            check_var(object_type, var_types=type, var_name='object_type')
         self.obj_type = object_type
         # -- obj_files
         check_var(obj_on_filesystem, var_types=PersistedObject, var_name='obj_on_filesystem')
