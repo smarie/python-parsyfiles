@@ -260,7 +260,7 @@ class AnyParser(_BaseParser):
     # flag used for create_parsing_plan logs (to prevent recursive print messages)
     thrd_locals = threading.local()
 
-    # note: it is normal that signature does not match parent.
+    # note: it is normal that signature does not match parent (additional option).
     def create_parsing_plan(self, desired_type: Type[T], filesystem_object: PersistedObject, logger: Logger,
                             _main_call: bool = True):
         """
