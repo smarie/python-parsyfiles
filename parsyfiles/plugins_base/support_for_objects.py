@@ -474,8 +474,8 @@ class MultifileObjectParser(MultiFileParser):
                                        + msg)
                     else:
                         logger.warning('WARNING parsing [{loc}] as a [{typ}]: optional constructor attribute [{att}] '
-                                       'not found on file system. This may be normal - this message is displayed \'just '
-                                       'in case\'.'.format(
+                                       'not found on file system. This may be normal - this message is displayed \'just'
+                                       ' in case\'.'.format(
                             loc=obj_on_fs.get_pretty_location(blank_parent_part=False, append_file_ext=False),
                             typ=get_pretty_type_str(desired_type),
                             att=attribute_name))
