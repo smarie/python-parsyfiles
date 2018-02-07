@@ -90,7 +90,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search">
     <label class="md-overlay" data-md-component="overlay" for="drawer"></label>
     
-      <a href="#250-support-for-union-types" tabindex="1" class="md-skip">
+      <a href="#260-support-for-typevars-and-better-support-for-unions-and-subclasses" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -292,6 +292,13 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#260-support-for-typevars-and-better-support-for-unions-and-subclasses" title="2.6.0 - support for TypeVars and better support for Unions and subclasses" class="md-nav__link">
+    2.6.0 - support for TypeVars and better support for Unions and subclasses
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#250-support-for-union-types" title="2.5.0 - support for Union types" class="md-nav__link">
     2.5.0 - support for Union types
   </a>
@@ -431,6 +438,13 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#260-support-for-typevars-and-better-support-for-unions-and-subclasses" title="2.6.0 - support for TypeVars and better support for Unions and subclasses" class="md-nav__link">
+    2.6.0 - support for TypeVars and better support for Unions and subclasses
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#250-support-for-union-types" title="2.5.0 - support for Union types" class="md-nav__link">
     2.5.0 - support for Union types
   </a>
@@ -561,7 +575,16 @@
                 
                   <h1>Changelog</h1>
                 
-                <h3 id="250-support-for-union-types">2.5.0 - support for Union types<a class="headerlink" href="#250-support-for-union-types" title="Permanent link">&para;</a></h3>
+                <h3 id="260-support-for-typevars-and-better-support-for-unions-and-subclasses">2.6.0 - support for TypeVars and better support for Unions and subclasses<a class="headerlink" href="#260-support-for-typevars-and-better-support-for-unions-and-subclasses" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>TypeVars</code> are now supported. This fixes <a href="https://github.com/smarie/python-parsyfiles/issues/17">#17</a></li>
+<li><code>Union</code> are now better supported too, in particular when there is a union inside a typevar or conversely.</li>
+<li>Instead of using <code>_args__</code> we now use <code>get_args(t, evaluate=True)</code> from <a href="https://github.com/ilevkivskyi/typing_inspect"><code>typing_inspect</code></a> everywhere, so as to be compliant with any complex PEP484 construct.</li>
+<li>The <code>&lt;dict_to_object&gt;</code> converter and the <code>Multifile object parser</code> now both check if a subtype can be built from the <code>dict</code>/<code>files</code> present before giving up. There is a macimum limit to the number of subclasses tried, in global configuration <code>parsyfiles_global_config(dict_to_object_subclass_limit=x)</code>. Default is 50. Fixes <a href="https://github.com/smarie/python-parsyfiles/issues/18">#18</a></li>
+<li>better 'nonability' check in all parsers/converters that rely on the constructor signature's PEP484 type hints</li>
+<li>Improved log messages for Try/Catch parser (CascadingParser)</li>
+</ul>
+<h3 id="250-support-for-union-types">2.5.0 - support for Union types<a class="headerlink" href="#250-support-for-union-types" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Union types are now supported. This fixes <a href="https://github.com/smarie/python-parsyfiles/issues/16">#16</a></li>
 </ul>
