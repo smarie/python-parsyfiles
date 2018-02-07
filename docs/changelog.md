@@ -1,3 +1,12 @@
+### 2.6.0 - support for TypeVars and better support for Unions and subclasses
+
+ * `TypeVars` are now supported. This fixes [#17](https://github.com/smarie/python-parsyfiles/issues/17)
+ * `Union` are now better supported too, in particular when there is a union inside a typevar or conversely.
+ * Instead of using `_args__` we now use `get_args(t, evaluate=True)` from [`typing_inspect`](https://github.com/ilevkivskyi/typing_inspect) everywhere, so as to be compliant with any complex PEP484 construct.
+ * The `<dict_to_object>` converter and the `Multifile object parser` now both check if a subtype can be built from the `dict`/`files` present before giving up. There is a macimum limit to the number of subclasses tried, in global configuration `parsyfiles_global_config(dict_to_object_subclass_limit=x)`. Default is 50. Fixes [#18](https://github.com/smarie/python-parsyfiles/issues/18)
+ * better 'nonability' check in all parsers/converters that rely on the constructor signature's PEP484 type hints
+ * Improved log messages for Try/Catch parser (CascadingParser)
+
 ### 2.5.0 - support for Union types
 
  * Union types are now supported. This fixes [#16](https://github.com/smarie/python-parsyfiles/issues/16)

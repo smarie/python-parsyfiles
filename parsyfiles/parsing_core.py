@@ -93,7 +93,7 @@ class _BaseParsingPlan(ParsingPlan[T]):
     """
 
     def __init__(self, object_type: Type[T], obj_on_filesystem: PersistedObject, parser: _BaseParser,
-                 logger: Logger):
+                 logger: Logger, accept_union_types: bool = False):
         """
         Constructor like in PersistedObject, but with an additional logger.
 
@@ -102,7 +102,8 @@ class _BaseParsingPlan(ParsingPlan[T]):
         :param parser:
         :param logger:
         """
-        super(_BaseParsingPlan, self).__init__(object_type, obj_on_filesystem, parser)
+        super(_BaseParsingPlan, self).__init__(object_type, obj_on_filesystem, parser,
+                                               accept_union_types=accept_union_types)
 
         # -- logger
         check_var(logger, var_types=Logger, var_name='logger', enforce_not_none=False)
@@ -217,7 +218,7 @@ class AnyParser(_BaseParser):
         """
 
         def __init__(self, object_type: Type[T], obj_on_filesystem: PersistedObject, parser: _BaseParser,
-                     logger: Logger):
+                     logger: Logger, accept_union_types: bool = False):
             """
             Constructor with recursive construction of all children parsing plan. The plan for all children is then
             stored in a field, so that _get_children_parsing_plan may get it later (it was a parent method to implement)
@@ -229,7 +230,8 @@ class AnyParser(_BaseParser):
             """
 
             # -- super
-            super(AnyParser._RecursiveParsingPlan, self).__init__(object_type, obj_on_filesystem, parser, logger)
+            super(AnyParser._RecursiveParsingPlan, self).__init__(object_type, obj_on_filesystem, parser, logger,
+                                                                  accept_union_types=accept_union_types)
 
             try:
                 # -- if singlefile, nothing to do

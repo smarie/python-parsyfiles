@@ -4,6 +4,7 @@ from warnings import warn
 from logging import Logger, warning, DEBUG
 from typing import Type, Any, List, Dict, Union
 
+from parsyfiles import GLOBAL_CONFIG
 from parsyfiles.converting_core import Converter, ConverterFunction, AnyObject, S, T, is_any_type, JOKER
 from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_core import MultiFileParser, AnyParser, SingleFileParserFunction
@@ -221,6 +222,10 @@ def _is_valid_for_dict_to_object_conversion(strict_mode: bool, from_type: Type, 
             return False
 
 
+class NoSubclassCouldBeInstantiated(Exception):
+    pass
+
+
 def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger: Logger,
                    options: Dict[str, Dict[str, Any]], conversion_finder: ConversionFinder = None,
                    is_dict_of_dicts: bool = False) -> T:
@@ -244,7 +249,51 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
         # handle it here, the constructor is not pep484-typed
         raise TypeError('Desired object type \'' + get_pretty_type_str(desired_type) + '\' is a collection, '
                         'so it cannot be created using this generic object creator')
+    else:
+        # Try the type itself
+        try:
+            return _dict_to_object(desired_type, contents_dict, logger=logger, options=options,
+                                   conversion_finder=conversion_finder, is_dict_of_dicts=is_dict_of_dicts)
+        except Exception as e:
+            # Check if any subclasses exist
+            subclasses = desired_type.__subclasses__()
+            if len(subclasses) == 0:
+                raise e.with_traceback(e.__traceback__)
 
+            errors = dict()
+            errors[desired_type] = e
+
+            # Then for each subclass also try (with a configurable limit in nb of subclasses)
+            for subclass in subclasses[0:GLOBAL_CONFIG.dict_to_object_subclass_limit]:
+                try:
+                    return _dict_to_object(subclass, contents_dict, logger=logger, options=options,
+                                           conversion_finder=conversion_finder, is_dict_of_dicts=is_dict_of_dicts)
+                except Exception as e:
+                    errors[subclass] = e
+
+            if len(subclasses) > GLOBAL_CONFIG.dict_to_object_subclass_limit:
+                warning('Type {} has more than {} subclasses, only {} were tried. You can raise this limit by setting the '
+                        'appropriate option with `parsyfiles_global_config()`'
+                        ''.format(desired_type, len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
+
+            raise NoSubclassCouldBeInstantiated(errors)
+
+
+def _dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger: Logger,
+                    options: Dict[str, Dict[str, Any]], conversion_finder: ConversionFinder = None,
+                    is_dict_of_dicts: bool = False) -> T:
+    """
+    Utility method to create an object from a dictionary of constructor arguments. Constructor arguments that dont have
+    the correct type are intelligently converted if possible
+
+    :param desired_type:
+    :param contents_dict:
+    :param logger:
+    :param options:
+    :param conversion_finder:
+    :param is_dict_of_dicts:
+    :return:
+    """
     # collect pep-484 information in the constructor to be able to understand what is required
     constructor_args_types_and_opt = get_constructor_attributes_types(desired_type)
 
@@ -419,7 +468,7 @@ class MultifileObjectParser(MultiFileParser):
     def _get_parsing_plan_for_multifile_children(self, obj_on_fs: PersistedObject, desired_type: Type[Any],
                                                  logger: Logger) -> Dict[str, Any]:
         """
-        Simply simply inspects the required type to find the names and types of its constructor arguments.
+        Simply inspects the required type to find the names and types of its constructor arguments.
         Then relies on the inner ParserFinder to parse each of them.
 
         :param obj_on_fs:
@@ -434,9 +483,54 @@ class MultifileObjectParser(MultiFileParser):
             raise TypeError('Desired object type \'' + get_pretty_type_str(desired_type) + '\' is a collection, '
                             'so it cannot be parsed with this default object parser')
 
-        # First get the file children
-        children_on_fs = obj_on_fs.get_multifile_children()
+        else:
+            # First get the file children
+            children_on_fs = obj_on_fs.get_multifile_children()
 
+            # Try the type itself
+            try:
+                return self.__get_parsing_plan_for_multifile_children(obj_on_fs, desired_type, children_on_fs,
+                                                                      logger=logger)
+            except Exception as e:
+                # Check if any subclasses exist
+                subclasses = desired_type.__subclasses__()
+                if len(subclasses) == 0:
+                    raise e.with_traceback(e.__traceback__)
+
+                errors = dict()
+                errors[desired_type] = e
+
+                # Then for each subclass also try (with a configurable limit in nb of subclasses)
+                for subclass in subclasses[0:GLOBAL_CONFIG.dict_to_object_subclass_limit]:
+                    try:
+                        return self.__get_parsing_plan_for_multifile_children(obj_on_fs, subclass, children_on_fs,
+                                                                              logger=logger)
+                    except Exception as e:
+                        errors[subclass] = e
+
+                if len(subclasses) > GLOBAL_CONFIG.dict_to_object_subclass_limit:
+                    warning(
+                        'Type {} has more than {} subclasses, only {} were tried. You can raise this limit by setting '
+                        'the appropriate option with `parsyfiles_global_config()`'
+                        ''.format(desired_type, len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
+
+                raise NoSubclassCouldBeInstantiated(errors)
+
+    def __get_parsing_plan_for_multifile_children(self, obj_on_fs: PersistedObject, desired_type: Type[Any],
+                                                  children_on_fs: Dict[str, PersistedObject], logger: Logger) \
+            -> Dict[str, Any]:
+        """
+        Simply inspects the required type to find the names and types of its constructor arguments.
+        Then relies on the inner ParserFinder to parse each of them.
+
+        :param obj_on_fs:
+        :param desired_type:
+        :param children_on_fs:
+        :param logger:
+        :return:
+        """
+
+        
         # -- (a) collect pep-484 information in the class constructor to be able to understand what is required
         constructor_args_types_and_opt = get_constructor_attributes_types(desired_type)
 
@@ -453,11 +547,11 @@ class MultifileObjectParser(MultiFileParser):
                 child_on_fs = children_on_fs[attribute_name]
 
                 # find a parser
-                parser_found = self.parser_finder.build_parser_for_fileobject_and_desiredtype(child_on_fs,
-                                                                                              attribute_type,
-                                                                                              logger=logger)
+                t, parser_found = self.parser_finder.build_parser_for_fileobject_and_desiredtype(child_on_fs,
+                                                                                                 attribute_type,
+                                                                                                 logger=logger)
                 # create a parsing plan
-                children_plan[attribute_name] = parser_found.create_parsing_plan(attribute_type, child_on_fs,
+                children_plan[attribute_name] = parser_found.create_parsing_plan(t, child_on_fs,
                                                                                  logger=logger, _main_call=False)
             else:
                 if attribute_is_mandatory:

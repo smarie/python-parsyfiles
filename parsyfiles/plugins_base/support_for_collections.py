@@ -298,9 +298,9 @@ class MultifileCollectionParser(MultiFileParser):
         for (child_name, child_fileobject), child_typ in zip(sorted(obj_on_fs.get_multifile_children().items()),
                                                            subtypes):
             # -- use the parserfinder to find the plan
-            child_parser = self.parser_finder.build_parser_for_fileobject_and_desiredtype(child_fileobject, child_typ,
-                                                                                          logger)
-            children_plan[child_name] = child_parser.create_parsing_plan(child_typ, child_fileobject, logger,
+            t, child_parser = self.parser_finder.build_parser_for_fileobject_and_desiredtype(child_fileobject, 
+                                                                                             child_typ, logger)
+            children_plan[child_name] = child_parser.create_parsing_plan(t, child_fileobject, logger,
                                                                          _main_call=False)
 
         return children_plan

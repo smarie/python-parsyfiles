@@ -1,7 +1,7 @@
 from inspect import Parameter, signature
 from typing import TypeVar, MutableMapping, Dict, List, Set, Tuple, Type, Any, Mapping, Iterable, Optional
 
-from typing_inspect import is_generic_type, get_origin, get_args, is_tuple_type, is_union_type, get_last_args
+from typing_inspect import is_generic_type, get_origin, get_args, is_tuple_type, is_union_type, is_typevar
 
 from parsyfiles.var_checker import check_var
 from collections import OrderedDict
@@ -18,6 +18,37 @@ class OrderedDictType(OrderedDict, MutableMapping[KT, VT], extra=OrderedDict):
         raise TypeError("Type OrderedDictType cannot be instantiated; use OrderedDict() instead")
 
 
+def resolve_union_and_typevar(typ) -> Tuple[Any, ...]:
+    """
+    If typ is a TypeVar,
+     * if the typevar is bound, return resolve_union_and_typevar(bound)
+     * if the typevar has constraints, return a tuple containing all the types listed in the constraints (with
+     appropriate recursive call to resolve_union_and_typevar for each of them)
+     * otherwise return (object, )
+
+    If typ is a Union, return a tuple containing all the types listed in the union (with
+     appropriate recursive call to resolve_union_and_typevar for each of them)
+
+    Otherwise return (typ, )
+    
+    :param typ: 
+    :return: 
+    """
+    if is_typevar(typ):
+        if hasattr(typ, '__bound__') and typ.__bound__ is not None:
+            return resolve_union_and_typevar(typ.__bound__)
+        elif hasattr(typ, '__constraints__') and typ.__constraints__ is not None:
+            return tuple(typpp for c in typ.__constraints__ for typpp in resolve_union_and_typevar(c))
+        else:
+            return object,
+    elif is_union_type(typ):
+        # do not use typ.__args__, it may be wrong
+        # the solution below works even in typevar+config cases such as u = Union[T, str][Optional[int]]
+        return get_args(typ, evaluate=True)
+    else:
+        return typ,
+    
+    
 def robust_isinstance(inst, typ) -> bool:
     """
     Similar to isinstance, but if 'typ' is a parametrized generic Type, it is first transformed into its base generic
@@ -29,14 +60,21 @@ def robust_isinstance(inst, typ) -> bool:
     """
     if typ is Any:
         return True
-    elif is_union_type(typ):
-        typs = get_args(typ)
-        if len(typs) > 0:
+    if is_typevar(typ):
+        if hasattr(typ, '__constraints__') and typ.__constraints__ is not None:
+            typs = get_args(typ, evaluate=True)
+            return any(robust_isinstance(inst, t) for t in typs)
+        elif hasattr(typ, '__bound__') and typ.__bound__ is not None:
+            return robust_isinstance(inst, typ.__bound__)
+        else:
+            # a raw TypeVar means 'anything'
+            return True
+    else:
+        if is_union_type(typ):
+            typs = get_args(typ, evaluate=True)
             return any(robust_isinstance(inst, t) for t in typs)
         else:
-            return False
-    else:
-        return isinstance(inst, get_base_generic_type(typ))
+            return isinstance(inst, get_base_generic_type(typ))
 
 
 def get_pretty_type_str(object_type) -> str:
@@ -64,7 +102,11 @@ def get_pretty_type_str(object_type) -> str:
         pass
 
     if is_union_type(object_type):
-        return 'Union[' + ', '.join([get_pretty_type_str(item_type) for item_type in object_type.__args__]) + ']'
+        return 'Union[' + ', '.join([get_pretty_type_str(item_type) 
+                                     for item_type in get_args(object_type, evaluate=True)]) + ']'
+    elif is_typevar(object_type):
+        # typevars usually do not display their namespace so str() is compact. And it displays the cov/contrav symbol
+        return str(object_type)
     else:
         try:
             return object_type.__name__
@@ -156,7 +198,7 @@ def is_collection(object_type, strict: bool = False) -> bool:
     :param strict: if set to True, this method will look for a strict match.
     :return:
     """
-    if object_type is None or is_union_type(object_type):
+    if object_type is None or object_type is Any or is_union_type(object_type) or is_typevar(object_type):
         return False
     elif strict:
         return object_type == dict \
@@ -168,17 +210,30 @@ def is_collection(object_type, strict: bool = False) -> bool:
                or get_base_generic_type(object_type) == Set \
                or get_base_generic_type(object_type) == Tuple
     else:
-        if is_union_type(object_type) or object_type is Any:
-            return False
-        else:
-            return issubclass(object_type, Dict) \
-                   or issubclass(object_type, List) \
-                   or issubclass(object_type, Set) \
-                   or issubclass(object_type, Tuple) \
-                   or issubclass(object_type, dict) \
-                   or issubclass(object_type, list) \
-                   or issubclass(object_type, tuple) \
-                   or issubclass(object_type, set)
+        return issubclass(object_type, Dict) \
+               or issubclass(object_type, List) \
+               or issubclass(object_type, Set) \
+               or issubclass(object_type, Tuple) \
+               or issubclass(object_type, dict) \
+               or issubclass(object_type, list) \
+               or issubclass(object_type, tuple) \
+               or issubclass(object_type, set)
+
+
+def is_pep484_nonable(typ):
+    """
+    Checks if a given type is nonable, meaning that it explicitly or implicitly declares a Union with NoneType.
+    Nested TypeVars and Unions are supported.
+
+    :param typ:
+    :return:
+    """
+    if typ is type(None):
+        return True
+    elif is_typevar(typ) or is_union_type(typ):
+        return any(is_pep484_nonable(tt) for tt in resolve_union_and_typevar(typ))
+    else:
+        return False
 
 
 def _extract_collection_base_type(collection_object_type, exception_if_none: bool = True) \
@@ -205,7 +260,11 @@ def _extract_collection_base_type(collection_object_type, exception_if_none: boo
         # --old: hack into typing module
         # if hasattr(collection_object_type, '__args__') and collection_object_type.__args__ is not None:
         # contents_item_type = collection_object_type.__args__
-        __args = get_last_args(collection_object_type)
+
+        # --new : using typing_inspect
+        # __args = get_last_args(collection_object_type)
+        # this one works even in typevar+config cases such as t = Tuple[int, Tuple[T, T]][Optional[int]]
+        __args = get_args(collection_object_type, evaluate=True)
         if len(__args) > 0:
             contents_item_type = __args
 
@@ -214,7 +273,11 @@ def _extract_collection_base_type(collection_object_type, exception_if_none: boo
             # --old: hack into typing module
             # if hasattr(collection_object_type, '__args__') and collection_object_type.__args__ is not None:
             # contents_key_type, contents_item_type = collection_object_type.__args__
-            __args = get_last_args(collection_object_type)
+
+            # --new : using typing_inspect
+            # __args = get_last_args(collection_object_type)
+            # this one works even in typevar+config cases such as d = Dict[int, Tuple[T, T]][Optional[int]]
+            __args = get_args(collection_object_type, evaluate=True)
             if len(__args) > 0:
                 contents_key_type, contents_item_type = __args
                 if not issubclass(contents_key_type, str):
@@ -227,7 +290,11 @@ def _extract_collection_base_type(collection_object_type, exception_if_none: boo
             # --old: hack into typing module
             # if hasattr(collection_object_type, '__args__') and collection_object_type.__args__ is not None:
             # contents_item_type = collection_object_type.__args__[0]
-            __args = get_last_args(collection_object_type)
+
+            # --new : using typing_inspect
+            # __args = get_last_args(collection_object_type)
+            # this one works even in typevar+config cases such as i = Iterable[Tuple[T, T]][Optional[int]]
+            __args = get_args(collection_object_type, evaluate=True)
             if len(__args) > 0:
                 contents_item_type, = __args
 
@@ -300,22 +367,14 @@ def get_constructor_attributes_types(item_type) -> Dict[str, Tuple[Type[Any], bo
             # skip the 'self' attribute
             if attr_name != 'self':
 
-                # -- get and check the attribute type
+                # -- Get and check that the attribute type is PEP484 compliant
                 typ = s.parameters[attr_name].annotation
-
-                # is there a better API to check that an annotation is conform to PEP484 ?
-                # We might wish to use https://github.com/ilevkivskyi/typing_inspect in the future though
-
-                # support Optional (Union to NoneType)
-                if is_union_type(typ):
-                    if len(typ.__args__) == 2 and typ.__args__[1] is type(None):
-                        typ = typ.__args__[0]
-
-                if typ is None or typ is Parameter.empty or not isinstance(typ, type):
+                if (typ is None) or (typ is Parameter.empty) or \
+                        not (isinstance(typ, type) or is_union_type(typ) or is_typevar(typ)):
                     raise TypeInformationRequiredError.create_for_object_attributes(item_type, attr_name)
 
                 # -- is the attribute mandatory ?
-                is_mandatory = s.parameters[attr_name].default is Parameter.empty
+                is_mandatory = (s.parameters[attr_name].default is Parameter.empty) and not is_pep484_nonable(typ)
 
                 # -- store both info in result dict
                 res[attr_name] = (typ, is_mandatory)

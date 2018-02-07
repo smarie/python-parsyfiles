@@ -6,8 +6,6 @@ from pprint import pprint
 from typing import Type, Dict, Any, List, Set, Tuple, Union, Mapping, AbstractSet, Sequence, Iterable
 from warnings import warn
 
-from typing_inspect import is_union_type
-
 from parsyfiles.converting_core import S, Converter, ConversionChain, is_any_type, get_validated_type, JOKER, \
     ConversionException
 from parsyfiles.filesystem_mapping import PersistedObject
@@ -16,7 +14,7 @@ from parsyfiles.parsing_combining_parsers import ParsingChain, CascadingParser, 
 from parsyfiles.parsing_core import _InvalidParserException
 from parsyfiles.parsing_core_api import Parser, ParsingPlan, T
 from parsyfiles.type_inspection_tools import get_pretty_type_str, get_base_generic_type, get_pretty_type_keys_dict, \
-    robust_isinstance, is_collection, _extract_collection_base_type, is_typed_collection
+    robust_isinstance, is_collection, _extract_collection_base_type, is_typed_collection, resolve_union_and_typevar
 from parsyfiles.var_checker import check_var
 
 
@@ -654,13 +652,13 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
         :return:
         """
         # find the parser for this object
-        combined_parser = self.build_parser_for_fileobject_and_desiredtype(filesystem_object, desired_type,
+        t, combined_parser = self.build_parser_for_fileobject_and_desiredtype(filesystem_object, desired_type,
                                                                            logger=logger)
         # ask the parser for the parsing plan
-        return combined_parser.create_parsing_plan(desired_type, filesystem_object, logger)
+        return combined_parser.create_parsing_plan(t, filesystem_object, logger)
 
     def build_parser_for_fileobject_and_desiredtype(self, obj_on_filesystem: PersistedObject, object_type: Type[T],
-                                                    logger: Logger = None):
+                                                    logger: Logger = None) -> Tuple[Type, Parser]:
         """
         Builds from the registry, a parser to parse object obj_on_filesystem as an object of type object_type.
 
@@ -674,18 +672,22 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
         :param obj_on_filesystem:
         :param object_type:
         :param logger:
-        :return:
+        :return: a type to use and a parser. The type to use is either directly the one provided, or a resolved one in
+        case of TypeVar
         """
-        # support Union
-        if not is_union_type(object_type):
-            # as usual
-            return self._build_parser_for_fileobject_and_desiredtype(obj_on_filesystem, object_typ=object_type,
-                                                                     logger=logger)
+        # First resolve TypeVars and Unions to get a list of compliant types
+        object_types = resolve_union_and_typevar(object_type)
+
+        if len(object_types) == 1:
+            # One type: proceed as usual
+            return object_types[0], self._build_parser_for_fileobject_and_desiredtype(obj_on_filesystem,
+                                                                                      object_typ=object_types[0],
+                                                                                      logger=logger)
         else:
-            # build a parser for each possible type
+            # Several types are supported: try to build a parser for each
             parsers = OrderedDict()
             errors = dict()
-            for typ in object_type.__args__:
+            for typ in object_types:
                 try:
                     parsers[typ] = self._build_parser_for_fileobject_and_desiredtype(obj_on_filesystem, object_typ=typ,
                                                                                      logger=logger)
@@ -698,7 +700,7 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
 
             # Combine if there are remaining, otherwise raise
             if len(parsers) > 0:
-                return CascadingParser(parsers)
+                return object_type, CascadingParser(parsers)
             else:
                 raise NoParserFoundForUnionType.create(obj_on_filesystem, object_type, errors)
 
@@ -1015,22 +1017,27 @@ class ConversionFinder(metaclass=ABCMeta):
     @staticmethod
     def try_convert_value(conversion_finder, attr_name: str, attr_value: S, desired_attr_type: Type[T], logger: Logger,
                           options: Dict[str, Dict[str, Any]]) -> T:
-        # support Union
-        if not is_union_type(desired_attr_type):
-            # as usual
+
+        # First resolve TypeVars and Unions to get a list of compliant types
+        object_types = resolve_union_and_typevar(desired_attr_type)
+
+        if len(object_types) == 1:
+            # One supported type: as usual
             return ConverterCache._try_convert_value(conversion_finder, attr_name=attr_name, attr_value=attr_value,
-                                                     desired_attr_type=desired_attr_type, logger=logger,
+                                                     desired_attr_type=object_types[0], logger=logger,
                                                      options=options)
         else:
+            # Several supported types: try to convert to each in sequence
             errors = dict()
-            for alternate_typ in desired_attr_type.__args__:
+            for alternate_typ in object_types:
                 try:
                     return ConverterCache._try_convert_value(conversion_finder, attr_name=attr_name,
-                                                             attr_value=attr_value, desired_attr_type=desired_attr_type,
+                                                             attr_value=attr_value, desired_attr_type=alternate_typ,
                                                              logger=logger, options=options)
                 except NoConverterFoundForObjectType as e:
                     errors[alternate_typ] = e
 
+            # Aggregate the errors if any
             raise NoConverterFoundForObjectType.create(conversion_finder, attr_value, desired_attr_type, errors)
 
     @staticmethod
@@ -1475,12 +1482,8 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
         matching_p_approx, matching_p_approx_with_approx_chain,\
         matching_p_exact, matching_p_exact_with_approx_chain = [], [], [], [], [], []
 
-        # support Union
-        orig_desired_type = desired_type
-        if is_union_type(orig_desired_type):
-            desired_types = desired_type.__args__
-        else:
-            desired_types = (orig_desired_type,)
+        # resolve Union and TypeVar
+        desired_types = resolve_union_and_typevar(desired_type)
 
         for desired_type in desired_types:
 

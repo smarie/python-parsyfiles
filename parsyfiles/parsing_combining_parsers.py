@@ -210,8 +210,9 @@ class CascadingParser(DelegatingParser):
                                  rest="' then '".join([str(p[1]) for p in self._parsers_list[1:]]) + ']')
             else:
                 return "[Try '{first}' -> [{first_typ}] then {rest}]" \
-                       "".format(first=self._parsers_list[0][1], first_typ=first_typ,
-                                 rest=" then ".join(["'{p}' -> [{p_typ}]".format(p=p[1], p_typ=p[0])
+                       "".format(first=self._parsers_list[0][1], first_typ=get_pretty_type_str(first_typ),
+                                 rest=" then ".join(["'{p}' -> [{p_typ}]".format(p=p[1],
+                                                                                 p_typ=get_pretty_type_str(p[0]))
                                                        for p in self._parsers_list[1:]]) + ']')
         elif len(self._parsers_list) == 1:
             # useless...
@@ -313,7 +314,11 @@ class CascadingParser(DelegatingParser):
         def __init__(self, desired_type: Type[T], obj_on_filesystem: PersistedObject, parser: AnyParser,
                      parser_list: List[Tuple[Type, Parser]], logger: Logger):
 
-            super(CascadingParser.CascadingParsingPlan, self).__init__(desired_type, obj_on_filesystem, parser)
+            # We accept that the desired type is a Union or a TypeVar
+            # Indeed CascadingParser can both provide alternatives to the same type (no Union), 
+            # or to different ones (Union)
+            super(CascadingParser.CascadingParsingPlan, self).__init__(desired_type, obj_on_filesystem, parser,
+                                                                       accept_union_types=True)
 
             # --parser list
             check_var(parser_list, var_types=list, var_name='parser_list', min_len=1)

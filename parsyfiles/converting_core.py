@@ -62,11 +62,12 @@ def get_validated_types(object_types: Set[Type], set_name: str) -> Set[Type]:
         return res
 
 
-def get_validated_type(object_type: Type[Any], name: str, enforce_not_joker:bool = True) -> Type[Any]:
+def get_validated_type(object_type: Type[Any], name: str, enforce_not_joker: bool = True) -> Type[Any]:
     """
     Utility to validate a type :
     * None is not allowed,
-    * 'object' and 'Any' are converted into 'AnyObject'
+    * 'object', 'AnyObject' and 'Any' lead to the same 'AnyObject' type
+    * JOKER is either rejected (if enforce_not_joker is True, default) or accepted 'as is'
 
     :param object_type: the type to validate
     :param name: a name used in exceptions if any
@@ -76,6 +77,7 @@ def get_validated_type(object_type: Type[Any], name: str, enforce_not_joker:bool
     if object_type is object or object_type is Any or object_type is AnyObject:
         return AnyObject
     else:
+        # -- !! Do not check TypeVar or Union : this is already handled at higher levels --
         if object_type is JOKER:
             # optionally check if JOKER is allowed
             if enforce_not_joker:

@@ -2,13 +2,11 @@ from abc import abstractmethod
 from logging import Logger
 from typing import TypeVar, Generic, Type, Callable, Dict, Any, Set, Tuple, List
 
-from typing_inspect import is_union_type
-
 from parsyfiles.global_config import GLOBAL_CONFIG
 from parsyfiles.converting_core import get_validated_types, S, Converter, get_options_for_id, is_any_type, \
     is_any_type_set, JOKER
 from parsyfiles.filesystem_mapping import EXT_SEPARATOR, MULTIFILE_EXT, PersistedObject
-from parsyfiles.type_inspection_tools import get_pretty_type_str, robust_isinstance
+from parsyfiles.type_inspection_tools import get_pretty_type_str, robust_isinstance, resolve_union_and_typevar
 from parsyfiles.var_checker import check_var
 
 T = TypeVar('T')  # Can be anything - used for all other objects
@@ -333,21 +331,27 @@ class ParsingPlan(Generic[T], PersistedObject):
     """
 
     def __init__(self, object_type: Type[T], obj_on_filesystem: PersistedObject,
-                 parser: _BaseParserDeclarationForRegistries):
+                 parser: _BaseParserDeclarationForRegistries, accept_union_types: bool = False):
         """
         Creates a parsing plan, from an object's type, an object's files, and a parser.
 
         :param object_type:
         :param obj_on_filesystem:
         :param parser:
+        :param accept_union_types: a boolean to accept when object_type is a Union or a TypeVar with union constraints
         """
         # DON'T CALL SUPER INIT, since we wrap/proxy an existing object
 
         # check and apply defaults
         # -- object_type
-        if not is_union_type(object_type):
-            check_var(object_type, var_types=type, var_name='object_type')
-        self.obj_type = object_type
+        t = resolve_union_and_typevar(object_type)
+        if len(t) == 1:
+            check_var(t[0], var_types=type, var_name='object_type')
+            self.obj_type = t[0]
+        elif not accept_union_types:
+            raise ValueError('Parsing Plan can not be created for Union type {}'.format(object_type))
+        else:
+            self.obj_type = object_type
         # -- obj_files
         check_var(obj_on_filesystem, var_types=PersistedObject, var_name='obj_on_filesystem')
         self.obj_on_fs_to_parse = obj_on_filesystem
