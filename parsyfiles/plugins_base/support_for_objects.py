@@ -83,9 +83,9 @@ class MissingMandatoryAttributeFiles(FileNotFoundError):
         """
 
         return MissingMandatoryAttributeFiles('Multifile object ' + str(obj) + ' cannot be built from constructor of '
-                                              'type, ' + str(obj_type) +
-                                              'mandatory constructor argument \'' + arg_name + '\'was not found on '
-                                                                                               'filesystem')
+                                              'type ' + get_pretty_type_str(obj_type) +
+                                              ', mandatory constructor argument \'' + arg_name + '\'was not found on '
+                                              'filesystem')
 
 
 class InvalidAttributeNameForConstructorError(Exception):
