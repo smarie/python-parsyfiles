@@ -695,17 +695,9 @@
 <h2 id="by-type">By Type<a class="headerlink" href="#by-type" title="Permanent link">&para;</a></h2>
 <h3 id="primitive-types-bool-float-int-str">primitive types: bool, float, int, str<a class="headerlink" href="#primitive-types-bool-float-int-str" title="Permanent link">&para;</a></h3>
 <p>The following files</p>
-<div class="codehilite"><pre><span></span>.pyc              .txt              .cfg         .csv         .yaml
----------------   ---------------   ----------   ----------   ----------
-<span class="se">\x</span><span class="m">80</span><span class="se">\x</span><span class="m">03</span><span class="se">\x</span><span class="m">88</span>.     Yes                                                    
-</pre></div>
-
-
-<div class="codehilite"><pre><span></span>.json             .properties       .cfg         .csv         .yaml
----------------   ---------------   ----------   ----------   ----------
-<span class="o">{</span>                                   <span class="o">[</span>main<span class="o">]</span>                    
-  <span class="s2">&quot;x&quot;</span>: True         <span class="nv">age</span><span class="o">=</span><span class="m">1</span>            <span class="nv">age</span><span class="o">=</span><span class="m">1</span>        age, name    age: <span class="m">1</span>
-<span class="o">}</span>                                                             
+<div class="codehilite"><pre><span></span>.pyc              .txt              .txt         .txt
+---------------   ---------------   ----------   ----------
+<span class="se">\x</span><span class="m">80</span><span class="se">\x</span><span class="m">03</span><span class="se">\x</span><span class="m">88</span>.     Yes               <span class="nv">gAOILg</span><span class="o">==</span>     <span class="m">1</span>.0                                               
 </pre></div>
 
 
@@ -714,7 +706,7 @@
 </pre></div>
 
 
-<p>Any primitive can be converted from another one, for example you may parse a bool from its string representation or conversely.</p>
+<p>Any primitive can be converted from another one (above, the string 'Yes' and the float '1.0'). The above also demonstrates the ability of parsyfiles to chain parsers and converters where appropriate: the binary pickle object in the .pyc file is extracted correctly, and so is the base64-encoded pickle object in the .txt.</p>
 <h3 id="configparser">ConfigParser<a class="headerlink" href="#configparser" title="Permanent link">&para;</a></h3>
 <h3 id="dict">Dict<a class="headerlink" href="#dict" title="Permanent link">&para;</a></h3>
 <p>(note about <code>dict</code>)</p>
