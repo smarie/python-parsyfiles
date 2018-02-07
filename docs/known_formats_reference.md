@@ -49,17 +49,9 @@ pprint(get_capabilities_for_type(bool))
 The following files
 
 ```bash
-.pyc              .txt              .cfg         .csv         .yaml
----------------   ---------------   ----------   ----------   ----------
-\x80\x03\x88.     Yes                                                    
-```
-
-```bash
-.json             .properties       .cfg         .csv         .yaml
----------------   ---------------   ----------   ----------   ----------
-{                                   [main]                    
-  "x": True         age=1            age=1        age, name    age: 1
-}                                                             
+.pyc              .txt              .txt         .txt
+---------------   ---------------   ----------   ----------
+\x80\x03\x88.     Yes               gAOILg==     1.0                                               
 ```
 
  may all be parsed into a `bool` using 
@@ -68,7 +60,8 @@ The following files
 bl = parse_item('<file_path_without_ext>', bool)
 ```
 
-Any primitive can be converted from another one, for example you may parse a bool from its string representation or conversely.
+Any primitive can be converted from another one (above, the string 'Yes' and the float '1.0'). The above also demonstrates the ability of parsyfiles to chain parsers and converters where appropriate: the binary pickle object in the .pyc file is extracted correctly, and so is the base64-encoded pickle object in the .txt.
+
 
 ### ConfigParser
 
