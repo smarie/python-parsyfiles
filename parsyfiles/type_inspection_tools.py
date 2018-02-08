@@ -229,6 +229,7 @@ def get_all_subclasses(typ):
     if is_generic_type(typ):
         # We now use get_origin() to also find all the concrete subclasses in case the desired type is a generic
         # TODO in that case we should also check that the subclass is compliant with all the TypeVar constraints
+        # see if there is an easy way to do this in https://github.com/Stewori/pytypes/issues/31
         return get_origin(typ).__subclasses__()
     else:
         return typ.__subclasses__()
@@ -266,6 +267,7 @@ def is_pep484_nonable(typ):
     :param typ:
     :return:
     """
+    # TODO rely on typing_inspect if there is an answer to https://github.com/ilevkivskyi/typing_inspect/issues/14
     if typ is type(None):
         return True
     elif is_typevar(typ) or is_union_type(typ):
