@@ -5,17 +5,19 @@
 from parsyfiles.filesystem_mapping import *
 from parsyfiles.parsing_fw import *
 from parsyfiles.global_config import parsyfiles_global_config
+from parsyfiles.log_utils import *
 
 # For the rest, allow user to do
 #    import parsyfiles as pf
 # and then pf.xxx
 __all__ = ['converting_core',
-           'filesystem_mapping'
+           'filesystem_mapping',
            'parsing_combining_parsers',
            'parsing_core',
            'parsing_core_api',
            'parsing_fw',
            'parsing_registries',
            'type_inspection_tools',
+           'log_utils',
            # dont insert the various support_xxx files here
            'var_checker']

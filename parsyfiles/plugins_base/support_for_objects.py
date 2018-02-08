@@ -1,7 +1,7 @@
 from abc import ABCMeta
 from inspect import Parameter
 from warnings import warn
-from logging import Logger, warning, DEBUG
+from logging import Logger, DEBUG
 from typing import Type, Any, List, Dict, Union
 
 from parsyfiles import GLOBAL_CONFIG
@@ -11,8 +11,9 @@ from parsyfiles.parsing_core import MultiFileParser, AnyParser, SingleFileParser
 from parsyfiles.parsing_registries import ParserFinder, ConversionFinder
 from parsyfiles.plugins_base.support_for_collections import DictOfDict
 from parsyfiles.type_inspection_tools import get_pretty_type_str, get_constructor_attributes_types, \
-    TypeInformationRequiredError, is_collection
+    TypeInformationRequiredError, is_collection, is_valid_pep484_type_hint, InvalidPEP484TypeHint, get_all_subclasses
 from parsyfiles.var_checker import check_var
+from parsyfiles.log_utils import default_logger
 
 
 def read_object_from_pickle(desired_type: Type[T], file_path: str, encoding: str,
@@ -185,6 +186,20 @@ class CaughtTypeErrorDuringInstantiation(Exception):
         return CaughtTypeErrorDuringInstantiation(msg).with_traceback(caught.__traceback__)
 
 
+def should_display_warnings_for(to_type):
+    """ Central method where we control whether warnings should be displayed """
+    if not hasattr(to_type, '__module__'):
+        return True
+    elif to_type.__module__ in {'builtins'} or to_type.__module__.startswith('parsyfiles') \
+            or to_type.__name__ in {'DataFrame'}:
+        return False
+    else:
+        return True
+
+
+_cache_valid_for_dict_to_object = dict()
+
+
 def _is_valid_for_dict_to_object_conversion(strict_mode: bool, from_type: Type, to_type: Type) -> bool:
     """
     Returns true if the provided types are valid for dict_to_object conversion
@@ -199,6 +214,44 @@ def _is_valid_for_dict_to_object_conversion(strict_mode: bool, from_type: Type, 
     :param to_type:
     :return:
     """
+    # cache previous results
+    try:
+        res, subclasses_hash = _cache_valid_for_dict_to_object[to_type][strict_mode]
+        # Check if are any new subclasses are available
+        if not strict_mode and to_type is not None and not is_any_type(to_type):
+            if hash(tuple(get_all_subclasses(to_type))) != subclasses_hash:
+                raise KeyError('fake error to recompute the cache entry')
+    except KeyError:
+        res = __is_valid_for_dict_to_object_conversion(strict_mode=strict_mode, from_type=from_type, to_type=to_type)
+        # Store an entry in the cache containing the result and the hash of the subclasses list
+        subclasses_hash = None
+        if not strict_mode and to_type is not None and not is_any_type(to_type):
+            subclasses_hash = hash(tuple(get_all_subclasses(to_type)))
+        entry = (res, subclasses_hash)
+        try:
+            _cache_valid_for_dict_to_object[to_type][strict_mode] = entry
+        except KeyError:
+            _cache_valid_for_dict_to_object[to_type] = {strict_mode: entry}
+    return res
+
+
+def __is_valid_for_dict_to_object_conversion(strict_mode: bool, from_type: Type, to_type: Type) -> bool:
+    """
+    Returns true if the provided types are valid for dict_to_object conversion
+
+    Explicitly declare that we are not able to parse collections nor able to create an object from a dictionary if the
+    object's constructor is non correctly PEP484-specified.
+
+    None should be treated as a Joker here (but we know that never from_type and to_type will be None at the same time)
+
+    :param strict_mode:
+    :param from_type:
+    :param to_type:
+    :return:
+    """
+    # right now we're stuck with the default logger..
+    logr = default_logger
+
     if to_type is None or is_any_type(to_type):
         # explicitly handle the 'None' (joker) or 'any' type
         return True
@@ -209,16 +262,54 @@ def _is_valid_for_dict_to_object_conversion(strict_mode: bool, from_type: Type, 
         return False
 
     else:
+        # (1) Try the type itself
         try:
             # can we find enough pep-484 information in the constructor to be able to understand what is required ?
             get_constructor_attributes_types(to_type)
             return True
-        except TypeInformationRequiredError as e:
+        except TypeInformationRequiredError as main_e:
             # failed: we cant guess the required types of constructor arguments
-            if hasattr(to_type, '__module__') and to_type.__module__ not in {'builtins'} \
-                    and not to_type.__module__.startswith('parsyfiles') and not to_type.__name__ == 'DataFrame':
-                warn('Object constructor signature for type {} does not allow parsyfiles to automatically create '
-                     'instances from dict content. Caught {}: {}'.format(to_type, type(e).__name__, e))
+            if strict_mode:
+                # Warning and return NO
+                if should_display_warnings_for(to_type):
+                    logr.debug('Object constructor signature for type {} does not allow parsyfiles to '
+                               'automatically create instances from dict content. Caught {}: {}'
+                               ''.format(get_pretty_type_str(to_type), type(main_e).__name__, main_e))
+                return False
+
+            # non-strict mode: (2) Check if any subclasses exist
+            subclasses = get_all_subclasses(to_type)
+            if len(subclasses) > GLOBAL_CONFIG.dict_to_object_subclass_limit:
+                logr.debug('WARNING: Type {} has {} subclasses, only {} will be tried by parsyfiles when attempting to '
+                           'create it from a subclass. You can raise this limit by setting the appropriate option with '
+                           '`parsyfiles_global_config()`'
+                           ''.format(to_type, len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
+
+            # Then for each subclass also try (with a configurable limit in nb of subclasses)
+            for subclass in subclasses[0:GLOBAL_CONFIG.dict_to_object_subclass_limit]:
+                try:
+                    get_constructor_attributes_types(subclass)
+                    # OK, but issue warning for the root type still
+                    if should_display_warnings_for(to_type):
+                        logr.debug('WARNING: Object constructor signature for type {} does not allow parsyfiles to '
+                                   'automatically create instances from dict content, but it can for at least one of '
+                                   'its subclasses ({}) so it might be ok for you. Caught {}: {}'
+                                   ''.format(get_pretty_type_str(to_type), get_pretty_type_str(subclass),
+                                             type(main_e).__name__, main_e))
+                    return True
+                except TypeInformationRequiredError as e:
+                    # failed: we cant guess the required types of constructor arguments
+                    if should_display_warnings_for(to_type):
+                        logr.debug('WARNING: Object constructor signature for type {} does not allow parsyfiles to '
+                                   'automatically create instances from dict content. Caught {}: {}'
+                                   ''.format(subclass, type(e).__name__, e))
+
+            # Nothing succeeded
+            if should_display_warnings_for(to_type):
+                logr.debug('WARNING: Object constructor signature for type {} does not allow parsyfiles to '
+                           'automatically create instances from dict content, and so is it for all of its subclasses '
+                           'tried. Caught {}: {}'
+                           ''.format(get_pretty_type_str(to_type), type(main_e).__name__, main_e))
             return False
 
 
@@ -241,6 +332,9 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
     :param is_dict_of_dicts:
     :return:
     """
+    # right now we're stuck with the default logger..
+    logr = default_logger
+
     check_var(desired_type, var_types=type, var_name='obj_type')
     check_var(contents_dict, var_types=dict, var_name='contents_dict')
 
@@ -254,14 +348,14 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
         try:
             return _dict_to_object(desired_type, contents_dict, logger=logger, options=options,
                                    conversion_finder=conversion_finder, is_dict_of_dicts=is_dict_of_dicts)
-        except Exception as e:
+        except Exception as main_e:
             # Check if any subclasses exist
-            subclasses = desired_type.__subclasses__()
+            subclasses = get_all_subclasses(desired_type)
             if len(subclasses) == 0:
-                raise e.with_traceback(e.__traceback__)
+                raise main_e.with_traceback(main_e.__traceback__)
 
             errors = dict()
-            errors[desired_type] = e
+            errors[desired_type] = main_e
 
             # Then for each subclass also try (with a configurable limit in nb of subclasses)
             for subclass in subclasses[0:GLOBAL_CONFIG.dict_to_object_subclass_limit]:
@@ -272,9 +366,9 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
                     errors[subclass] = e
 
             if len(subclasses) > GLOBAL_CONFIG.dict_to_object_subclass_limit:
-                warning('Type {} has more than {} subclasses, only {} were tried. You can raise this limit by setting the '
-                        'appropriate option with `parsyfiles_global_config()`'
-                        ''.format(desired_type, len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
+                warn('Type {} has more than {} subclasses, only {} were tried to convert it, with no success. You can '
+                     'raise this limit by setting the appropriate option with `parsyfiles_global_config()`'
+                     ''.format(desired_type, len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
 
             raise NoSubclassCouldBeInstantiated(errors)
 
@@ -309,7 +403,7 @@ def _dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger
                 attr_type_required = constructor_args_types_and_opt[attr_name][0]
 
                 if not is_dict_of_dicts:
-                    if isinstance(attr_type_required, type):
+                    if is_valid_pep484_type_hint(attr_type_required):
                         # this will not fail if type information is not present;the attribute will only be used 'as is'
                         full_attr_name = get_pretty_type_str(desired_type) + '.' + attr_name
 
@@ -319,8 +413,9 @@ def _dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger
                                                                                       options)
 
                     else:
-                        warning('Constructor for type <' + get_pretty_type_str(desired_type) + '> has no PEP484 Type '
-                                'hint, trying to use the parsed value in the dict directly')
+                        warn("Constructor for type <{t}> has no valid PEP484 Type hint for attribute {att}, trying to "
+                             "use the parsed value in the dict directly".format(t=get_pretty_type_str(desired_type),
+                                                                         att=attr_name))
                         dict_for_init[attr_name] = provided_attr_value
 
                 else:
@@ -329,8 +424,14 @@ def _dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger
                     if isinstance(provided_attr_value, dict):
                         # recurse : try to build this attribute from the dictionary provided. We need to know the type
                         # for this otherwise we wont be able to call the constructor :)
-                        if attr_type_required is Parameter.empty or not isinstance(attr_type_required, type):
-                            raise TypeInformationRequiredError.create_for_object_attributes(desired_type, attr_name)
+                        if (attr_type_required is None) or (attr_type_required is Parameter.empty):
+                            raise TypeInformationRequiredError.create_for_object_attributes(desired_type, attr_name,
+                                                                                            attr_type_required)
+
+                        elif not is_valid_pep484_type_hint(attr_type_required):
+                            raise InvalidPEP484TypeHint.create_for_object_attributes(desired_type, attr_name,
+                                                                                     attr_type_required)
+
                         else:
                             # we can build the attribute from the sub-dict
                             dict_for_init[attr_name] = dict_to_object(attr_type_required, provided_attr_value,
@@ -491,14 +592,14 @@ class MultifileObjectParser(MultiFileParser):
             try:
                 return self.__get_parsing_plan_for_multifile_children(obj_on_fs, desired_type, children_on_fs,
                                                                       logger=logger)
-            except Exception as e:
+            except Exception as main_e:
                 # Check if any subclasses exist
-                subclasses = desired_type.__subclasses__()
+                subclasses = get_all_subclasses(desired_type)
                 if len(subclasses) == 0:
-                    raise e.with_traceback(e.__traceback__)
+                    raise main_e.with_traceback(main_e.__traceback__)
 
                 errors = dict()
-                errors[desired_type] = e
+                errors[desired_type] = main_e
 
                 # Then for each subclass also try (with a configurable limit in nb of subclasses)
                 for subclass in subclasses[0:GLOBAL_CONFIG.dict_to_object_subclass_limit]:
@@ -509,10 +610,9 @@ class MultifileObjectParser(MultiFileParser):
                         errors[subclass] = e
 
                 if len(subclasses) > GLOBAL_CONFIG.dict_to_object_subclass_limit:
-                    warning(
-                        'Type {} has more than {} subclasses, only {} were tried. You can raise this limit by setting '
-                        'the appropriate option with `parsyfiles_global_config()`'
-                        ''.format(desired_type, len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
+                    warn('Type {} has more than {} subclasses, only {} were tried to convert it, with no success. You '
+                         'can raise this limit by setting the appropriate option with `parsyfiles_global_config()`'
+                         ''.format(desired_type, len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
 
                 raise NoSubclassCouldBeInstantiated(errors)
 

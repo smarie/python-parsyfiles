@@ -1,3 +1,12 @@
+### 2.6.1 - bugfixes for unions, typevars and generics and log/warnings improvements
+
+ * fixed `__init__` file: `__all__` contained a wrong entry
+ * the central logger `default_logger` is now independent from the `RootParser` class
+ * fixed a conversion bug for `Union` types (or `TypeVar`s with union constraints): now all alternate conversion paths are tried even in case of an exception in a converter.
+ * The `<dict_to_object>` converter and the `Multifile object parser` now both support generic types when looking for subclasses (although strong compliance of the subclasses with the `TypeVar` constraints are not further checked). The method to list these subclasses is in a central place to ensure consistency
+ * Now there are two error types for invalid type hints : `TypeInformationRequiredError` (no type hint) and `InvalidPEP484TypeHint` (invalid type hint). This PEP484-compliance check is also now done in a central place to ensure consistency.
+ * The `<dict_to_object>` converter and the `Multifile object parser` now benefit from a cache in order to know if a given class can be built from its constructor, or its subclasses. This leads to much less log warning messages
+
 ### 2.6.0 - support for TypeVars and better support for Unions and subclasses
 
  * `TypeVars` are now supported. This fixes [#17](https://github.com/smarie/python-parsyfiles/issues/17)

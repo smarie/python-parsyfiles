@@ -777,10 +777,10 @@ class AttrConversionException(ConversionException):
         :param caught_exec:
         :return:
         """
-        base_msg = 'Error while trying to convert parsed attribute value for attribute \'' + str(att_name) + '\' : \n' \
-                   + '   - parsed value is : \'' + str(parsed_att) + '\' of type \'' + get_pretty_type_str(type(parsed_att)) + '\'\n' \
-                   + '   - attribute type required by object constructor is \'' + get_pretty_type_str(attribute_type) \
-                   + '\' \n'
+        base_msg = "Error while trying to convert value for attribute '{a}' to type <{t}>:\n" \
+                   "   - parsed value is : '{v}' of type <{tv}>\n" \
+                   "".format(a=str(att_name), t=get_pretty_type_str(attribute_type), v=parsed_att,
+                             tv=get_pretty_type_str(type(parsed_att)))
 
         msg = StringIO()
         if len(list(caught_exec.keys())) > 0:
@@ -954,7 +954,7 @@ class ConversionFinder(metaclass=ABCMeta):
                 res = dict()
                 # convert if required
                 for key, val in coll_to_convert.items():
-                    res[key] = ConversionFinder.try_convert_value(conversion_finder, '', val, item_typ, logger,
+                    res[key] = ConversionFinder.try_convert_value(conversion_finder, key, val, item_typ, logger,
                                                                   options=kwargs)
                 return res
 
@@ -1034,7 +1034,7 @@ class ConversionFinder(metaclass=ABCMeta):
                     return ConverterCache._try_convert_value(conversion_finder, attr_name=attr_name,
                                                              attr_value=attr_value, desired_attr_type=alternate_typ,
                                                              logger=logger, options=options)
-                except NoConverterFoundForObjectType as e:
+                except Exception as e:
                     errors[alternate_typ] = e
 
             # Aggregate the errors if any

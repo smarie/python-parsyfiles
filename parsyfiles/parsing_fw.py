@@ -1,12 +1,12 @@
-import sys
 import traceback
 from io import StringIO
-from logging import getLogger, StreamHandler, Logger, INFO
+from logging import getLogger, Logger
 from typing import Type, Dict, Any, Set, Tuple, List
 from warnings import warn
 
 from copy import deepcopy
 
+from parsyfiles.log_utils import default_logger
 from parsyfiles.converting_core import JOKER
 from parsyfiles.filesystem_mapping import FileMappingConfiguration, WrappedFileMappingConfiguration
 from parsyfiles.parsing_core_api import T, Parser
@@ -150,15 +150,9 @@ class RootParser(ParserRegistryWithConverters):
     The root parser
     """
 
-    # default logger that prints on stdout
-    _default_logger = getLogger('parsyfiles')
-    ch = StreamHandler(sys.stdout)
-    _default_logger.addHandler(ch)
-    _default_logger.setLevel(INFO)
-
     # When register_default_parsers is True, return a copy of the DefaultRootParser singleton
     def __new__(cls, pretty_name: str = None, *, strict_matching: bool = False,
-                register_default_parsers: bool = True, logger: Logger = _default_logger):
+                register_default_parsers: bool = True, logger: Logger = default_logger):
         if cls is RootParser and register_default_parsers:
             # return a copy of the DefaultRootParser singleton with the new logger (urgh! not multithread safe!)
             c = DefaultRootParser.get_singleton_copy()
@@ -188,7 +182,7 @@ class RootParser(ParserRegistryWithConverters):
         self.__dict__.update(d)
 
     def __init__(self, pretty_name: str = None, *, strict_matching: bool = False,
-                 register_default_parsers: bool = True, logger: Logger = _default_logger):
+                 register_default_parsers: bool = True, logger: Logger = default_logger):
         """
         Constructor. Initializes the dictionary of parsers with the optionally provided initial_parsers, and
         inits the lock that will be used for access in multithreading context.
@@ -212,7 +206,7 @@ class RootParser(ParserRegistryWithConverters):
             # if this assertion fails, thats a discrepancy between __new__ and __init__ arguments
             assert len(self.get_all_parsers()) > 0
 
-        logger = logger or RootParser._default_logger
+        logger = logger or default_logger
         check_var(logger, var_types=Logger, var_name='logger')
         self.logger = logger
 
@@ -378,7 +372,7 @@ def get_default_parser():
     return RootParser()
 
 
-def _create_parser_from_default(logger: Logger = RootParser._default_logger):
+def _create_parser_from_default(logger: Logger = default_logger):
     p = get_default_parser()
     p.logger = logger
     return p
@@ -386,7 +380,7 @@ def _create_parser_from_default(logger: Logger = RootParser._default_logger):
 
 def parse_item(location: str, item_type: Type[T], item_name_for_log: str = None,
                file_mapping_conf: FileMappingConfiguration = None,
-               logger: Logger = RootParser._default_logger, lazy_mfcollection_parsing: bool = False) -> T:
+               logger: Logger = default_logger, lazy_mfcollection_parsing: bool = False) -> T:
     """
     Creates a RootParser() and calls its parse_item() method
 
@@ -405,7 +399,7 @@ def parse_item(location: str, item_type: Type[T], item_name_for_log: str = None,
 
 
 def parse_collection(location: str, base_item_type: Type[T], item_name_for_log: str = None,
-                     file_mapping_conf: FileMappingConfiguration = None, logger: Logger = RootParser._default_logger,
+                     file_mapping_conf: FileMappingConfiguration = None, logger: Logger = default_logger,
                      lazy_mfcollection_parsing: bool = False)\
         -> Dict[str, T]:
     """

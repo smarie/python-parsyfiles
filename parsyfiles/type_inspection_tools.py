@@ -220,6 +220,44 @@ def is_collection(object_type, strict: bool = False) -> bool:
                or issubclass(object_type, set)
 
 
+def get_all_subclasses(typ):
+    """
+    Returns all subclasses, and supports generic types
+    :param typ:
+    :return:
+    """
+    if is_generic_type(typ):
+        # We now use get_origin() to also find all the concrete subclasses in case the desired type is a generic
+        # TODO in that case we should also check that the subclass is compliant with all the TypeVar constraints
+        return get_origin(typ).__subclasses__()
+    else:
+        return typ.__subclasses__()
+
+
+def is_valid_pep484_type_hint(typ_hint):
+    """
+    Returns True if the provided type is a valid PEP484 type hint, False otherwise.
+    Note: string type hints are not supported by parsyfiles as of today
+
+    :param typ_hint:
+    :return:
+    """
+    try:
+        # most common case first, to be faster
+        if isinstance(typ_hint, type):
+            return True
+        else:
+            try:
+                return is_union_type(typ_hint) or is_typevar(typ_hint)
+            except:
+                return False
+    except:
+        try:
+            return is_union_type(typ_hint) or is_typevar(typ_hint)
+        except:
+            return False
+
+
 def is_pep484_nonable(typ):
     """
     Checks if a given type is nonable, meaning that it explicitly or implicitly declares a Union with NoneType.
@@ -256,7 +294,9 @@ def _extract_collection_base_type(collection_object_type, exception_if_none: boo
 
     check_var(collection_object_type, var_types=type, var_name='collection_object_type')
 
+    is_tuple = False
     if is_tuple_type(collection_object_type):  # Tuple is a special construct, is_generic_type does not work
+        is_tuple = True
         # --old: hack into typing module
         # if hasattr(collection_object_type, '__args__') and collection_object_type.__args__ is not None:
         # contents_item_type = collection_object_type.__args__
@@ -309,10 +349,26 @@ def _extract_collection_base_type(collection_object_type, exception_if_none: boo
                              + ' is not a collection')
 
     # Finally return if something was found, otherwise tell it
-    if (contents_item_type is None or contents_item_type is Parameter.empty) and exception_if_none:
-        raise TypeInformationRequiredError.create_for_collection_items(collection_object_type)
-    else:
+    if not exception_if_none:
+        # always return, whatever it is
         return contents_item_type, contents_key_type
+    elif contents_item_type is None or contents_item_type is Parameter.empty:
+        # Empty type hints
+        raise TypeInformationRequiredError.create_for_collection_items(collection_object_type, contents_item_type)
+    elif is_tuple:
+        # Iterate on all sub-types
+        for t in contents_item_type:
+            if contents_item_type is None or contents_item_type is Parameter.empty:
+                # Empty type hints
+                raise TypeInformationRequiredError.create_for_collection_items(collection_object_type, t)
+            if not is_valid_pep484_type_hint(t):
+                # Invalid type hints
+                raise InvalidPEP484TypeHint.create_for_collection_items(collection_object_type, t)
+    elif not is_valid_pep484_type_hint(contents_item_type):
+        # Invalid type hints
+        raise InvalidPEP484TypeHint.create_for_collection_items(collection_object_type, contents_item_type)
+
+    return contents_item_type, contents_key_type
 
 
 def _get_constructor_signature(item_type):
@@ -353,7 +409,7 @@ def get_constructor_attributes_types(item_type) -> Dict[str, Tuple[Type[Any], bo
         for attr_name, v in res.items():
             typ = v[0]
             if typ is None or typ is Parameter.empty or not isinstance(typ, type):
-                raise TypeInformationRequiredError.create_for_object_attributes(item_type, attr_name)
+                raise TypeInformationRequiredError.create_for_object_attributes(item_type, attr_name, typ)
 
     except:
         # -- Fallback to PEP484
@@ -369,9 +425,10 @@ def get_constructor_attributes_types(item_type) -> Dict[str, Tuple[Type[Any], bo
 
                 # -- Get and check that the attribute type is PEP484 compliant
                 typ = s.parameters[attr_name].annotation
-                if (typ is None) or (typ is Parameter.empty) or \
-                        not (isinstance(typ, type) or is_union_type(typ) or is_typevar(typ)):
-                    raise TypeInformationRequiredError.create_for_object_attributes(item_type, attr_name)
+                if (typ is None) or (typ is Parameter.empty):
+                    raise TypeInformationRequiredError.create_for_object_attributes(item_type, attr_name, typ)
+                elif not is_valid_pep484_type_hint(typ):
+                    raise InvalidPEP484TypeHint.create_for_object_attributes(item_type, attr_name, typ)
 
                 # -- is the attribute mandatory ?
                 is_mandatory = (s.parameters[attr_name].default is Parameter.empty) and not is_pep484_nonable(typ)
@@ -384,7 +441,7 @@ def get_constructor_attributes_types(item_type) -> Dict[str, Tuple[Type[Any], bo
 
 class TypeInformationRequiredError(Exception):
     """
-    Raised whenever an object can not be parsed - but there is a file present
+    Raised whenever there is a missing type hint in a collection declaration or an object constructor attribute
     """
     def __init__(self, contents):
         """
@@ -397,10 +454,9 @@ class TypeInformationRequiredError(Exception):
         super(TypeInformationRequiredError, self).__init__(contents)
 
     @staticmethod
-    def create_for_collection_items(item_type):
+    def create_for_collection_items(item_type, hint):
         """
-        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
-        https://github.com/nose-devs/nose/issues/725
+        Helper method for collection items
 
         :param item_type:
         :return:
@@ -410,15 +466,15 @@ class TypeInformationRequiredError(Exception):
         #     prt_type = get_pretty_type_str(item_type)
         # except:
         #     prt_type = str(item_type)
-        return TypeInformationRequiredError('Cannot parse object of type ' + str(item_type) + ' as a'
-                                            ' collection: this type has no valid PEP484 type hint about its contents.'
-                                            ' Please use a full declaration such as Dict[str, Foo] or List[Foo]')
+        return TypeInformationRequiredError("Cannot parse object of type {t} as a collection: this type has no "
+                                            "PEP484 type hint about its contents. Please use a full "
+                                            "PEP484 declaration such as Dict[str, Foo] or List[Foo]"
+                                            "".format(t=str(item_type)))
 
     @staticmethod
-    def create_for_object_attributes(item_type, faulty_attribute_name: str):
+    def create_for_object_attributes(item_type, faulty_attribute_name: str, hint):
         """
-        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
-        https://github.com/nose-devs/nose/issues/725
+        Helper method for constructor attributes
 
         :param item_type:
         :return:
@@ -428,6 +484,55 @@ class TypeInformationRequiredError(Exception):
         #     prt_type = get_pretty_type_str(item_type)
         # except:
         #     prt_type = str(item_type)
-        return TypeInformationRequiredError('Cannot create instances of type ' + str(item_type) + ': '
-                                            'constructor attribute \'' + faulty_attribute_name + '\' has no valid '
-                                            'PEP484 type hint.')
+        return TypeInformationRequiredError("Cannot create instances of type {t}: constructor attribute '{a}' has no "
+                                            "PEP484 type hint.".format(t=str(item_type), a=faulty_attribute_name))
+
+
+class InvalidPEP484TypeHint(TypeInformationRequiredError):
+    """
+    Raised whenever there is an invalid type hint in a collection declaration or an object constructor attribute
+    """
+    def __init__(self, contents):
+        """
+        We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
+        https://github.com/nose-devs/nose/issues/725
+        That's why we have a helper static method create()
+
+        :param contents:
+        """
+        super(InvalidPEP484TypeHint, self).__init__(contents)
+
+    @staticmethod
+    def create_for_collection_items(item_type, hint):
+        """
+        Helper method for collection items
+
+        :param item_type:
+        :return:
+        """
+        # this leads to infinite loops
+        # try:
+        #     prt_type = get_pretty_type_str(item_type)
+        # except:
+        #     prt_type = str(item_type)
+        return TypeInformationRequiredError("Cannot parse object of type {t} as a collection: this type has no valid "
+                                            "PEP484 type hint about its contents: found {h}. Please use a standard "
+                                            "PEP484 declaration such as Dict[str, Foo] or List[Foo]"
+                                            "".format(t=str(item_type), h=hint))
+
+    @staticmethod
+    def create_for_object_attributes(item_type, faulty_attribute_name: str, hint):
+        """
+        Helper method for constructor attributes
+
+        :param item_type:
+        :return:
+        """
+        # this leads to infinite loops
+        # try:
+        #     prt_type = get_pretty_type_str(item_type)
+        # except:
+        #     prt_type = str(item_type)
+        return TypeInformationRequiredError("Cannot create instances of type {t}: constructor attribute '{a}' has an"
+                                            " invalid PEP484 type hint: {h}.".format(t=str(item_type),
+                                                                                     a=faulty_attribute_name, h=hint))
