@@ -90,7 +90,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search">
     <label class="md-overlay" data-md-component="overlay" for="drawer"></label>
     
-      <a href="#260-support-for-typevars-and-better-support-for-unions-and-subclasses" tabindex="1" class="md-skip">
+      <a href="#261-bugfixes-for-unions-typevars-and-generics-and-logwarnings-improvements" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -292,6 +292,13 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#261-bugfixes-for-unions-typevars-and-generics-and-logwarnings-improvements" title="2.6.1 - bugfixes for unions, typevars and generics and log/warnings improvements" class="md-nav__link">
+    2.6.1 - bugfixes for unions, typevars and generics and log/warnings improvements
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#260-support-for-typevars-and-better-support-for-unions-and-subclasses" title="2.6.0 - support for TypeVars and better support for Unions and subclasses" class="md-nav__link">
     2.6.0 - support for TypeVars and better support for Unions and subclasses
   </a>
@@ -438,6 +445,13 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#261-bugfixes-for-unions-typevars-and-generics-and-logwarnings-improvements" title="2.6.1 - bugfixes for unions, typevars and generics and log/warnings improvements" class="md-nav__link">
+    2.6.1 - bugfixes for unions, typevars and generics and log/warnings improvements
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#260-support-for-typevars-and-better-support-for-unions-and-subclasses" title="2.6.0 - support for TypeVars and better support for Unions and subclasses" class="md-nav__link">
     2.6.0 - support for TypeVars and better support for Unions and subclasses
   </a>
@@ -575,7 +589,16 @@
                 
                   <h1>Changelog</h1>
                 
-                <h3 id="260-support-for-typevars-and-better-support-for-unions-and-subclasses">2.6.0 - support for TypeVars and better support for Unions and subclasses<a class="headerlink" href="#260-support-for-typevars-and-better-support-for-unions-and-subclasses" title="Permanent link">&para;</a></h3>
+                <h3 id="261-bugfixes-for-unions-typevars-and-generics-and-logwarnings-improvements">2.6.1 - bugfixes for unions, typevars and generics and log/warnings improvements<a class="headerlink" href="#261-bugfixes-for-unions-typevars-and-generics-and-logwarnings-improvements" title="Permanent link">&para;</a></h3>
+<ul>
+<li>fixed <code>__init__</code> file: <code>__all__</code> contained a wrong entry</li>
+<li>the central logger <code>default_logger</code> is now independent from the <code>RootParser</code> class</li>
+<li>fixed a conversion bug for <code>Union</code> types (or <code>TypeVar</code>s with union constraints): now all alternate conversion paths are tried even in case of an exception in a converter.</li>
+<li>The <code>&lt;dict_to_object&gt;</code> converter and the <code>Multifile object parser</code> now both support generic types when looking for subclasses (although strong compliance of the subclasses with the <code>TypeVar</code> constraints are not further checked). The method to list these subclasses is in a central place to ensure consistency</li>
+<li>Now there are two error types for invalid type hints : <code>TypeInformationRequiredError</code> (no type hint) and <code>InvalidPEP484TypeHint</code> (invalid type hint). This PEP484-compliance check is also now done in a central place to ensure consistency.</li>
+<li>The <code>&lt;dict_to_object&gt;</code> converter and the <code>Multifile object parser</code> now benefit from a cache in order to know if a given class can be built from its constructor, or its subclasses. This leads to much less log warning messages</li>
+</ul>
+<h3 id="260-support-for-typevars-and-better-support-for-unions-and-subclasses">2.6.0 - support for TypeVars and better support for Unions and subclasses<a class="headerlink" href="#260-support-for-typevars-and-better-support-for-unions-and-subclasses" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>TypeVars</code> are now supported. This fixes <a href="https://github.com/smarie/python-parsyfiles/issues/17">#17</a></li>
 <li><code>Union</code> are now better supported too, in particular when there is a union inside a typevar or conversely.</li>
