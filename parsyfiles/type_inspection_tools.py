@@ -1,5 +1,5 @@
-from inspect import Parameter, signature
-from typing import TypeVar, MutableMapping, Dict, List, Set, Tuple, Type, Any, Mapping, Iterable, Optional
+from inspect import Parameter, signature, stack, getmodule
+from typing import TypeVar, MutableMapping, Dict, List, Set, Tuple, Type, Any, Mapping, Iterable, Optional, _ForwardRef
 
 from typing_inspect import is_generic_type, get_origin, get_args, is_tuple_type, is_union_type, is_typevar
 
@@ -18,33 +18,70 @@ class OrderedDictType(OrderedDict, MutableMapping[KT, VT], extra=OrderedDict):
         raise TypeError("Type OrderedDictType cannot be instantiated; use OrderedDict() instead")
 
 
-def resolve_union_and_typevar(typ) -> Tuple[Any, ...]:
+def get_alternate_types_resolving_forwardref_union_and_typevar(typ, _memo: List[Any] = None) \
+        -> Tuple[Any, ...]:
     """
+    Returns a tuple of all alternate types allowed by the `typ` type annotation.
+
     If typ is a TypeVar,
-     * if the typevar is bound, return resolve_union_and_typevar(bound)
+     * if the typevar is bound, return get_alternate_types_resolving_forwardref_union_and_typevar(bound)
      * if the typevar has constraints, return a tuple containing all the types listed in the constraints (with
-     appropriate recursive call to resolve_union_and_typevar for each of them)
+     appropriate recursive call to get_alternate_types_resolving_forwardref_union_and_typevar for each of them)
      * otherwise return (object, )
 
     If typ is a Union, return a tuple containing all the types listed in the union (with
-     appropriate recursive call to resolve_union_and_typevar for each of them)
+     appropriate recursive call to get_alternate_types_resolving_forwardref_union_and_typevar for each of them)
 
-    Otherwise return (typ, )
-    
+    If typ is a forward reference, it is evaluated and this method is applied to the results.
+
+    Otherwise (typ, ) is returned
+
+    Note that this function automatically prevent infinite recursion through forward references such as in
+    `A = Union[str, 'A']`, by keeping a _memo of already met symbols.
+
     :param typ: 
     :return: 
     """
+    # avoid infinite recursion by using a _memo
+    _memo = _memo or []
+    if typ in _memo:
+        return tuple()
+
+    # remember that this was already explored
+    _memo.append(typ)
     if is_typevar(typ):
         if hasattr(typ, '__bound__') and typ.__bound__ is not None:
-            return resolve_union_and_typevar(typ.__bound__)
+            # TypeVar is 'bound' to a class
+            if hasattr(typ, '__contravariant__') and typ.__contravariant__:
+                # Contravariant means that only super classes of this type are supported!
+                raise Exception('Contravariant TypeVars are not supported')
+            else:
+                # only subclasses of this are allowed (even if not covariant, because as of today we cant do otherwise)
+                return get_alternate_types_resolving_forwardref_union_and_typevar(typ.__bound__, _memo=_memo)
+
         elif hasattr(typ, '__constraints__') and typ.__constraints__ is not None:
-            return tuple(typpp for c in typ.__constraints__ for typpp in resolve_union_and_typevar(c))
+            if hasattr(typ, '__contravariant__') and typ.__contravariant__:
+                # Contravariant means that only super classes of this type are supported!
+                raise Exception('Contravariant TypeVars are not supported')
+            else:
+                # TypeVar is 'constrained' to several alternate classes, meaning that subclasses of any of them are
+                # allowed (even if not covariant, because as of today we cant do otherwise)
+                return tuple(typpp for c in typ.__constraints__
+                             for typpp in get_alternate_types_resolving_forwardref_union_and_typevar(c, _memo=_memo))
+
         else:
+            # A non-parametrized TypeVar means 'any'
             return object,
+
     elif is_union_type(typ):
         # do not use typ.__args__, it may be wrong
         # the solution below works even in typevar+config cases such as u = Union[T, str][Optional[int]]
-        return get_args(typ, evaluate=True)
+        return tuple(t for typpp in get_args(typ, evaluate=True)
+                     for t in get_alternate_types_resolving_forwardref_union_and_typevar(typpp, _memo=_memo))
+
+    elif is_forward_ref(typ):
+        return get_alternate_types_resolving_forwardref_union_and_typevar(resolve_forward_ref(typ), _memo=_memo)
+
     else:
         return typ,
     
@@ -88,7 +125,8 @@ def get_pretty_type_str(object_type) -> str:
     """
 
     try:
-        contents_item_type, contents_key_type = _extract_collection_base_type(object_type)
+        # DO NOT resolve forward references otherwise this can lead to infinite recursion
+        contents_item_type, contents_key_type = _extract_collection_base_type(object_type, resolve_fwd_refs=False)
         if isinstance(contents_item_type, tuple):
             return object_type.__name__ + '[' \
                    + ', '.join([get_pretty_type_str(item_type) for item_type in contents_item_type]) + ']'
@@ -235,28 +273,89 @@ def get_all_subclasses(typ):
         return typ.__subclasses__()
 
 
-def is_valid_pep484_type_hint(typ_hint):
+def is_forward_ref(typ):
     """
-    Returns True if the provided type is a valid PEP484 type hint, False otherwise.
-    Note: string type hints are not supported by parsyfiles as of today
-
-    :param typ_hint:
+    Returns true if typ is a typing ForwardRef
+    :param typ:
     :return:
     """
+    return isinstance(typ, _ForwardRef)
+
+
+class InvalidForwardRefError(Exception):
+    """ Raised whenever some forward reference can not be evaluated """
+
+    def __init__(self, invalid: _ForwardRef):
+        self.invalid_ref = invalid
+
+    def __str__(self):
+        return "Invalid PEP484 type hint: forward reference {} could not be resolved with the current stack's " \
+               "variables".format(self.invalid_ref)
+
+
+def eval_forward_ref(typ: _ForwardRef):
+    """
+    Climbs the current stack until the given Forward reference has been resolved, or raises an InvalidForwardRefError
+
+    :param typ: the forward reference to resolve
+    :return:
+    """
+    for frame in stack():
+        m = getmodule(frame[0])
+        m_name = m.__name__ if m is not None else '<unknown>'
+        if m_name.startswith('parsyfiles.tests') or not m_name.startswith('parsyfiles'):
+            try:
+                # print("File {}:{}".format(frame.filename, frame.lineno))
+                return typ._eval_type(frame[0].f_globals, frame[0].f_locals)
+            except NameError:
+                pass
+
+    raise InvalidForwardRefError(typ)
+
+
+def resolve_forward_ref(typ):
+    """
+    If typ is a forward reference, return a resolved version of it. If it is not, return typ 'as is'
+
+    :param typ:
+    :return:
+    """
+    if is_forward_ref(typ):
+        return eval_forward_ref(typ)
+    else:
+        return typ
+
+
+def is_valid_pep484_type_hint(typ_hint, allow_forward_refs: bool = False):
+    """
+    Returns True if the provided type is a valid PEP484 type hint, False otherwise.
+
+    Note: string type hints (forward references) are not supported by default, since callers of this function in
+    parsyfiles lib actually require them to be resolved already.
+
+    :param typ_hint:
+    :param allow_forward_refs:
+    :return:
+    """
+    # most common case first, to be faster
     try:
-        # most common case first, to be faster
         if isinstance(typ_hint, type):
             return True
-        else:
-            try:
-                return is_union_type(typ_hint) or is_typevar(typ_hint)
-            except:
-                return False
     except:
-        try:
-            return is_union_type(typ_hint) or is_typevar(typ_hint)
-        except:
-            return False
+        pass
+
+    # optionally, check forward reference
+    try:
+        if allow_forward_refs and is_forward_ref(typ_hint):
+            return True
+    except:
+        pass
+
+    # finally check unions and typevars
+    try:
+        return is_union_type(typ_hint) or is_typevar(typ_hint)
+    except:
+        return False
 
 
 def is_pep484_nonable(typ):
@@ -271,13 +370,13 @@ def is_pep484_nonable(typ):
     if typ is type(None):
         return True
     elif is_typevar(typ) or is_union_type(typ):
-        return any(is_pep484_nonable(tt) for tt in resolve_union_and_typevar(typ))
+        return any(is_pep484_nonable(tt) for tt in get_alternate_types_resolving_forwardref_union_and_typevar(typ))
     else:
         return False
 
 
-def _extract_collection_base_type(collection_object_type, exception_if_none: bool = True) \
-        -> Tuple[Type, Optional[Type]]:
+def _extract_collection_base_type(collection_object_type, exception_if_none: bool = True,
+                                  resolve_fwd_refs: bool = True) -> Tuple[Type, Optional[Type]]:
     """
     Utility method to extract the base item type from a collection/iterable item type.
     Throws
@@ -351,24 +450,46 @@ def _extract_collection_base_type(collection_object_type, exception_if_none: boo
                              + ' is not a collection')
 
     # Finally return if something was found, otherwise tell it
-    if not exception_if_none:
-        # always return, whatever it is
-        return contents_item_type, contents_key_type
-    elif contents_item_type is None or contents_item_type is Parameter.empty:
-        # Empty type hints
-        raise TypeInformationRequiredError.create_for_collection_items(collection_object_type, contents_item_type)
-    elif is_tuple:
-        # Iterate on all sub-types
-        for t in contents_item_type:
-            if contents_item_type is None or contents_item_type is Parameter.empty:
-                # Empty type hints
-                raise TypeInformationRequiredError.create_for_collection_items(collection_object_type, t)
-            if not is_valid_pep484_type_hint(t):
+    try:
+        if contents_item_type is None or contents_item_type is Parameter.empty:
+            # Empty type hints
+            raise TypeInformationRequiredError.create_for_collection_items(collection_object_type, contents_item_type)
+        
+        elif is_tuple:
+            # --- tuple: Iterate on all sub-types
+            resolved = []
+            for t in contents_item_type:
+                # Check for empty type hints
+                if contents_item_type is None or contents_item_type is Parameter.empty:
+                    raise TypeInformationRequiredError.create_for_collection_items(collection_object_type, t)
+
+                # Resolve any forward references if needed
+                if resolve_fwd_refs:
+                    t = resolve_forward_ref(t)
+                resolved.append(t)
+
+                # Final type hint compliance
+                if not is_valid_pep484_type_hint(t):
+                    raise InvalidPEP484TypeHint.create_for_collection_items(collection_object_type, t)
+
+            if resolve_fwd_refs:
+                contents_item_type = tuple(resolved)
+        
+        else:
+            # --- Not a tuple
+            # resolve any forward references first
+            if resolve_fwd_refs:
+                contents_item_type = resolve_forward_ref(contents_item_type)
+
+            # check validity then
+            if not is_valid_pep484_type_hint(contents_item_type):
                 # Invalid type hints
-                raise InvalidPEP484TypeHint.create_for_collection_items(collection_object_type, t)
-    elif not is_valid_pep484_type_hint(contents_item_type):
-        # Invalid type hints
-        raise InvalidPEP484TypeHint.create_for_collection_items(collection_object_type, contents_item_type)
+                raise InvalidPEP484TypeHint.create_for_collection_items(collection_object_type, contents_item_type)
+
+    except TypeInformationRequiredError as e:
+        # only raise it if the flag says it
+        if exception_if_none:
+            raise e.with_traceback(e.__traceback__)
 
     return contents_item_type, contents_key_type
 
@@ -393,6 +514,28 @@ def _get_constructor_signature(item_type):
     return s
 
 
+def get_validated_attribute_type_info(typ, item_type, attr_name):
+    """
+    Routine to validate that typ is a valid non-empty PEP484 type hint. If it is a forward reference, it will be 
+    resolved 
+    
+    :param typ: 
+    :param item_type: 
+    :param attr_name: 
+    :return: 
+    """
+    if (typ is None) or (typ is Parameter.empty):
+        raise TypeInformationRequiredError.create_for_object_attributes(item_type, attr_name, typ)
+
+    # resolve forward references
+    typ = resolve_forward_ref(typ)
+
+    if not is_valid_pep484_type_hint(typ):
+        raise InvalidPEP484TypeHint.create_for_object_attributes(item_type, attr_name, typ)
+
+    return typ
+
+
 def get_constructor_attributes_types(item_type) -> Dict[str, Tuple[Type[Any], bool]]:
     """
     Utility method to return a dictionary of attribute name > attribute type from the constructor of a given type
@@ -401,21 +544,26 @@ def get_constructor_attributes_types(item_type) -> Dict[str, Tuple[Type[Any], bo
     :param item_type:
     :return: a dictionary containing for each attr name, a tuple (type, is_mandatory)
     """
-
+    res = dict()
     try:
         # -- Try to read an 'attr' declaration and to extract types and optionality
         from parsyfiles.plugins_optional.support_for_attrs import get_attrs_declarations
-        res = get_attrs_declarations(item_type)
+        decls = get_attrs_declarations(item_type)
 
         # check that types are correct
-        for attr_name, v in res.items():
-            typ = v[0]
-            if typ is None or typ is Parameter.empty or not isinstance(typ, type):
-                raise TypeInformationRequiredError.create_for_object_attributes(item_type, attr_name, typ)
+        for attr_name, v in decls.items():
+            # -- Get and check that the attribute type is PEP484 compliant
+            typ = get_validated_attribute_type_info(v[0], item_type, attr_name)
 
-    except:
+            # -- is the attribute mandatory ?
+            is_mandatory = not is_pep484_nonable(typ)  # and TODO get the default value in the attrs declaration + check validator 'optional'
+
+            # -- store both info in result dict
+            res[attr_name] = (typ, is_mandatory)
+
+    except Exception:  # ImportError or NotAnAttrsClassError but we obviously cant import the latter
+        
         # -- Fallback to PEP484
-        res = dict()
 
         # first get the signature of the class constructor
         s = _get_constructor_signature(item_type)
@@ -426,11 +574,7 @@ def get_constructor_attributes_types(item_type) -> Dict[str, Tuple[Type[Any], bo
             if attr_name != 'self':
 
                 # -- Get and check that the attribute type is PEP484 compliant
-                typ = s.parameters[attr_name].annotation
-                if (typ is None) or (typ is Parameter.empty):
-                    raise TypeInformationRequiredError.create_for_object_attributes(item_type, attr_name, typ)
-                elif not is_valid_pep484_type_hint(typ):
-                    raise InvalidPEP484TypeHint.create_for_object_attributes(item_type, attr_name, typ)
+                typ = get_validated_attribute_type_info(s.parameters[attr_name].annotation, item_type, attr_name)
 
                 # -- is the attribute mandatory ?
                 is_mandatory = (s.parameters[attr_name].default is Parameter.empty) and not is_pep484_nonable(typ)

@@ -1,3 +1,8 @@
+### 2.7.0 - Added support for PEP484 forward references in type hints
+
+ * Added support for Forward References in PEP484 annotations. Fixes [#20](https://github.com/smarie/python-parsyfiles/issues/20). This unlocks parsing infinitely-nested collections: you just have to create a collection type that contains a union to itself such as in `InfiniteRecursiveDictOfA = Dict[str, Union[A, 'InfiniteRecursiveDictOfA']]`. Note that infinite unions are detected and handled correctly (such as `Foo = Union[str, 'Foo']`)
+ * Fixed a bug with type inspection for attrs classes
+
 ### 2.6.1 - bugfixes for unions, typevars and generics and log/warnings improvements
 
  * fixed `__init__` file: `__all__` contained a wrong entry

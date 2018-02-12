@@ -14,7 +14,7 @@ from parsyfiles.parsing_combining_parsers import ParsingChain, CascadingParser, 
 from parsyfiles.parsing_core import _InvalidParserException
 from parsyfiles.parsing_core_api import Parser, ParsingPlan, T
 from parsyfiles.type_inspection_tools import get_pretty_type_str, get_base_generic_type, get_pretty_type_keys_dict, \
-    robust_isinstance, is_collection, _extract_collection_base_type, is_typed_collection, resolve_union_and_typevar
+    robust_isinstance, is_collection, _extract_collection_base_type, is_typed_collection, get_alternate_types_resolving_forwardref_union_and_typevar
 from parsyfiles.var_checker import check_var
 
 
@@ -676,7 +676,7 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
         case of TypeVar
         """
         # First resolve TypeVars and Unions to get a list of compliant types
-        object_types = resolve_union_and_typevar(object_type)
+        object_types = get_alternate_types_resolving_forwardref_union_and_typevar(object_type)
 
         if len(object_types) == 1:
             # One type: proceed as usual
@@ -1019,7 +1019,7 @@ class ConversionFinder(metaclass=ABCMeta):
                           options: Dict[str, Dict[str, Any]]) -> T:
 
         # First resolve TypeVars and Unions to get a list of compliant types
-        object_types = resolve_union_and_typevar(desired_attr_type)
+        object_types = get_alternate_types_resolving_forwardref_union_and_typevar(desired_attr_type)
 
         if len(object_types) == 1:
             # One supported type: as usual
@@ -1483,7 +1483,7 @@ class ParserRegistryWithConverters(ConverterCache, ParserRegistry, ConversionFin
         matching_p_exact, matching_p_exact_with_approx_chain = [], [], [], [], [], []
 
         # resolve Union and TypeVar
-        desired_types = resolve_union_and_typevar(desired_type)
+        desired_types = get_alternate_types_resolving_forwardref_union_and_typevar(desired_type)
 
         for desired_type in desired_types:
 

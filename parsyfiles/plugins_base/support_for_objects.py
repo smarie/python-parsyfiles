@@ -11,7 +11,8 @@ from parsyfiles.parsing_core import MultiFileParser, AnyParser, SingleFileParser
 from parsyfiles.parsing_registries import ParserFinder, ConversionFinder
 from parsyfiles.plugins_base.support_for_collections import DictOfDict
 from parsyfiles.type_inspection_tools import get_pretty_type_str, get_constructor_attributes_types, \
-    TypeInformationRequiredError, is_collection, is_valid_pep484_type_hint, InvalidPEP484TypeHint, get_all_subclasses
+    TypeInformationRequiredError, is_collection, is_valid_pep484_type_hint, InvalidPEP484TypeHint, get_all_subclasses, \
+    resolve_forward_ref
 from parsyfiles.var_checker import check_var
 from parsyfiles.log_utils import default_logger
 
@@ -401,6 +402,9 @@ def _dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger
 
                 # check the theoretical type wanted by the constructor
                 attr_type_required = constructor_args_types_and_opt[attr_name][0]
+
+                # resolve forward references
+                attr_type_required = resolve_forward_ref(attr_type_required)
 
                 if not is_dict_of_dicts:
                     if is_valid_pep484_type_hint(attr_type_required):

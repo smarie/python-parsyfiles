@@ -2,7 +2,7 @@ from numbers import Integral
 from typing import Tuple, List, Dict, Set, Any, Union, Callable, Optional, TypeVar, Generic
 
 from parsyfiles.type_inspection_tools import robust_isinstance, get_base_generic_type, is_collection, \
-    _extract_collection_base_type
+    _extract_collection_base_type, get_all_subclasses, get_alternate_types_resolving_forwardref_union_and_typevar
 
 import pytest
 
@@ -134,3 +134,64 @@ test_extract_collection_base_type_data = [
 @pytest.mark.parametrize('typ, expected', test_extract_collection_base_type_data, ids=str)
 def test__extract_collection_base_type(typ, expected):
     assert _extract_collection_base_type(typ) == expected
+
+
+def test_get_alternate_types_resolving_forwardref_union_and_typevar():
+    """ Tests that infinite recursion is prevented when using forward references """
+
+    InfiniteRecursiveDictOfInt = Union[int, 'InfiniteRecursiveDictOfInt']
+    assert get_alternate_types_resolving_forwardref_union_and_typevar(InfiniteRecursiveDictOfInt) == (int, )
+
+
+def test_get_subclasses():
+    """ Tests that the method to get all subclasses works even in Generic cases """
+
+    from typing import TypeVar, Generic
+
+    T = TypeVar('T', covariant=True)
+    U = TypeVar('U', covariant=True)
+
+    class FullUnparam(Generic[T, U]):
+        pass
+
+    class FullUnparam2(FullUnparam):
+        pass
+
+    class HalfParam(FullUnparam[T, int]):
+        pass
+
+    class EntirelyParam(FullUnparam[str, int]):
+        pass
+
+    class EntirelyParam2(HalfParam[str]):
+        pass
+
+    # def get_all_subclasses(cls):
+    #     from pytypes.type_util import _find_base_with_origin
+    #     from pytypes import is_subtype
+    #     orig = _find_base_with_origin(cls, object)
+    #     res = cls.__subclasses__()
+    #     if not orig is None and hasattr(orig, "__origin__") and not orig.__origin__ is None:
+    #         candidates = orig.__origin__.__subclasses__()
+    #         for candidate in candidates:
+    #             if candidate != cls and is_subtype(candidate, cls):
+    #                 res.append(candidate)
+    #     return res
+
+    # This works with FullUnparam.__subclasses__() today
+    assert get_all_subclasses(FullUnparam) == [FullUnparam2, FullUnparam[T, int], HalfParam, HalfParam[str], FullUnparam[str, int], EntirelyParam, EntirelyParam2]  # EntirelyParam2 is missing
+
+    # This does not work with FullUnparam.__subclasses__() today. Maybe a bug of stdlib ?
+    assert get_all_subclasses(FullUnparam[str, int]) == [EntirelyParam, HalfParam[str], EntirelyParam2]  # Wrong: also contains FullUnparam2, FullUnparam[+T, int], HalfParam, FullUnparam[str, int] ???
+
+    # This does not work with HalfParam.__subclasses__() today.
+    assert get_all_subclasses(HalfParam) == [HalfParam[str], EntirelyParam2]
+
+    assert get_all_subclasses(HalfParam[str]) == [EntirelyParam2]
+
+    # # variant 1:  only Generic subclasses
+    # assert get_all_subclasses(FullUnparam, only_generics=True) == [FullUnparam2, HalfParam]
+    # assert get_all_subclasses(HalfParam, only_generics=True) == []
+    #
+    # # variant 2: only Generic subclasses with same number of free parameters
+    # assert get_all_subclasses(FullUnparam, only_generics=True, parametrized=False) == [FullUnparam2]

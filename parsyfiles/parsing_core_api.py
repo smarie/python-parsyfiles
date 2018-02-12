@@ -6,7 +6,7 @@ from parsyfiles.global_config import GLOBAL_CONFIG
 from parsyfiles.converting_core import get_validated_types, S, Converter, get_options_for_id, is_any_type, \
     is_any_type_set, JOKER
 from parsyfiles.filesystem_mapping import EXT_SEPARATOR, MULTIFILE_EXT, PersistedObject
-from parsyfiles.type_inspection_tools import get_pretty_type_str, robust_isinstance, resolve_union_and_typevar
+from parsyfiles.type_inspection_tools import get_pretty_type_str, robust_isinstance, get_alternate_types_resolving_forwardref_union_and_typevar
 from parsyfiles.var_checker import check_var
 
 T = TypeVar('T')  # Can be anything - used for all other objects
@@ -344,7 +344,7 @@ class ParsingPlan(Generic[T], PersistedObject):
 
         # check and apply defaults
         # -- object_type
-        t = resolve_union_and_typevar(object_type)
+        t = get_alternate_types_resolving_forwardref_union_and_typevar(object_type)
         if len(t) == 1:
             check_var(t[0], var_types=type, var_name='object_type')
             self.obj_type = t[0]
