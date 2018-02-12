@@ -23,7 +23,7 @@ def test_union_1(root_parser: RootParser):
         def __init__(self, bar: float):
             self.bar = bar
 
-    item = root_parser.parse_item(get_path('test1/a'), Union[A, B])
+    item = root_parser.parse_item(get_path('test1', 'a'), Union[A, B])
     assert type(item) == A
 
 
@@ -75,5 +75,5 @@ def test_union_recursive_1(root_parser: RootParser):
     # It should be handled correctly by parsyfiles so as not to lead to infinite recursiong
     InfiniteRecursiveDictOfA3 = Union[A, 'InfiniteRecursiveDictOfA3']
 
-    item = root_parser.parse_item(get_path('test2/b'), InfiniteRecursiveDictOfA3)
+    item = root_parser.parse_item(get_path('test2', 'b'), InfiniteRecursiveDictOfA3)
     assert type(item) == A

@@ -16,7 +16,7 @@ def test_collections(root_parser):
     Tests all the supported ways to parse collections_data
     :return:
     """
-    l = parse_item(get_path('.'), Tuple[Dict[str, int], List[int], Set[int], Tuple[str, int, str]])
+    l = parse_item(get_path(), Tuple[Dict[str, int], List[int], Set[int], Tuple[str, int, str]])
     print(l)
 
 

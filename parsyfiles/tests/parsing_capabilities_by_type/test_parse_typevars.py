@@ -50,10 +50,10 @@ def test_typevars_2(root_parser: RootParser):
 
     TV = TypeVar('TV', bound=A)
 
-    item = root_parser.parse_item(get_path('test2/a'), TV)
+    item = root_parser.parse_item(get_path('test2', 'a'), TV)
     assert type(item) == A
 
-    item = root_parser.parse_item(get_path('test2/b'), TV)
+    item = root_parser.parse_item(get_path('test2', 'b'), TV)
     assert type(item) == B
 
     items = root_parser.parse_collection(get_path('test2'), TV)
@@ -76,10 +76,10 @@ def test_typevars_3(root_parser: RootParser):
 
     TV = TypeVar('TV', A, B)
 
-    item = root_parser.parse_item(get_path('test2/a'), TV)
+    item = root_parser.parse_item(get_path('test2', 'a'), TV)
     assert type(item) == A
 
-    item = root_parser.parse_item(get_path('test2/b'), TV)
+    item = root_parser.parse_item(get_path('test2', 'b'), TV)
     assert type(item) == B
 
     items = root_parser.parse_collection(get_path('test2'), TV)

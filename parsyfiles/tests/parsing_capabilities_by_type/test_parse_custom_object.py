@@ -40,11 +40,11 @@ def test_simple_objects_support():
     """
 
     # create the parser and parse a single file
-    e = parse_item(get_path('./test1/test_diff_1'), ExecOpTest)
+    e = parse_item(get_path('test1', 'test_diff_1'), ExecOpTest)
     pprint(e)
 
     # parse all of them
-    e = parse_collection(get_path('./test1/'), ExecOpTest)
+    e = parse_collection(get_path('test1'), ExecOpTest)
     pprint(e)
 
     for case_name, case in e.items():
@@ -64,6 +64,6 @@ def test_parse_subtypes(root_parser: RootParser):
         def __init__(self, bar: str):
             super(C, self).__init__(foo=bar)
 
-    items = root_parser.parse_collection(get_path('./test2/'), A)
+    items = root_parser.parse_collection(get_path('test2'), A)
     assert type(items['b']) == B
     assert type(items['c']) == C

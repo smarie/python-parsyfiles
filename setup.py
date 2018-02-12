@@ -46,8 +46,8 @@ LICENSE_LONG = 'License :: OSI Approved :: BSD License'
 version_for_download_url = get_version()
 DOWNLOAD_URL = URL + '/tarball/' + version_for_download_url
 
-KEYWORDS = 'file collection complex simple test object parser converter parsing framework PEP484 typing data binding ' \
-           'SFiCoPaF'
+KEYWORDS = 'parsing framework file converter conversion parser object folder dict yaml properties' \
+           'collection complex simple benchmark type class PEP484 type-hint data binding'
 # --Get the long description from the README file
 # with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 #    LONG_DESCRIPTION = f.read()
