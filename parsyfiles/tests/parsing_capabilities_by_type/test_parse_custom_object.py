@@ -1,7 +1,6 @@
 from pprint import pprint
 import os
-from parsyfiles import parse_item, parse_collection
-
+from parsyfiles import parse_item, parse_collection, RootParser
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -41,12 +40,30 @@ def test_simple_objects_support():
     """
 
     # create the parser and parse a single file
-    e = parse_item(get_path('./test_diff_1'), ExecOpTest)
+    e = parse_item(get_path('./test1/test_diff_1'), ExecOpTest)
     pprint(e)
 
     # parse all of them
-    e = parse_collection(get_path('.'), ExecOpTest)
+    e = parse_collection(get_path('./test1/'), ExecOpTest)
     pprint(e)
 
     for case_name, case in e.items():
         assert exec_op(case.x, case.y, case.op) == case.expected_result
+
+
+def test_parse_subtypes(root_parser: RootParser):
+    """ Tests that subclasses can be parsed """
+    class A:
+        pass
+
+    class B(A):
+        def __init__(self, foo: str):
+            self.foo = foo
+
+    class C(B):
+        def __init__(self, bar: str):
+            super(C, self).__init__(foo=bar)
+
+    items = root_parser.parse_collection(get_path('./test2/'), A)
+    assert type(items['b']) == B
+    assert type(items['c']) == C

@@ -1,3 +1,8 @@
+### 2.7.1 - Bugfix + Log warnings improvements
+
+ * Fixed sub-subclass detection [#21](https://github.com/smarie/python-parsyfiles/issues/21)
+ * Some log warnings were hidden, in particular those explaining why instances of a given class could not be instantiated from constructor.
+
 ### 2.7.0 - Added support for PEP484 forward references in type hints
 
  * Added support for Forward References in PEP484 annotations. Fixes [#20](https://github.com/smarie/python-parsyfiles/issues/20). This unlocks parsing infinitely-nested collections: you just have to create a collection type that contains a union to itself such as in `InfiniteRecursiveDictOfA = Dict[str, Union[A, 'InfiniteRecursiveDictOfA']]`. Note that infinite unions are detected and handled correctly (such as `Foo = Union[str, 'Foo']`)

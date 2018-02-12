@@ -143,7 +143,24 @@ def test_get_alternate_types_resolving_forwardref_union_and_typevar():
     assert get_alternate_types_resolving_forwardref_union_and_typevar(InfiniteRecursiveDictOfInt) == (int, )
 
 
-def test_get_subclasses():
+def test_get_subclasses_simple():
+    """ Checks that the method to get all subclasses is recursive """
+
+    class A:
+        pass
+
+    class B(A):
+        def __init__(self, foo: str):
+            self.foo = foo
+
+    class C(B):
+        def __init__(self, bar: str):
+            super(C, self).__init__(foo=bar)
+
+    assert get_all_subclasses(A) == [B, C]
+
+
+def test_get_subclasses_generic():
     """ Tests that the method to get all subclasses works even in Generic cases """
 
     from typing import TypeVar, Generic
