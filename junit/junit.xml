@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuite errors="1" failures="0" name="pytest" skips="0" tests="1" time="2.527"><testcase classname="" file="parsyfiles/tests/pytest_integration/test_pytest.py" name="parsyfiles.tests.pytest_integration.test_pytest" time="0"><error message="collection failure">parsyfiles/tests/pytest_integration/test_pytest.py:16: in &lt;module&gt;
+<?xml version="1.0" encoding="utf-8"?><testsuite errors="1" failures="0" name="pytest" skips="0" tests="1" time="2.215"><testcase classname="" file="parsyfiles/tests/pytest_integration/test_pytest.py" name="parsyfiles.tests.pytest_integration.test_pytest" time="0"><error message="collection failure">parsyfiles/tests/pytest_integration/test_pytest.py:16: in &lt;module&gt;
     lazy_mfcollection_parsing=True)
 parsyfiles/parsing_fw.py:419: in parse_collection
     file_mapping_conf=file_mapping_conf, options=opts)
