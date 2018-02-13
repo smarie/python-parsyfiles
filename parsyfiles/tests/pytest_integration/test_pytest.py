@@ -12,8 +12,8 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 pprint(get_capabilities_for_type(ExecOpTest))
 
 # let's parse the collection of tests
-cases = parse_collection(os.path.join(THIS_DIR, '../parsing_capabilities_by_type/objects_data'), ExecOpTest,
-                         lazy_mfcollection_parsing=True)
+cases = parse_collection(os.path.join(THIS_DIR, os.pardir, 'parsing_capabilities_by_type', 'objects_data', 'test1'),
+                         ExecOpTest, lazy_mfcollection_parsing=True)
 
 
 @pytest.mark.parametrize("case_name", cases.keys())

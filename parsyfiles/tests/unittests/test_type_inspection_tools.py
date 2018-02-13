@@ -196,7 +196,7 @@ def test_get_subclasses_generic():
     #     return res
 
     # This works with FullUnparam.__subclasses__() today
-    assert get_all_subclasses(FullUnparam) == [FullUnparam2, FullUnparam[T, int], HalfParam, HalfParam[str], FullUnparam[str, int], EntirelyParam, EntirelyParam2]  # EntirelyParam2 is missing
+    assert get_all_subclasses(FullUnparam) == [FullUnparam2, FullUnparam[T, int], HalfParam, FullUnparam[str, int], EntirelyParam, HalfParam[str], EntirelyParam2]  # EntirelyParam2 is missing
 
     # This does not work with FullUnparam.__subclasses__() today. Maybe a bug of stdlib ?
     assert get_all_subclasses(FullUnparam[str, int]) == [EntirelyParam, HalfParam[str], EntirelyParam2]  # Wrong: also contains FullUnparam2, FullUnparam[+T, int], HalfParam, FullUnparam[str, int] ???

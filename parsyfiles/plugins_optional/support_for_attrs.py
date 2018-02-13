@@ -1,5 +1,5 @@
 import attr
-from attr import fields
+from attr import fields, NOTHING
 from attr.validators import _OptionalValidator, _InstanceOfValidator
 
 
@@ -45,14 +45,14 @@ def guess_type_from_validators(attr):
     return _guess_type_from_validator(attr.validator)
 
 
-def is_mandatory(attr):
+def is_optional(attr):
     """
     Helper method to find if an attribute is mandatory
 
     :param attr:
     :return:
     """
-    return not isinstance(attr.validator, _OptionalValidator)
+    return isinstance(attr.validator, _OptionalValidator) or (attr.default is not None and attr.default is not NOTHING)
 
 
 def get_attrs_declarations(item_type):
@@ -71,13 +71,13 @@ def get_attrs_declarations(item_type):
         attr_name = attr.name
 
         # -- is the attribute mandatory ?
-        mandatory = is_mandatory(attr)
+        optional = is_optional(attr)
 
         # -- get and check the attribute type
         typ = guess_type_from_validators(attr)
 
         # -- store both info in result dict
-        res[attr_name] = (typ, mandatory)
+        res[attr_name] = (typ, optional)
 
     return res
 

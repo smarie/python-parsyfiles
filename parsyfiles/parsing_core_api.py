@@ -258,10 +258,16 @@ class ParsingException(Exception):
         except:
             typ = str(desired_type)
 
-        return ParsingException('Error while parsing ' + str(obj) + ' as a ' + typ + ' with parser \''
+        e = ParsingException('Error while parsing ' + str(obj) + ' as a ' + typ + ' with parser \''
                                 + str(parser) + '\' using options=(' + str(options) + ') : caught \n  '
                                 + str(caught.__class__.__name__) + ' : ' + str(caught))\
             .with_traceback(caught.__traceback__) # 'from e' was hiding the inner traceback. This is much better for debug
+        e.__cause__ = None
+        # e.__cause__ = caught
+        return e
+
+
+class WrongTypeCreatedError(ParsingException):
 
     @staticmethod
     def create_for_wrong_result_type(parser: _BaseParserDeclarationForRegistries, desired_type: Type[T],
@@ -277,28 +283,10 @@ class ParsingException(Exception):
         :param options:
         :return:
         """
-        return ParsingException('Error while parsing ' + str(obj) + ' as a ' + str(desired_type) + ' with parser \''
-                                + str(parser) + '\' using options=(' + str(options) + ') : \n      parser returned '
-                                + str(result) + ' of type ' + str(type(result))
-                                + ' which is not an instance of ' + str(desired_type))
-
-    @staticmethod
-    def create_for_wrong_result_type_multifile(desired_type: Type[T], parser: _BaseParserDeclarationForRegistries,
-                                               result: T, multifile_location: str):
-        """
-        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
-        https://github.com/nose-devs/nose/issues/725
-
-        :param desired_type:
-        :param parser:
-        :param result:
-        :param multifile_location:
-        :return:
-        """
-        return ParsingException('Error while parsing multifile at location \'' + multifile_location + '\' with parser'
-                                ' \'' + str(parser) + '\' : parser returned ' + str(result) + ' of type ' +
-                                str(type(result)) + ' while it was supposed to parse instances of ' +
-                                str(desired_type))
+        return WrongTypeCreatedError('Error while parsing ' + str(obj) + ' as a ' + str(desired_type) + ' with '
+                                     'parser \'' + str(parser) + '\' using options=(' + str(options) + ') : \n'
+                                     '      parser returned ' + str(result) + ' of type ' + str(type(result))
+                                     + ' which is not an instance of ' + str(desired_type))
 
 
 def get_parsing_plan_log_str(obj_on_fs_to_parse, desired_type, log_only_last: bool, parser):
@@ -423,8 +411,8 @@ class ParsingPlan(Generic[T], PersistedObject):
                 return res
 
         # wrong type : error
-        raise ParsingException.create_for_wrong_result_type(self.parser, self.obj_type, self.obj_on_fs_to_parse,
-                                                            res, options)
+        raise WrongTypeCreatedError.create_for_wrong_result_type(self.parser, self.obj_type, self.obj_on_fs_to_parse,
+                                                                 res, options)
 
     @abstractmethod
     def _execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]) -> T:

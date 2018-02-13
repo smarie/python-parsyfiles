@@ -1,3 +1,10 @@
+### 2.8.0 - More readable errors, subclass detectoin improvements, and bugs+tests fix
+
+ * Improved readability of errors by removing the `__cause__` of `CascadeError` and `NoSubclassCouldBeInstantiated`
+ * Improved the error messages in `NoSubclassCouldBeInstantiated` and in `CascadeError`. In particular the order of exceptions display was fixed.
+ * Slightly improved subclasses detection. Now relying on `pytypes`
+ * Fixed issue with `attrs` and improved detection of optionality (if a default value is provided then the attribute is optional)
+
 ### 2.7.1 - Bugfix + Log warnings improvements
 
  * Fixed sub-subclass detection [#21](https://github.com/smarie/python-parsyfiles/issues/21)

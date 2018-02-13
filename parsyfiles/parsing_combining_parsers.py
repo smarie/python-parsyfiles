@@ -1,5 +1,5 @@
 import traceback
-from collections import Mapping
+from collections import Mapping, OrderedDict
 from io import StringIO, TextIOBase
 from logging import Logger, DEBUG
 from typing import Type, Dict, Any, List, Iterable, Union, Tuple
@@ -8,7 +8,8 @@ from parsyfiles.global_config import GLOBAL_CONFIG
 from parsyfiles.converting_core import Converter, T, S, ConversionChain, AnyObject
 from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_core import AnyParser
-from parsyfiles.parsing_core_api import get_parsing_plan_log_str, Parser, ParsingPlan, ParsingException
+from parsyfiles.parsing_core_api import get_parsing_plan_log_str, Parser, ParsingPlan, ParsingException, \
+    WrongTypeCreatedError
 from parsyfiles.type_inspection_tools import get_pretty_type_str, get_base_generic_type
 from parsyfiles.var_checker import check_var
 
@@ -100,7 +101,8 @@ class CascadeError(ParsingException):
     caught in the multiple parsers
     """
 
-    def __init__(self, contents):
+    def __init__(self, origin_parser: AnyParser, parent_plan: AnyParser._RecursiveParsingPlan[T],
+                 pp_creation_errors, pp_execution_errors):
         """
         We actually can't put more than 1 argument in the constructor, it creates a bug in Nose tests
         https://github.com/nose-devs/nose/issues/725
@@ -108,67 +110,55 @@ class CascadeError(ParsingException):
 
         :param contents:
         """
-        super(CascadeError, self).__init__(contents)
+        self.origin_parser = origin_parser
+        self.parent_plan = parent_plan
+        self.pp_creation_errors = pp_creation_errors or dict()
+        self.pp_execution_errors = pp_execution_errors or dict()
 
-    @staticmethod
-    def create_for_parsing_plan_creation(origin_parser: AnyParser, parent_plan: AnyParser._RecursiveParsingPlan[T],
-                                         caught: Dict[AnyParser, Exception]):
+        # super constructor
+        super(CascadeError, self).__init__(str(self))
+
+    def __str__(self):
         """
-        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
-        https://github.com/nose-devs/nose/issues/725
-
-        :param origin_parser:
-        :param parent_plan:
-        :param caught:
+        A string representation
         :return:
         """
-        base_msg = 'Error while trying to build parsing plan to parse \'' + str(parent_plan.obj_on_fs_to_parse) \
-                   + '\' : \n' \
-                   + '   - required object type is \'' + get_pretty_type_str(parent_plan.obj_type) + '\' \n' \
-                   + '   - cascading parser is : ' + str(origin_parser) + '\n'
+        is_at_pp_creation_time = len(self.pp_execution_errors) == 0
+        base_msg = "Error while trying to {action} parsing plan to parse '{obj}' as a {typ}. Parsers tried:\n" \
+                   "".format(action='create' if is_at_pp_creation_time else 'execute',
+                             obj=self.parent_plan.obj_on_fs_to_parse,
+                             typ=get_pretty_type_str(self.parent_plan.obj_type))
 
         msg = StringIO()
-        if len(list(caught.keys())) > 0:
-            msg.writelines('   - parsers tried are : \n      * ')
-            msg.writelines('\n      * '.join([str(p) for p in caught.keys()]))
-            msg.writelines(' \n Caught the following exceptions: \n')
 
-            for p, err in caught.items():
-                msg.writelines('--------------- From ' + str(p) + ' caught: \n')
+        # sort by parser in the list
+        tried_and_errors = []
+        for t, p in self.origin_parser._parsers_list:
+            if p in self.pp_creation_errors:
+                is_creation_err = True
+                err = self.pp_creation_errors[p]
+            elif p in self.pp_execution_errors:
+                is_creation_err = False
+                err = self.pp_execution_errors[p]
+            else:
+                raise Exception('Internal error - this should not happen, please file an issue in the tracker')
+            tried_and_errors.append((t, p, is_creation_err, err))
+
+        if len(tried_and_errors) > 0:
+            msg.writelines('  * ' +
+                           '\n  * '.join(["'{p}' -> <{t}>".format(p=p,
+                                                                t=get_pretty_type_str(t or self.parent_plan.obj_type))
+                                         for t, p, is_creation_err, err in tried_and_errors]))
+            msg.writelines('\n\nCaught the following exceptions: \n')
+
+            for t, p, is_creation_err, err in tried_and_errors:
+                msg.writelines("--------------- From '{p}' -> <{t}> caught the following when {expl} parsing plan: \n"
+                               "".format(p=p, t=get_pretty_type_str(t or self.parent_plan.obj_type),
+                                         expl='creating' if is_creation_err else 'executing'))
                 print_error_to_io_stream(err, msg)
                 msg.write('\n')
 
-        return CascadeError(base_msg + msg.getvalue())
-
-    @staticmethod
-    def create_for_execution(origin_parser: AnyParser, parent_plan: AnyParser._RecursiveParsingPlan[T],
-                             caught_exec: Dict[AnyParser, Exception]):
-        """
-        Helper method provided because we actually can't put that in the constructor, it creates a bug in Nose tests
-        https://github.com/nose-devs/nose/issues/725
-
-        :param origin_parser:
-        :param parent_plan:
-        :param caught_exec:
-        :return:
-        """
-        base_msg = 'Error while trying to execute parsing plan to parse \'' + str(parent_plan.obj_on_fs_to_parse) \
-                   + '\' : \n' \
-                   + '   - required object type is \'' + get_pretty_type_str(parent_plan.obj_type) + '\' \n' \
-                   + '   - cascading parser is : ' + str(origin_parser) + '\n'
-
-        msg = StringIO()
-        if len(list(caught_exec.keys())) > 0:
-            msg.writelines('   - parsers tried are : \n      * ')
-            msg.writelines('\n      * '.join([str(p) for p in caught_exec.keys()]))
-            msg.writelines(' \n Caught the following exceptions: \n')
-
-            for p, err in caught_exec.items():
-                msg.writelines('--------------- From ' + str(p) + ' caught: \n')
-                print_error_to_io_stream(err, msg)
-                msg.write('\n')
-
-        return CascadeError(base_msg + msg.getvalue())
+        return base_msg + msg.getvalue()
 
 
 class CascadingParser(DelegatingParser):
@@ -327,7 +317,7 @@ class CascadingParser(DelegatingParser):
             # -- the variables that will contain the active parser and its parsing plan
             self.active_parser_idx = -1
             self.active_parsing_plan = None
-            self.parsing_plan_creation_errors = dict()
+            self.parsing_plan_creation_errors = OrderedDict()
 
             # -- activate the next one
             self.activate_next_working_parser(logger=logger)
@@ -376,13 +366,8 @@ class CascadingParser(DelegatingParser):
                         self.parsing_plan_creation_errors[p] = e
 
             # no more parsers to try...
-            if already_caught_execution_errors is None:
-                raise CascadeError.create_for_parsing_plan_creation(self.parser, self,
-                                                                    self.parsing_plan_creation_errors)
-            else:
-                caught = self.parsing_plan_creation_errors
-                caught.update(already_caught_execution_errors)
-                raise CascadeError.create_for_execution(self.parser, self, caught)
+            raise CascadeError(self.parser, self, self.parsing_plan_creation_errors,
+                               already_caught_execution_errors) from None
 
         def execute(self, logger: Logger, options: Dict[str, Dict[str, Any]]):
             """
@@ -394,7 +379,7 @@ class CascadingParser(DelegatingParser):
             :return:
             """
             if self.active_parsing_plan is not None:
-                execution_errors = dict()
+                execution_errors = OrderedDict()
                 while self.active_parsing_plan is not None:
                     try:
                         # -- try to execute current plan
@@ -410,7 +395,8 @@ class CascadingParser(DelegatingParser):
                                 parser=str(self.active_parsing_plan.parser), err_type=type(e).__name__, err=e))
                         else:
                             msg = StringIO()
-                            print_error_to_io_stream(e, msg, print_big_traceback=logger.isEnabledFor(DEBUG))
+                            big_tb = not isinstance(e, WrongTypeCreatedError) and logger.isEnabledFor(DEBUG)
+                            print_error_to_io_stream(e, msg, print_big_traceback=big_tb)
                             logger.warning('  !! Caught error during execution !!')
                             logger.warning(msg.getvalue())
                         # print('----- WARNING: Caught error during execution : ')
@@ -423,9 +409,7 @@ class CascadingParser(DelegatingParser):
                         # -- try to switch to the next parser of the cascade, if any
                         self.activate_next_working_parser(execution_errors, logger)
 
-                caught = self.parsing_plan_creation_errors
-                caught.update(execution_errors)
-                raise CascadeError.create_for_execution(self.parser, self, caught)
+                raise CascadeError(self.parser, self, self.parsing_plan_creation_errors, execution_errors) from None
 
             else:
                 raise Exception('Cannot execute this parsing plan : empty parser list !')

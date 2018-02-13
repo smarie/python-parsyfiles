@@ -1,4 +1,5 @@
 from abc import ABCMeta
+from collections import OrderedDict
 from inspect import Parameter
 from warnings import warn
 from logging import Logger, DEBUG
@@ -315,7 +316,17 @@ def __is_valid_for_dict_to_object_conversion(strict_mode: bool, from_type: Type,
 
 
 class NoSubclassCouldBeInstantiated(Exception):
-    pass
+    def __init__(self, errors):
+        self.errors = errors
+        super(NoSubclassCouldBeInstantiated, self).__init__()
+
+    def __str__(self):
+        names = list(self.errors.keys())
+        msg = "Neither the base class {} nor any of its subclasses {} could be instantiated".format(names[0], names[1:])
+        details = []
+        for subclass, error in self.errors.items():
+            details.append("  - tried to create a {} -> caught {}: {}".format(subclass, type(error).__name__, error))
+        return msg + '\n' + '\n'.join(details)
 
 
 def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger: Logger,
@@ -333,9 +344,6 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
     :param is_dict_of_dicts:
     :return:
     """
-    # right now we're stuck with the default logger..
-    logr = default_logger
-
     check_var(desired_type, var_types=type, var_name='obj_type')
     check_var(contents_dict, var_types=dict, var_name='contents_dict')
 
@@ -355,7 +363,7 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
             if len(subclasses) == 0:
                 raise main_e.with_traceback(main_e.__traceback__)
 
-            errors = dict()
+            errors = OrderedDict()
             errors[get_pretty_type_str(desired_type)] = main_e
 
             # Then for each subclass also try (with a configurable limit in nb of subclasses)
@@ -371,7 +379,7 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
                      'raise this limit by setting the appropriate option with `parsyfiles_global_config()`'
                      ''.format(get_pretty_type_str(desired_type), len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
 
-            raise NoSubclassCouldBeInstantiated(errors)
+            raise NoSubclassCouldBeInstantiated(errors) from None
 
 
 def _dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger: Logger,
@@ -602,7 +610,7 @@ class MultifileObjectParser(MultiFileParser):
                 if len(subclasses) == 0:
                     raise main_e.with_traceback(main_e.__traceback__)
 
-                errors = dict()
+                errors = OrderedDict()
                 errors[desired_type] = main_e
 
                 # Then for each subclass also try (with a configurable limit in nb of subclasses)
@@ -618,7 +626,7 @@ class MultifileObjectParser(MultiFileParser):
                          'can raise this limit by setting the appropriate option with `parsyfiles_global_config()`'
                          ''.format(desired_type, len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
 
-                raise NoSubclassCouldBeInstantiated(errors)
+                raise NoSubclassCouldBeInstantiated(errors) from None
 
     def __get_parsing_plan_for_multifile_children(self, obj_on_fs: PersistedObject, desired_type: Type[Any],
                                                   children_on_fs: Dict[str, PersistedObject], logger: Logger) \
@@ -634,7 +642,6 @@ class MultifileObjectParser(MultiFileParser):
         :return:
         """
 
-        
         # -- (a) collect pep-484 information in the class constructor to be able to understand what is required
         constructor_args_types_and_opt = get_constructor_attributes_types(desired_type)
 

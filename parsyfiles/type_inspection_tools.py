@@ -1,6 +1,6 @@
 from inspect import Parameter, signature, stack, getmodule
 from typing import TypeVar, MutableMapping, Dict, List, Set, Tuple, Type, Any, Mapping, Iterable, Optional, _ForwardRef
-
+from pytypes import is_subtype
 from typing_inspect import is_generic_type, get_origin, get_args, is_tuple_type, is_union_type, is_typevar
 
 from parsyfiles.var_checker import check_var
@@ -265,11 +265,14 @@ def get_all_subclasses(typ, recursive: bool = True, memo = None) -> List[Type[An
     :param typ:
     :return:
     """
-    memo = memo or []
-    if typ in memo:
-        return list()
+    memo = memo or set()
 
-    memo.append(typ)
+    # if we have collected the subclasses for this already, return
+    if typ in memo:
+        return []
+
+    # else remember that we have collected them, and collect them
+    memo.add(typ)
     if is_generic_type(typ):
         # We now use get_origin() to also find all the concrete subclasses in case the desired type is a generic
         # TODO in that case we should also check that the subclass is compliant with all the TypeVar constraints
@@ -280,9 +283,14 @@ def get_all_subclasses(typ, recursive: bool = True, memo = None) -> List[Type[An
 
     # recurse
     if recursive:
-        return sub_list + list(t for typpp in sub_list for t in get_all_subclasses(typpp, memo=memo))
-    else:
-        return sub_list
+        for typpp in sub_list:
+            for t in get_all_subclasses(typpp, recursive=True, memo=memo):
+                # unfortunately we have to check 't not in sub_list' because with generics strange things happen
+                # also is_subtype returns false when the parent is a generic
+                if t not in sub_list and (not is_generic_type(t) or is_subtype(t, typ)):
+                    sub_list.append(t)
+
+    return sub_list
 
 
 def is_forward_ref(typ):
@@ -564,35 +572,40 @@ def get_constructor_attributes_types(item_type) -> Dict[str, Tuple[Type[Any], bo
 
         # check that types are correct
         for attr_name, v in decls.items():
+            typ, is_optional = v
+
             # -- Get and check that the attribute type is PEP484 compliant
-            typ = get_validated_attribute_type_info(v[0], item_type, attr_name)
+            typ = get_validated_attribute_type_info(typ, item_type, attr_name)
+
+            # -- optional = attrs'Optional validator was used, or a default value was set, or type is pep484 Optional
+            is_optional = is_optional or is_pep484_nonable(typ)
+
+            # -- store both info in result dict
+            res[attr_name] = (typ, not is_optional)
+
+        return res
+
+    except:  # ImportError or NotAnAttrsClassError but we obviously cant import the latter.
+        pass  # do not specify a type and use 'pass' so as to reset the exception context
+
+    # -- Fallback to PEP484
+
+    # first get the signature of the class constructor
+    s = _get_constructor_signature(item_type)
+
+    # then extract the type and optionality of each attribute and raise errors if needed
+    for attr_name in s.parameters.keys():
+        # skip the 'self' attribute
+        if attr_name != 'self':
+
+            # -- Get and check that the attribute type is PEP484 compliant
+            typ = get_validated_attribute_type_info(s.parameters[attr_name].annotation, item_type, attr_name)
 
             # -- is the attribute mandatory ?
-            is_mandatory = not is_pep484_nonable(typ)  # and TODO get the default value in the attrs declaration + check validator 'optional'
+            is_mandatory = (s.parameters[attr_name].default is Parameter.empty) and not is_pep484_nonable(typ)
 
             # -- store both info in result dict
             res[attr_name] = (typ, is_mandatory)
-
-    except Exception:  # ImportError or NotAnAttrsClassError but we obviously cant import the latter
-        
-        # -- Fallback to PEP484
-
-        # first get the signature of the class constructor
-        s = _get_constructor_signature(item_type)
-
-        # then extract the type and optionality of each attribute and raise errors if needed
-        for attr_name in s.parameters.keys():
-            # skip the 'self' attribute
-            if attr_name != 'self':
-
-                # -- Get and check that the attribute type is PEP484 compliant
-                typ = get_validated_attribute_type_info(s.parameters[attr_name].annotation, item_type, attr_name)
-
-                # -- is the attribute mandatory ?
-                is_mandatory = (s.parameters[attr_name].default is Parameter.empty) and not is_pep484_nonable(typ)
-
-                # -- store both info in result dict
-                res[attr_name] = (typ, is_mandatory)
 
     return res
 
