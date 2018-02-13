@@ -1,4 +1,4 @@
-### 2.8.0 - More readable errors, subclass detectoin improvements, and bugs+tests fix
+### 2.8.0 - More readable errors, subclass detection improvements, and bugs+tests fix
 
  * Improved readability of errors by removing the `__cause__` of `CascadeError` and `NoSubclassCouldBeInstantiated`
  * Improved the error messages in `NoSubclassCouldBeInstantiated` and in `CascadeError`. In particular the order of exceptions display was fixed.
