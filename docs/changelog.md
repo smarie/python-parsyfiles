@@ -1,3 +1,9 @@
+### 2.9.0 - Even more readable errors and better subclass handling
+
+ * Improved subclass detection (now passing all the tests !). Fixes #19 and Fixes #21
+ * Subclasses are now handled as casscading parsers: this leads to more verbose output but everything is inside the same framework of parser cascade in terms of output
+ * some exceptions/warning messages were improved
+
 ### 2.8.0 - More readable errors, subclass detection improvements, and bugs+tests fix
 
  * Improved readability of errors by removing the `__cause__` of `CascadeError` and `NoSubclassCouldBeInstantiated`

@@ -195,6 +195,9 @@ def should_display_warnings_for(to_type):
     elif to_type.__module__ in {'builtins'} or to_type.__module__.startswith('parsyfiles') \
             or to_type.__name__ in {'DataFrame'}:
         return False
+    elif issubclass(to_type, int) or issubclass(to_type, str) \
+            or issubclass(to_type, float) or issubclass(to_type, bool):
+        return False
     else:
         return True
 
@@ -270,63 +273,64 @@ def __is_valid_for_dict_to_object_conversion(strict_mode: bool, from_type: Type,
             get_constructor_attributes_types(to_type)
             return True
         except TypeInformationRequiredError as main_e:
-            # failed: we cant guess the required types of constructor arguments
-            if strict_mode:
-                # Warning and return NO
-                if should_display_warnings_for(to_type):
-                    logr.warn('Object constructor signature for type {} does not allow parsyfiles to '
-                               'automatically create instances from dict content. Caught {}: {}'
-                               ''.format(get_pretty_type_str(to_type), type(main_e).__name__, main_e))
-                return False
+            # # failed: we cant guess the required types of constructor arguments
+            # if strict_mode:
+            #     # Warning and return NO
+            #     if should_display_warnings_for(to_type):
+            #         logr.warn('Object constructor signature for type {} does not allow parsyfiles to '
+            #                    'automatically create instances from dict content. Caught {}: {}'
+            #                    ''.format(get_pretty_type_str(to_type), type(main_e).__name__, main_e))
+            #     return False
+            #
+            # # non-strict mode: (2) Check if any subclasses exist
+            # subclasses = get_all_subclasses(to_type)
+            # if len(subclasses) > GLOBAL_CONFIG.dict_to_object_subclass_limit:
+            #     logr.warn('WARNING: Type {} has {} subclasses, only {} will be tried by parsyfiles when attempting to '
+            #               'create it from a subclass. You can raise this limit by setting the appropriate option with '
+            #               '`parsyfiles_global_config()`'
+            #               ''.format(to_type, len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
+            #
+            # # Then for each subclass also try (with a configurable limit in nb of subclasses)
+            # for subclass in subclasses[0:GLOBAL_CONFIG.dict_to_object_subclass_limit]:
+            #     try:
+            #         get_constructor_attributes_types(subclass)
+            #         # OK, but issue warning for the root type still
+            #         if should_display_warnings_for(to_type):
+            #             logr.warn('WARNING: Object constructor signature for type {} does not allow parsyfiles to '
+            #                       'automatically create instances from dict content, but it can for at least one of '
+            #                       'its subclasses ({}) so it might be ok for you. Caught {}: {}'
+            #                       ''.format(get_pretty_type_str(to_type), get_pretty_type_str(subclass),
+            #                                  type(main_e).__name__, main_e))
+            #         return True
+            #     except TypeInformationRequiredError as e:
+            #         # failed: we cant guess the required types of constructor arguments
+            #         if should_display_warnings_for(to_type):
+            #             logr.warn('WARNING: Object constructor signature for type {} does not allow parsyfiles to '
+            #                       'automatically create instances from dict content. Caught {}: {}'
+            #                       ''.format(subclass, type(e).__name__, e))
+            #
+            # # Nothing succeeded
 
-            # non-strict mode: (2) Check if any subclasses exist
-            subclasses = get_all_subclasses(to_type)
-            if len(subclasses) > GLOBAL_CONFIG.dict_to_object_subclass_limit:
-                logr.warn('WARNING: Type {} has {} subclasses, only {} will be tried by parsyfiles when attempting to '
-                          'create it from a subclass. You can raise this limit by setting the appropriate option with '
-                          '`parsyfiles_global_config()`'
-                          ''.format(to_type, len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
-
-            # Then for each subclass also try (with a configurable limit in nb of subclasses)
-            for subclass in subclasses[0:GLOBAL_CONFIG.dict_to_object_subclass_limit]:
-                try:
-                    get_constructor_attributes_types(subclass)
-                    # OK, but issue warning for the root type still
-                    if should_display_warnings_for(to_type):
-                        logr.warn('WARNING: Object constructor signature for type {} does not allow parsyfiles to '
-                                  'automatically create instances from dict content, but it can for at least one of '
-                                  'its subclasses ({}) so it might be ok for you. Caught {}: {}'
-                                  ''.format(get_pretty_type_str(to_type), get_pretty_type_str(subclass),
-                                             type(main_e).__name__, main_e))
-                    return True
-                except TypeInformationRequiredError as e:
-                    # failed: we cant guess the required types of constructor arguments
-                    if should_display_warnings_for(to_type):
-                        logr.warn('WARNING: Object constructor signature for type {} does not allow parsyfiles to '
-                                  'automatically create instances from dict content. Caught {}: {}'
-                                  ''.format(subclass, type(e).__name__, e))
-
-            # Nothing succeeded
             if should_display_warnings_for(to_type):
                 logr.warn('WARNING: Object constructor signature for type {} does not allow parsyfiles to '
-                          'automatically create instances from dict content, and so is it for all of its subclasses '
-                          'tried. Caught {}: {}'
+                          'automatically create instances from dict content. Caught {}: {}'
                           ''.format(get_pretty_type_str(to_type), type(main_e).__name__, main_e))
+
             return False
 
 
-class NoSubclassCouldBeInstantiated(Exception):
-    def __init__(self, errors):
-        self.errors = errors
-        super(NoSubclassCouldBeInstantiated, self).__init__()
-
-    def __str__(self):
-        names = list(self.errors.keys())
-        msg = "Neither the base class {} nor any of its subclasses {} could be instantiated".format(names[0], names[1:])
-        details = []
-        for subclass, error in self.errors.items():
-            details.append("  - tried to create a {} -> caught {}: {}".format(subclass, type(error).__name__, error))
-        return msg + '\n' + '\n'.join(details)
+# class NoSubclassCouldBeInstantiated(Exception):
+#     def __init__(self, errors):
+#         self.errors = errors
+#         super(NoSubclassCouldBeInstantiated, self).__init__()
+#
+#     def __str__(self):
+#         names = list(self.errors.keys())
+#         msg = "Neither the base class {} nor any of its subclasses {} could be instantiated".format(names[0], names[1:])
+#         details = []
+#         for subclass, error in self.errors.items():
+#             details.append("  - tried to create a {} -> caught {}: {}".format(subclass, type(error).__name__, error))
+#         return msg + '\n' + '\n'.join(details)
 
 
 def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger: Logger,
@@ -354,32 +358,33 @@ def dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger:
                         'so it cannot be created using this generic object creator')
     else:
         # Try the type itself
-        try:
-            return _dict_to_object(desired_type, contents_dict, logger=logger, options=options,
-                                   conversion_finder=conversion_finder, is_dict_of_dicts=is_dict_of_dicts)
-        except Exception as main_e:
-            # Check if any subclasses exist
-            subclasses = get_all_subclasses(desired_type)
-            if len(subclasses) == 0:
-                raise main_e.with_traceback(main_e.__traceback__)
-
-            errors = OrderedDict()
-            errors[get_pretty_type_str(desired_type)] = main_e
-
-            # Then for each subclass also try (with a configurable limit in nb of subclasses)
-            for subclass in subclasses[0:GLOBAL_CONFIG.dict_to_object_subclass_limit]:
-                try:
-                    return _dict_to_object(subclass, contents_dict, logger=logger, options=options,
-                                           conversion_finder=conversion_finder, is_dict_of_dicts=is_dict_of_dicts)
-                except Exception as e:
-                    errors[get_pretty_type_str(subclass)] = e
-
-            if len(subclasses) > GLOBAL_CONFIG.dict_to_object_subclass_limit:
-                warn('Type {} has more than {} subclasses, only {} were tried to convert it, with no success. You can '
-                     'raise this limit by setting the appropriate option with `parsyfiles_global_config()`'
-                     ''.format(get_pretty_type_str(desired_type), len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
-
-            raise NoSubclassCouldBeInstantiated(errors) from None
+        # try:
+        return _dict_to_object(desired_type, contents_dict, logger=logger, options=options,
+                               conversion_finder=conversion_finder, is_dict_of_dicts=is_dict_of_dicts)
+        # except Exception as main_e:
+        #     # Check if any subclasses exist
+        #     subclasses = get_all_subclasses(desired_type)
+        #     if len(subclasses) == 0:
+        #         raise main_e
+        #
+        #     errors = OrderedDict()
+        #     errors[get_pretty_type_str(desired_type)] = main_e
+        #
+        #     # Then for each subclass also try (with a configurable limit in nb of subclasses)
+        #     for subclass in subclasses[0:GLOBAL_CONFIG.dict_to_object_subclass_limit]:
+        #         try:
+        #             return _dict_to_object(subclass, contents_dict, logger=logger, options=options,
+        #                                    conversion_finder=conversion_finder, is_dict_of_dicts=is_dict_of_dicts)
+        #         except Exception as e:
+        #             errors[get_pretty_type_str(subclass)] = e
+        #
+        #     if len(subclasses) > GLOBAL_CONFIG.dict_to_object_subclass_limit:
+        #         warn('Type {} has more than {} subclasses, only {} were tried to convert it, with no success. You can '
+        #              'raise this limit by setting the appropriate option with `parsyfiles_global_config()`'
+        #              ''.format(get_pretty_type_str(desired_type), len(subclasses),
+        #                        GLOBAL_CONFIG.dict_to_object_subclass_limit))
+        #
+        #     raise NoSubclassCouldBeInstantiated(errors) from None
 
 
 def _dict_to_object(desired_type: Type[T], contents_dict: Dict[str, Any], logger: Logger,
@@ -601,32 +606,32 @@ class MultifileObjectParser(MultiFileParser):
             children_on_fs = obj_on_fs.get_multifile_children()
 
             # Try the type itself
-            try:
-                return self.__get_parsing_plan_for_multifile_children(obj_on_fs, desired_type, children_on_fs,
-                                                                      logger=logger)
-            except Exception as main_e:
-                # Check if any subclasses exist
-                subclasses = get_all_subclasses(desired_type)
-                if len(subclasses) == 0:
-                    raise main_e.with_traceback(main_e.__traceback__)
-
-                errors = OrderedDict()
-                errors[desired_type] = main_e
-
-                # Then for each subclass also try (with a configurable limit in nb of subclasses)
-                for subclass in subclasses[0:GLOBAL_CONFIG.dict_to_object_subclass_limit]:
-                    try:
-                        return self.__get_parsing_plan_for_multifile_children(obj_on_fs, subclass, children_on_fs,
-                                                                              logger=logger)
-                    except Exception as e:
-                        errors[subclass] = e
-
-                if len(subclasses) > GLOBAL_CONFIG.dict_to_object_subclass_limit:
-                    warn('Type {} has more than {} subclasses, only {} were tried to convert it, with no success. You '
-                         'can raise this limit by setting the appropriate option with `parsyfiles_global_config()`'
-                         ''.format(desired_type, len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
-
-                raise NoSubclassCouldBeInstantiated(errors) from None
+            # try:
+            return self.__get_parsing_plan_for_multifile_children(obj_on_fs, desired_type, children_on_fs,
+                                                                  logger=logger)
+            # except Exception as main_e:
+            #     # Check if any subclasses exist
+            #     subclasses = get_all_subclasses(desired_type)
+            #     if len(subclasses) == 0:
+            #         raise main_e
+            #
+            #     errors = OrderedDict()
+            #     errors[get_pretty_type_str(desired_type)] = main_e
+            #
+            #     # Then for each subclass also try (with a configurable limit in nb of subclasses)
+            #     for subclass in subclasses[0:GLOBAL_CONFIG.dict_to_object_subclass_limit]:
+            #         try:
+            #             return self.__get_parsing_plan_for_multifile_children(obj_on_fs, subclass, children_on_fs,
+            #                                                                   logger=logger)
+            #         except Exception as e:
+            #             errors[get_pretty_type_str(subclass)] = e
+            #
+            #     if len(subclasses) > GLOBAL_CONFIG.dict_to_object_subclass_limit:
+            #         warn('Type {} has more than {} subclasses, only {} were tried to convert it, with no success. You '
+            #              'can raise this limit by setting the appropriate option with `parsyfiles_global_config()`'
+            #              ''.format(desired_type, len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
+            #
+            #     raise NoSubclassCouldBeInstantiated(errors) from None
 
     def __get_parsing_plan_for_multifile_children(self, obj_on_fs: PersistedObject, desired_type: Type[Any],
                                                   children_on_fs: Dict[str, PersistedObject], logger: Logger) \

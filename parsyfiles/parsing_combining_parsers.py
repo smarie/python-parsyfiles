@@ -10,7 +10,7 @@ from parsyfiles.filesystem_mapping import PersistedObject
 from parsyfiles.parsing_core import AnyParser
 from parsyfiles.parsing_core_api import get_parsing_plan_log_str, Parser, ParsingPlan, ParsingException, \
     WrongTypeCreatedError
-from parsyfiles.type_inspection_tools import get_pretty_type_str, get_base_generic_type
+from parsyfiles.type_inspection_tools import get_pretty_type_str, TypeInformationRequiredError
 from parsyfiles.var_checker import check_var
 
 
@@ -134,12 +134,13 @@ class CascadeError(ParsingException):
         # sort by parser in the list
         tried_and_errors = []
         for t, p in self.origin_parser._parsers_list:
-            if p in self.pp_creation_errors:
+            t = t or self.parent_plan.obj_type
+            if (t, p) in self.pp_creation_errors:
                 is_creation_err = True
-                err = self.pp_creation_errors[p]
-            elif p in self.pp_execution_errors:
+                err = self.pp_creation_errors[(t, p)]
+            elif (t, p) in self.pp_execution_errors:
                 is_creation_err = False
-                err = self.pp_execution_errors[p]
+                err = self.pp_execution_errors[(t, p)]
             else:
                 raise Exception('Internal error - this should not happen, please file an issue in the tracker')
             tried_and_errors.append((t, p, is_creation_err, err))
@@ -159,6 +160,26 @@ class CascadeError(ParsingException):
                 msg.write('\n')
 
         return base_msg + msg.getvalue()
+
+
+def should_hide_traceback(e):
+    """ Returns True if we can hide the error traceback in the warnings messages """
+    if type(e) in {WrongTypeCreatedError, CascadeError, TypeInformationRequiredError}:
+        return True
+    elif type(e).__name__ in {'InvalidAttributeNameForConstructorError', 'MissingMandatoryAttributeFiles'}:
+        return True
+    else:
+        return False
+
+
+def short_exception_message(e):
+    """ Returns a small message for exception e, to use in log warnings """
+    if isinstance(e, CascadeError):
+        # idx = str(e).find('\n\n')
+        # return str(e)[0:idx]
+        return "See previous log messages for details"
+    else:
+        return str(e)
 
 
 class CascadingParser(DelegatingParser):
@@ -259,15 +280,16 @@ class CascadingParser(DelegatingParser):
                             'cascades configuration (supported types should at least contain the supported types '
                             'already in place. The parser misses type(s) ' + str(missing_types) + ')')
             else:
+                # a parser is added but with a specific type target (parallel cascade)
                 if typ == AnyObject:
                     raise ValueError(
                         'Cannot add this parser to this parsing cascade : it does not match the expected type "Any", '
                         'it only supports ' + str(parser.supported_types))
-                else:
-                    if get_base_generic_type(typ) not in parser.supported_types:
-                        raise ValueError(
-                            'Cannot add this parser to this parsing cascade : it does not match the expected type ' +
-                            str(typ) + ', it only supports ' + str(parser.supported_types))
+                # else:
+                #     if get_base_generic_type(typ) not in parser.supported_types:
+                #         raise ValueError(
+                #             'Cannot add this parser to this parsing cascade : it does not match the expected type ' +
+                #             str(typ) + ', it only supports ' + str(parser.supported_types))
 
         missing_exts = set(self.supported_exts) - set(parser.supported_exts)
         if len(missing_exts) > 0:
@@ -337,33 +359,53 @@ class CascadingParser(DelegatingParser):
                 # ask each parser to create a parsing plan right here. Stop at the first working one
                 for i in range(self.active_parser_idx+1, len(self.parser_list)):
                     typ, p = self.parser_list[i]
-                    if i > 0:
-                        # print('----- Rebuilding local parsing plan with next candidate parser:')
-                        if logger is not None:
-                            logger.info('Rebuilding local parsing plan with next candidate parser: ' + str(p))
+                    # if i > 0:
+                    #     # print('----- Rebuilding local parsing plan with next candidate parser:')
+                    #     if logger is not None:
+                    #         logger.info("Rebuilding local parsing plan with {p} -> {t}"
+                    #                     "".format(p=p, t=get_pretty_type_str(typ or self.obj_type)))
                     try:
                         # -- try to rebuild a parsing plan with next parser, and remember it if is succeeds
                         self.active_parsing_plan = CascadingParser.ActiveParsingPlan(p.create_parsing_plan(
                             typ or self.obj_type, self.obj_on_fs_to_parse, self.logger, _main_call=False), self.parser)
                         self.active_parser_idx = i
-                        if i > 0 and logger is not None:
-                            logger.info('DONE Rebuilding local parsing plan for [{location}]. Resuming parsing...'
-                                        ''.format(location=self.obj_on_fs_to_parse.get_pretty_location(
-                                compact_file_ext=True)))
+                        # if i > 0 and logger is not None:
+                        #     logger.info('DONE Rebuilding local parsing plan for [{location}]. Resuming parsing...'
+                        #                 ''.format(location=self.obj_on_fs_to_parse.get_pretty_location(
+                        #         compact_file_ext=True)))
                         return
 
-                    except Exception as e:
+                    except Exception as err:
+
+                        # log simplification for nested errors
+                        if isinstance(err, ParsingException) and hasattr(err, 'caught'):
+                            e_for_log = err.caught
+                        else:
+                            e_for_log = err
+
+                        # trying to display the error in front of the indented object
+                        if not GLOBAL_CONFIG.full_paths_in_logs:
+                            idx = self.obj_on_fs_to_parse.get_pretty_location(blank_parent_part=True).index('|--')
+                            prefix = ' ' * (idx + 4)
+                        else:
+                            prefix = ''
+
                         # -- log the error
-                        msg = StringIO()
-                        print_error_to_io_stream(e, msg, print_big_traceback=logger.isEnabledFor(DEBUG))
-                        logger.warning('----- WARNING: Caught error while creating parsing plan with parser ' + str(p))
-                        logger.warning(msg.getvalue())
-                        # print('----- WARNING: Caught error while creating parsing plan with parser ' + str(p) + '.')
-                        # print(msg.getvalue())
-                        # (Note: we dont use warning because it does not show up in the correct order in the console)
+                        if should_hide_traceback(e_for_log):
+                            logger.warning("{pre} ! CAUGHT: {t} - {e}".format(pre=prefix,
+                                                                           t=type(e_for_log).__name__, e=e_for_log))
+                        else:
+                            msg = StringIO()
+                            print_error_to_io_stream(e_for_log, msg, print_big_traceback=logger.isEnabledFor(DEBUG))
+                            logger.warning("----- WARNING: Caught error while creating parsing plan with parser {p}"
+                                           "".format(p=p))
+                            logger.warning(msg.getvalue())
+                            # print('----- WARNING: Caught error while creating parsing plan with parser ' + str(p) + '.')
+                            # print(msg.getvalue())
+                            # (Note: we dont use warning because it does not show up in the correct order in the console)
 
                         # -- remember the error in order to create a CascadeError at the end in case of failure of all
-                        self.parsing_plan_creation_errors[p] = e
+                        self.parsing_plan_creation_errors[(typ or self.obj_type, p)] = err
 
             # no more parsers to try...
             raise CascadeError(self.parser, self, self.parsing_plan_creation_errors,
@@ -385,26 +427,46 @@ class CascadingParser(DelegatingParser):
                         # -- try to execute current plan
                         return self.active_parsing_plan.execute(logger, options)
 
-                    except Exception as e:
+                    except Exception as err:
                         # -- log the error
                         if not logger.isEnabledFor(DEBUG):
                             logger.warning('ERROR while parsing [{location}] into a [{type}] using [{parser}]. '
                                            'Set log level to DEBUG for details'.format(
                                 location=self.obj_on_fs_to_parse.get_pretty_location(compact_file_ext=True),
                                 type=get_pretty_type_str(self.active_parsing_plan.obj_type),
-                                parser=str(self.active_parsing_plan.parser), err_type=type(e).__name__, err=e))
+                                parser=str(self.active_parsing_plan.parser), err_type=type(err).__name__, err=err))
                         else:
-                            msg = StringIO()
-                            big_tb = not isinstance(e, WrongTypeCreatedError) and logger.isEnabledFor(DEBUG)
-                            print_error_to_io_stream(e, msg, print_big_traceback=big_tb)
-                            logger.warning('  !! Caught error during execution !!')
-                            logger.warning(msg.getvalue())
+                            # log simplification for nested errors
+                            if isinstance(err, ParsingException) and hasattr(err, 'caught'):
+                                e_for_log = err.caught
+                            else:
+                                e_for_log = err
+
+                            # trying to display the error in front of the indented object
+                            if not GLOBAL_CONFIG.full_paths_in_logs:
+                                idx = self.obj_on_fs_to_parse.get_pretty_location(blank_parent_part=True).index(
+                                    '|--')
+                                prefix = ' ' * (idx + 4)
+                            else:
+                                prefix = ''
+
+                            # -- log the error
+                            if should_hide_traceback(e_for_log):
+                                logger.warning("{pre} ! CAUGHT: {t} - {e}".format(pre=prefix,
+                                                                               t=type(e_for_log).__name__,
+                                                                               e=short_exception_message(e_for_log)))
+                            else:
+                                msg = StringIO()
+                                big_tb = logger.isEnabledFor(DEBUG)
+                                print_error_to_io_stream(e_for_log, msg, print_big_traceback=big_tb)
+                                logger.warning('  !! Caught error during execution !!')
+                                logger.warning(msg.getvalue())
                         # print('----- WARNING: Caught error during execution : ')
                         # print(msg.getvalue())
                         # (Note: we dont use warning because it does not show up in the correct order in the console)
 
                         # -- remember the error in order to create a CascadeError at the end in case of failure of all
-                        execution_errors[self.active_parsing_plan.parser] = e
+                        execution_errors[(self.active_parsing_plan.obj_type, self.active_parsing_plan.parser)] = err
 
                         # -- try to switch to the next parser of the cascade, if any
                         self.activate_next_working_parser(execution_errors, logger)

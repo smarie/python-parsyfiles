@@ -264,6 +264,8 @@ class ParsingException(Exception):
             .with_traceback(caught.__traceback__) # 'from e' was hiding the inner traceback. This is much better for debug
         e.__cause__ = None
         # e.__cause__ = caught
+        # store the exception still, to be able to handle it later
+        e.caught = caught
         return e
 
 
@@ -283,10 +285,10 @@ class WrongTypeCreatedError(ParsingException):
         :param options:
         :return:
         """
-        return WrongTypeCreatedError('Error while parsing ' + str(obj) + ' as a ' + str(desired_type) + ' with '
-                                     'parser \'' + str(parser) + '\' using options=(' + str(options) + ') : \n'
-                                     '      parser returned ' + str(result) + ' of type ' + str(type(result))
-                                     + ' which is not an instance of ' + str(desired_type))
+        msg = "Error while parsing {obj} as a {typ} with parser {p} using options=({opts}) - parser returned an object " \
+              "of wrong type {tret}: {ret}".format(obj=obj, typ=get_pretty_type_str(desired_type), p=parser,
+                                                   opts=options, tret=type(result), ret=result)
+        return WrongTypeCreatedError(msg)
 
 
 def get_parsing_plan_log_str(obj_on_fs_to_parse, desired_type, log_only_last: bool, parser):

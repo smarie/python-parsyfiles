@@ -261,6 +261,7 @@ def is_collection(object_type, strict: bool = False) -> bool:
 def get_all_subclasses(typ, recursive: bool = True, memo = None) -> List[Type[Any]]:
     """
     Returns all subclasses, and supports generic types. It is recursive by default
+    See discussion at https://github.com/Stewori/pytypes/issues/31
 
     :param typ:
     :return:
@@ -275,22 +276,21 @@ def get_all_subclasses(typ, recursive: bool = True, memo = None) -> List[Type[An
     memo.add(typ)
     if is_generic_type(typ):
         # We now use get_origin() to also find all the concrete subclasses in case the desired type is a generic
-        # TODO in that case we should also check that the subclass is compliant with all the TypeVar constraints
-        # see if there is an easy way to do this in https://github.com/Stewori/pytypes/issues/31
         sub_list = get_origin(typ).__subclasses__()
     else:
         sub_list = typ.__subclasses__()
 
     # recurse
+    result = [t for t in sub_list if t is not typ and is_subtype(t, typ, bound_typevars={})]
     if recursive:
         for typpp in sub_list:
             for t in get_all_subclasses(typpp, recursive=True, memo=memo):
                 # unfortunately we have to check 't not in sub_list' because with generics strange things happen
                 # also is_subtype returns false when the parent is a generic
-                if t not in sub_list and (not is_generic_type(t) or is_subtype(t, typ)):
-                    sub_list.append(t)
+                if t not in sub_list and is_subtype(t, typ, bound_typevars={}):
+                    result.append(t)
 
-    return sub_list
+    return result
 
 
 def is_forward_ref(typ):

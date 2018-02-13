@@ -6,6 +6,7 @@ from pprint import pprint
 from typing import Type, Dict, Any, List, Set, Tuple, Union, Mapping, AbstractSet, Sequence, Iterable
 from warnings import warn
 
+from parsyfiles import GLOBAL_CONFIG
 from parsyfiles.converting_core import S, Converter, ConversionChain, is_any_type, get_validated_type, JOKER, \
     ConversionException
 from parsyfiles.filesystem_mapping import PersistedObject
@@ -14,7 +15,8 @@ from parsyfiles.parsing_combining_parsers import ParsingChain, CascadingParser, 
 from parsyfiles.parsing_core import _InvalidParserException
 from parsyfiles.parsing_core_api import Parser, ParsingPlan, T
 from parsyfiles.type_inspection_tools import get_pretty_type_str, get_base_generic_type, get_pretty_type_keys_dict, \
-    robust_isinstance, is_collection, _extract_collection_base_type, is_typed_collection, get_alternate_types_resolving_forwardref_union_and_typevar
+    robust_isinstance, is_collection, _extract_collection_base_type, is_typed_collection, \
+    get_alternate_types_resolving_forwardref_union_and_typevar, get_all_subclasses
 from parsyfiles.var_checker import check_var
 
 
@@ -64,17 +66,17 @@ class NoParserFoundForObjectExt(Exception):
         """
 
         # base message
-        msg = str(obj) + ' cannot be parsed as a ' + get_pretty_type_str(obj_type) + ' because no parser supporting ' \
-              'that extension (' + obj.get_pretty_file_ext() + ') is registered.\n'
+        msg = "{obj} cannot be parsed as a {typ} because no parser supporting that extension ({ext}) is able to " \
+              "create this type of object." \
+              "".format(obj=obj, typ=get_pretty_type_str(obj_type), ext=obj.get_pretty_file_ext())
 
         # add details
         if extensions_supported is not None and len(extensions_supported) > 0:
-            msg += ' If you wish to parse this fileobject in that type, you may replace the file with any of the ' \
-                   'following extensions currently supported :' + str(extensions_supported) + ' (see ' \
-                   'get_capabilities_for_type(' + get_pretty_type_str(obj_type) + ', strict_type_matching=False) for ' \
-                   'details).\n' \
-                   + 'Otherwise, please register a new parser for type ' + get_pretty_type_str(obj_type) \
-                   + ' and extension ' + obj.get_pretty_file_ext()
+            msg += " If you wish to parse this fileobject to that precise type, you may wish to either " \
+                   "(1) replace the file with any of the following extensions currently supported : {exts} " \
+                   "(see get_capabilities_for_type({typ}, strict_type_matching=False) for details)." \
+                   " Or (2) register a new parser." \
+                   "".format(exts=extensions_supported, typ=get_pretty_type_str(obj_type))
         else:
             raise ValueError('extensions_supported should be provided to create a NoParserFoundForObjectExt. If no '
                              'extension is supported, use NoParserFoundForObjectType.create instead')
@@ -579,8 +581,11 @@ class ParserCache(AbstractParserCache):
                     matching_parsers_generic.append(p)
 
             else:
-                # type matches always
-                no_ext_match_but_type_match.append(p)
+                # check if by releasing the constraint on ext it makes a match
+                if p.is_able_to_parse(desired_type=desired_type, desired_ext=JOKER, strict=strict):
+                    no_ext_match_but_type_match.append(p)
+                else:
+                    no_type_match_but_ext_match.append(p)
 
         # then the specific
         for p in self._specific_parsers:
@@ -680,22 +685,25 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
 
         if len(object_types) == 1:
             # One type: proceed as usual
-            return object_types[0], self._build_parser_for_fileobject_and_desiredtype(obj_on_filesystem,
-                                                                                      object_typ=object_types[0],
-                                                                                      logger=logger)
+            parsers = self._build_parser_for_fileobject_and_desiredtype(obj_on_filesystem, object_typ=object_types[0],
+                                                                        logger=logger)
+            if len(parsers) > 1:
+                return object_types[0], CascadingParser(parsers)
+            else:
+                return next(iter(parsers.items()))
         else:
-            # Several types are supported: try to build a parser for each
+            # Several alternate types are supported: try to build a parser for each
             parsers = OrderedDict()
-            errors = dict()
+            errors = OrderedDict()
             for typ in object_types:
                 try:
-                    parsers[typ] = self._build_parser_for_fileobject_and_desiredtype(obj_on_filesystem, object_typ=typ,
-                                                                                     logger=logger)
+                    parsers.update(self._build_parser_for_fileobject_and_desiredtype(obj_on_filesystem, object_typ=typ,
+                                                                                     logger=logger))
                 except NoParserFoundForObjectExt as e:
-                    warn(e)
+                    logger.warning("{} - {}".format(type(e).__name__, e))
                     errors[e] = e
                 except NoParserFoundForObjectType as f:
-                    warn(f)
+                    logger.warning("{} - {}".format(type(f).__name__, f))
                     errors[f] = f
 
             # Combine if there are remaining, otherwise raise
@@ -705,7 +713,62 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
                 raise NoParserFoundForUnionType.create(obj_on_filesystem, object_type, errors)
 
     def _build_parser_for_fileobject_and_desiredtype(self, obj_on_filesystem: PersistedObject, object_typ: Type[T],
-                                                    logger: Logger = None) -> Parser:
+                                                     logger: Logger = None) -> Dict[Type, Parser]:
+        """
+        Builds a parser for each subtype of object_typ
+
+        :param obj_on_filesystem:
+        :param object_typ:
+        :param logger:
+        :return:
+        """
+
+        parsers = OrderedDict()
+        errors = OrderedDict()
+        try:
+            p = self.__build_parser_for_fileobject_and_desiredtype(obj_on_filesystem,
+                                                                   object_typ=object_typ,
+                                                                   logger=logger)
+            parsers[object_typ] = p
+        except NoParserFoundForObjectExt as e:
+            logger.warning("{} - {}".format(type(e).__name__, e))
+            errors[e] = e
+        except NoParserFoundForObjectType as f:
+            logger.warning("{} - {}".format(type(f).__name__, f))
+            errors[f] = f
+
+        # do not explore subclasses for collections
+        if is_collection(object_typ, strict=True):
+            if len(errors) > 0:
+                raise next(iter(errors.values()))
+            else:
+                return parsers
+
+        # Finally create one such parser for each subclass
+        subclasses = get_all_subclasses(object_typ)
+
+        # Then for each subclass also try (with a configurable limit in nb of subclasses)
+        for subclass in subclasses[0:GLOBAL_CONFIG.dict_to_object_subclass_limit]:
+            try:
+                parsers[subclass] = self.__build_parser_for_fileobject_and_desiredtype(obj_on_filesystem,
+                                                                                       object_typ=subclass,
+                                                                                       logger=logger)
+            except NoParserFoundForObjectExt as e:
+                logger.warning("{} - {}".format(type(e).__name__, e))
+                errors[e] = e
+            except NoParserFoundForObjectType as f:
+                logger.warning("{} - {}".format(type(f).__name__, f))
+                errors[f] = f
+
+        if len(subclasses) > GLOBAL_CONFIG.dict_to_object_subclass_limit:
+            warn('Type {} has more than {} subclasses, only {} were tried to convert it, with no success. You '
+                 'can raise this limit by setting the appropriate option with `parsyfiles_global_config()`'
+                 ''.format(object_typ, len(subclasses), GLOBAL_CONFIG.dict_to_object_subclass_limit))
+
+        return parsers
+
+    def __build_parser_for_fileobject_and_desiredtype(self, obj_on_filesystem: PersistedObject, object_typ: Type[T],
+                                                      logger: Logger = None) -> Parser:
         """
         Builds from the registry, a parser to parse object obj_on_filesystem as an object of type object_type.
 
@@ -724,7 +787,8 @@ class ParserRegistry(ParserCache, ParserFinder, DelegatingParser):
 
         # find all matching parsers for this
         matching, no_type_match_but_ext_match, no_ext_match_but_type_match, no_match = \
-            self.find_all_matching_parsers(strict=self.is_strict, desired_type=object_type, required_ext=obj_on_filesystem.ext)
+            self.find_all_matching_parsers(strict=self.is_strict, desired_type=object_type,
+                                           required_ext=obj_on_filesystem.ext)
         matching_parsers = matching[0] + matching[1] + matching[2]
 
         if len(matching_parsers) == 0:
