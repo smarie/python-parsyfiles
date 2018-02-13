@@ -1,13 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?><testsuite errors="1" failures="0" name="pytest" skips="0" tests="1" time="1.726"><testcase classname="" file="parsyfiles/tests/pytest_integration/test_pytest.py" name="parsyfiles.tests.pytest_integration.test_pytest" time="0"><error message="collection failure">parsyfiles/plugins_base/support_for_objects.py:224: in _is_valid_for_dict_to_object_conversion
+<?xml version="1.0" encoding="utf-8"?><testsuite errors="1" failures="0" name="pytest" skips="0" tests="1" time="2.015"><testcase classname="" file="parsyfiles/tests/pytest_integration/test_pytest.py" name="parsyfiles.tests.pytest_integration.test_pytest" time="0"><error message="collection failure">parsyfiles/plugins_base/support_for_objects.py:224: in _is_valid_for_dict_to_object_conversion
     res, subclasses_hash = _cache_valid_for_dict_to_object[to_type][strict_mode]
 E   KeyError: False
-
-During handling of the above exception, another exception occurred:
-../../../virtualenv/python3.5.5/lib/python3.5/site-packages/pytypes/type_util.py:1336: in _issubclass_2
-    return issubclass(subclass, superclass)
-/opt/python/3.5.5/lib/python3.5/typing.py:263: in __subclasscheck__
-    raise TypeError(&quot;Forward references cannot be used with issubclass().&quot;)
-E   TypeError: Forward references cannot be used with issubclass().
 
 During handling of the above exception, another exception occurred:
 parsyfiles/tests/pytest_integration/test_pytest.py:12: in &lt;module&gt;
@@ -54,6 +47,8 @@ parsyfiles/type_inspection_tools.py:284: in &lt;listcomp&gt;
     if not _issubclass(p_cls, p_self, bound_Generic, bound_typevars):
 ../../../virtualenv/python3.5.5/lib/python3.5/site-packages/pytypes/type_util.py:1312: in _issubclass
     res = _issubclass_2(subclass, superclass, bound_Generic, bound_typevars)
-../../../virtualenv/python3.5.5/lib/python3.5/site-packages/pytypes/type_util.py:1339: in _issubclass_2
-    (type_str(subclass), type_str(superclass)))
-E   TypeError: Invalid type declaration: Type[Any], _ForwardRef(&apos;ValidationFuncs&apos;)</error></testcase></testsuite>
+../../../virtualenv/python3.5.5/lib/python3.5/site-packages/pytypes/type_util.py:1327: in _issubclass_2
+    return _issubclass_Generic(subclass, superclass, bound_Generic, bound_typevars)
+../../../virtualenv/python3.5.5/lib/python3.5/site-packages/pytypes/type_util.py:1157: in _issubclass_Generic
+    if type.__subclasscheck__(superclass, subclass):
+E   TypeError: issubclass() arg 1 must be a class</error></testcase></testsuite>
