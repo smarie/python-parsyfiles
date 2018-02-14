@@ -585,7 +585,9 @@ class ParserCache(AbstractParserCache):
                 if p.is_able_to_parse(desired_type=desired_type, desired_ext=JOKER, strict=strict):
                     no_ext_match_but_type_match.append(p)
                 else:
-                    no_type_match_but_ext_match.append(p)
+                    # there will be no way to use this: it is a generic parser that is not able to parse this type...
+                    # no_type_match_but_ext_match.append(p)
+                    pass
 
         # then the specific
         for p in self._specific_parsers:

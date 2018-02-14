@@ -1,5 +1,6 @@
 from inspect import Parameter, signature, stack, getmodule
-from typing import TypeVar, MutableMapping, Dict, List, Set, Tuple, Type, Any, Mapping, Iterable, Optional, _ForwardRef
+from typing import TypeVar, MutableMapping, Dict, List, Set, Tuple, Type, Any, Mapping, Iterable, Optional, _ForwardRef, \
+    Sequence
 from pytypes import is_subtype
 from typing_inspect import is_generic_type, get_origin, get_args, is_tuple_type, is_union_type, is_typevar
 
@@ -258,22 +259,24 @@ def is_collection(object_type, strict: bool = False) -> bool:
                or issubclass(object_type, set)
 
 
-def get_all_subclasses(typ, recursive: bool = True, memo = None) -> List[Type[Any]]:
+def get_all_subclasses(typ, recursive: bool = True, _memo = None) -> Sequence[Type[Any]]:
     """
     Returns all subclasses, and supports generic types. It is recursive by default
     See discussion at https://github.com/Stewori/pytypes/issues/31
 
     :param typ:
+    :param recursive: a boolean indicating whether recursion is needed
+    :param _memo: internal variable used in recursion to avoid exploring subclasses that were already explored
     :return:
     """
-    memo = memo or set()
+    _memo = _memo or set()
 
     # if we have collected the subclasses for this already, return
-    if typ in memo:
+    if typ in _memo:
         return []
 
     # else remember that we have collected them, and collect them
-    memo.add(typ)
+    _memo.add(typ)
     if is_generic_type(typ):
         # We now use get_origin() to also find all the concrete subclasses in case the desired type is a generic
         sub_list = get_origin(typ).__subclasses__()
@@ -281,10 +284,21 @@ def get_all_subclasses(typ, recursive: bool = True, memo = None) -> List[Type[An
         sub_list = typ.__subclasses__()
 
     # recurse
-    result = [t for t in sub_list if t is not typ and is_subtype(t, typ, bound_typevars={})]
+    result = []
+    for t in sub_list:
+        # only keep the origins in the list
+        to = get_origin(t) or t
+        try:
+            if to is not typ and to not in result and is_subtype(to, typ, bound_typevars={}):
+                result.append(to)
+        except:
+            # catching an error with is_subtype(Dict, Dict[str, int], bound_typevars={})
+            pass
+
+    # recurse
     if recursive:
         for typpp in sub_list:
-            for t in get_all_subclasses(typpp, recursive=True, memo=memo):
+            for t in get_all_subclasses(typpp, recursive=True, _memo=_memo):
                 # unfortunately we have to check 't not in sub_list' because with generics strange things happen
                 # also is_subtype returns false when the parent is a generic
                 if t not in sub_list and is_subtype(t, typ, bound_typevars={}):

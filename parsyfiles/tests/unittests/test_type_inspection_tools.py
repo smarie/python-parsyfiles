@@ -196,13 +196,13 @@ def test_get_subclasses_generic():
     #     return res
 
     # This works with FullUnparam.__subclasses__() today
-    assert get_all_subclasses(FullUnparam) == [FullUnparam2, FullUnparam[T, int], HalfParam, FullUnparam[str, int], EntirelyParam, HalfParam[str], EntirelyParam2]  # EntirelyParam2 is missing
+    assert get_all_subclasses(FullUnparam) == [FullUnparam2,  HalfParam, EntirelyParam, EntirelyParam2]  # EntirelyParam2 is missing
 
     # This does not work with FullUnparam.__subclasses__() today. Maybe a bug of stdlib ?
-    assert get_all_subclasses(FullUnparam[str, int]) == [EntirelyParam, HalfParam[str], EntirelyParam2]  # Wrong: also contains FullUnparam2, FullUnparam[+T, int], HalfParam, FullUnparam[str, int] ???
+    assert get_all_subclasses(FullUnparam[str, int]) == [EntirelyParam, EntirelyParam2]  # Wrong: also contains FullUnparam2, FullUnparam[+T, int], HalfParam, FullUnparam[str, int] ???
 
     # This does not work with HalfParam.__subclasses__() today.
-    assert get_all_subclasses(HalfParam) == [HalfParam[str], EntirelyParam2]
+    assert get_all_subclasses(HalfParam) == [EntirelyParam2]
 
     assert get_all_subclasses(HalfParam[str]) == [EntirelyParam2]
 
@@ -212,3 +212,7 @@ def test_get_subclasses_generic():
     #
     # # variant 2: only Generic subclasses with same number of free parameters
     # assert get_all_subclasses(FullUnparam, only_generics=True, parametrized=False) == [FullUnparam2]
+
+
+def test_get_subclasses_nonparam_dict():
+    get_all_subclasses(Dict)

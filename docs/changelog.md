@@ -1,3 +1,9 @@
+### 2.9.1 - Better subclass detection + bugfixes
+
+ * The list of subclass is now smaller in case of generics, which avoids duplicate exploration
+ * a bug was introduced in 2.9.0 that made the root parser create chains that would not make sense. Fixed this.
+ * failing test collection now can make the CI build fail
+
 ### 2.9.0 - Even more readable errors and better subclass handling
 
  * Improved subclass detection (now passing all the tests !). Fixes #19 and Fixes #21
