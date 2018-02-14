@@ -90,7 +90,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search">
     <label class="md-overlay" data-md-component="overlay" for="drawer"></label>
     
-      <a href="#290-even-more-readable-errors-and-better-subclass-handling" tabindex="1" class="md-skip">
+      <a href="#291-better-subclass-detection-bugfixes" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -292,6 +292,13 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#291-better-subclass-detection-bugfixes" title="2.9.1 - Better subclass detection + bugfixes" class="md-nav__link">
+    2.9.1 - Better subclass detection + bugfixes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#290-even-more-readable-errors-and-better-subclass-handling" title="2.9.0 - Even more readable errors and better subclass handling" class="md-nav__link">
     2.9.0 - Even more readable errors and better subclass handling
   </a>
@@ -475,6 +482,13 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#291-better-subclass-detection-bugfixes" title="2.9.1 - Better subclass detection + bugfixes" class="md-nav__link">
+    2.9.1 - Better subclass detection + bugfixes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#290-even-more-readable-errors-and-better-subclass-handling" title="2.9.0 - Even more readable errors and better subclass handling" class="md-nav__link">
     2.9.0 - Even more readable errors and better subclass handling
   </a>
@@ -649,7 +663,13 @@
                 
                   <h1>Changelog</h1>
                 
-                <h3 id="290-even-more-readable-errors-and-better-subclass-handling">2.9.0 - Even more readable errors and better subclass handling<a class="headerlink" href="#290-even-more-readable-errors-and-better-subclass-handling" title="Permanent link">&para;</a></h3>
+                <h3 id="291-better-subclass-detection-bugfixes">2.9.1 - Better subclass detection + bugfixes<a class="headerlink" href="#291-better-subclass-detection-bugfixes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The list of subclass is now smaller in case of generics, which avoids duplicate exploration</li>
+<li>a bug was introduced in 2.9.0 that made the root parser create chains that would not make sense. Fixed this.</li>
+<li>failing test collection now can make the CI build fail</li>
+</ul>
+<h3 id="290-even-more-readable-errors-and-better-subclass-handling">2.9.0 - Even more readable errors and better subclass handling<a class="headerlink" href="#290-even-more-readable-errors-and-better-subclass-handling" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Improved subclass detection (now passing all the tests !). Fixes #19 and Fixes #21</li>
 <li>Subclasses are now handled as cascading parsers: this leads to more verbose output but everything is inside the same framework of parser cascade in terms of output</li>
